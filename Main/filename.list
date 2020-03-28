@@ -10,7 +10,7 @@ SpreadsheetLib/SheetBuffer
 SpreadsheetLib/DataTable
 WorksheetLib/Date
 WorksheetLib/Metadata
-WorksheetLib/Group
+WorksheetLib/StudyGroup
 WorksheetLib/Worksheet
 Actions/Error
 Actions/User

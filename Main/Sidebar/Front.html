@@ -1159,6 +1159,8 @@ function display(group_name, set_active_group) {
 }
 
 function restore_hidden() {
+  // XXX make this function also close any expanded details
+  // and make it enabled if any details are opened
   $("#contents--worksheets, #contents--categories")
     .find(".hidden")
     .removeClass("hidden");

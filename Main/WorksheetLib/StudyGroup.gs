@@ -174,6 +174,73 @@ StudyGroup.add = function(spreadsheet, name, options) {
 
 // initialize {{{2
 
+/* options: {{{
+ *   rows (object)
+ *     map of header row names to row numbers
+ *     must include 'data_row' and all row names from row_info
+ *   data_height (number)
+ *     number of data rows, excluding the first (hidden) data row
+ *     default is initial.data_height
+ *   color_scheme (string)
+ *     code, must match spreadsheet metadata
+ *     default will use default color scheme
+ *   rating (boolean)
+ *     whether to create a total rating
+ *     default is yes
+ *   sum (boolean)
+ *     whether to create a total sum
+ *     default is yes
+ *   categories (array)
+ *     default is no categories
+ *   categories[*].code
+ *   categories[*].rating (false or object)
+ *     whether to create a rating for this category
+ *     default is yes
+ *   categories[*].rating.integrate (boolean)
+ *     whether to include this category in bases for the total rating
+ *     effective if total rating is created at all
+ *     default is yes
+ *   categories[*].sum (false or object)
+ *     whether to create a sum for this category
+ *     default is yes
+ *   categories[*].sum.integrate (boolean)
+ *     whether to include this category in bases for the total sum
+ *     effective if total sum is created at all
+ *     default is yes
+ *   category_musthave (boolean)
+ *     whether empty category (or category that was not listed) in worksheet
+ *       will be highlighted as an error
+ *     default is yes, unless no categories were specified
+ *   attendance (object)
+ *     parameters for creating attendance
+ *     default is to not create attendance
+ *   attendance.sum (boolean)
+ *     whether to create attendance sum
+ *     default is yes
+ *   attendance.columns (number or object)
+ *     number of columns in attendance
+ *     default is initial.attendance.columns
+ *   attendance.columns.date_list (array or object)
+ *     date list (array of Date objects) or
+ *     parameters for date list
+ *   attendance.columns.date_list.start (Date)
+ *     first date, included
+ *   attendance.columns.date_list.end (Date)
+ *     last date, not included
+ *   attendance.columns.date_list.weekdays (array)
+ *     list of seven boolean
+ *     whether to include corresponding weekdays (starting with Monday)
+ *     default is to include every day
+ *   attendance.columns.date_lists (array)
+ *     list of date lists
+ *     each list is specified in the same way as above
+ *   attendance.columns.date_lists[*] (array or object)
+ *   attendance.columns.date_lists[*].start (Date)
+ *   attendance.columns.date_lists[*].end (Date)
+ *   attendance.columns.date_lists[*].weekdays (array)
+ *   attendance.columns.date_lists[*].title (string)
+ * }}} */
+
 function Initializer(sheet, name, options) {
   this.sheet = sheet;
   this.options = this.rectify_options(options);
@@ -241,94 +308,24 @@ function Initializer(sheet, name, options) {
   this.sheet.setConditionalFormatRules(this.cf_rules);
 }
 
-/* options: {{{
- *   rows (object)
- *     map of header row names to row numbers
- *     must include 'data_row' and all row names from row_info
- *   data_height (number)
- *     number of data rows, excluding the first (hidden) data row
- *     default is initial.data_height
- *   color_scheme (string)
- *     code, must match spreadsheet metadata
- *     default will use default color scheme
- *   rating (boolean)
- *     whether to create a total rating
- *     default is yes
- *   sum (boolean)
- *     whether to create a total sum
- *     default is yes
- *   categories (array)
- *     default is no categories
- *   {{{ categories
- *   categories[*].code
- *   categories[*].rating (false or object)
- *     whether to create a rating for this category
- *     default is yes
- *   categories[*].rating.integrate (boolean)
- *     whether to include this category in bases for the total rating
- *     effective if total rating is created at all
- *     default is yes
- *   categories[*].sum (false or object)
- *     whether to create a sum for this category
- *     default is yes
- *   categories[*].sum.integrate (boolean)
- *     whether to include this category in bases for the total sum
- *     effective if total sum is created at all
- *     default is yes
- *   }}}
- *   category_musthave (boolean)
- *     whether empty category (or category that was not listed) in worksheet
- *       will be highlighted as an error
- *     default is yes, unless no categories were specified
- *   attendance (object)
- *     parameters for creating attendance
- *     default is to not create attendance
- *   attendance.sum (boolean)
- *     whether to create attendance sum
- *     default is yes
- *   attendance.columns (number or object)
- *     number of columns in attendance
- *     default is initial.attendance.columns
- *   {{{ attendance.columns
- *   attendance.columns.date_list (array or object)
- *     date list (array of Date objects) or
- *     parameters for date list
- *   attendance.columns.date_list.start (Date)
- *     first date, included
- *   attendance.columns.date_list.end (Date)
- *     last date, not included
- *   attendance.columns.date_list.weekdays (array)
- *     list of seven boolean
- *     whether to include corresponding weekdays (starting with Monday)
- *     default is to include every day
- *   attendance.columns.date_lists (array)
- *     list of date lists
- *     each list is specified in the same way as above
- *   attendance.columns.date_lists[*] (array or object)
- *   attendance.columns.date_lists[*].start (Date)
- *   attendance.columns.date_lists[*].end (Date)
- *   attendance.columns.date_lists[*].weekdays (array)
- *   attendance.columns.date_lists[*].title (string)
- *   }}}
- * }}} */
-
 Initializer.prototype.rectify_options // [options -> options] {{{
 = function(options) {
   if (options == null)
     options = {};
-  if (options.rows == null)
-    options.rows = initial.rows
-  if (options.data_height == null)
-    options.data_height = initial.data_height
+  ({
+    rows: options.rows = initial.rows,
+    data_height: options.data_height = initial.data_height,
+  } = options);
   if (options.color_scheme != null)
     throw "XXX color_scheme is not functional yet";
-  if (options.rating == null)
-    options.rating = true;
-  if (options.sum == null)
-    options.sum = true;
-  if (options.categories == null)
-    options.categories = [];
-  options.categories.forEach(function(item, index) {
+  ({
+    rating: options.rating = true,
+    sum: options.sum = true,
+    categories: options.categories = [],
+    category_musthave: options.category_musthave =
+      (options.categories.length > 0)
+  } = options);
+  for (let item of options.categories) {
     if (item.code == null)
       throw new StudyGroupInitError(
         "rectify_options: category must have a code" );
@@ -340,9 +337,7 @@ Initializer.prototype.rectify_options // [options -> options] {{{
       item.sum = {};
     if (item.sum && item.sum.integrate == null)
       item.sum.integrate = true;
-  });
-  if (options.category_musthave == null)
-    options.category_musthave = (options.categories.length > 0);
+  }
   if (options.attendance == null)
     options.attendance = false;
   if (options.attendance) {
@@ -651,7 +646,7 @@ Initializer.prototype.add_attendance // [-> range] {{{
     }
     columns = date_list.length;
   } else if (columns_option.date_lists) {
-    date_lists = columns_option.date_lists.map(function(date_list) {
+    date_lists = columns_option.date_lists.map((date_list) => {
       if (date_list.start != null && date_list.end != null) {
         var title = date_list.title;
         date_list = this.generate_date_list(
@@ -661,7 +656,7 @@ Initializer.prototype.add_attendance // [-> range] {{{
         date_list.title = title;
       }
       return date_list;
-    }, this);
+    });
     columns = date_lists
       .reduce(function(sum, list) {
         return sum + list.length + 1;
@@ -1079,20 +1074,20 @@ Initializer.prototype.push_category_cf_rules // {{{
   var categories = Categories.get(this.sheet.getParent());
   var category_A1 = sheet.getRange(this.dim.category_row, ranges[0].getColumn())
     .getA1Notation().replace(/([A-Z]+)([0-9]+)/, "$1$$$2");
-  this.options.categories.forEach(function(category_option) {
-    var code = category_option.code;
-    var category = categories[code];
+  for (let category_option of this.options.categories) {
+    let code = category_option.code;
+    let category = categories[code];
     if (category == null || category.color == null)
-      return;
+      continue;
     if (code.indexOf('"') >= 0)
       throw new StudyGroupInitError(
-        "push_category_cf_rule: category code must not contain ‘\"’" );
+        "push_category_cf_rules: category code must not contain ‘\"’" );
     this.cf_rules.push( SpreadsheetApp.newConditionalFormatRule()
       .setRanges(ranges)
       .whenFormulaSatisfied('=exact("' + code + '"; ' + category_A1 + ')')
       .setBackground(HSL.to_hex(category.color))
       .build() );
-  }, this);
+  }
 } // }}}
 
 Initializer.prototype.push_rating_cf_rules // {{{
@@ -1117,9 +1112,8 @@ Initializer.prototype.push_rating_cf_rules // {{{
   ));
 } // }}}
 
-// }}}2
-
-StudyGroup.prototype.new_cf_rule_rating = function(ranges, colour_mid, colour_top) {
+StudyGroup.prototype.new_cf_rule_rating // {{{
+= function(ranges, colour_mid, colour_top) {
   var range = ranges[0];
   var max_A1 = range.offset(this.dim.max_row - range.getRow(), 0, 1, 1)
     .getA1Notation().replace(/([A-Z]+)([0-9]+)/, "$1$$$2");
@@ -1134,13 +1128,14 @@ StudyGroup.prototype.new_cf_rule_rating = function(ranges, colour_mid, colour_to
       SpreadsheetApp.InterpolationType.NUMBER,
       '= 9/10 * max(1/100; ' + max_A1 + ')' )
     .setRanges(ranges).build();
-}
+} // }}}
 
-StudyGroup.prototype.add_metadatum = function(options) {
-  /* options:
-   *   skip_remove (boolean)
-   *     make the call faster by not trying to remove old metadata
-   */
+StudyGroup.prototype.add_metadatum // {{{
+= function(options = {}) {
+  ({
+    skip_remove: options.skip_remove = false,
+      // make the call faster by not trying to remove old metadata
+  } = options);
   if (!options || !options.skip_remove) {
     var metadata = this.sheet.createDeveloperMetadataFinder()
       .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.SHEET)
@@ -1153,7 +1148,9 @@ StudyGroup.prototype.add_metadatum = function(options) {
   }
   this.sheet.addDeveloperMetadata( metadata_keys.main,
     SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT );
-}
+} // }}}
+
+// }}}2
 
 StudyGroup.prototype.check = function(options = {}) {
   ({
