@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_blank">
+</head>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
+</script>
+<link rel="stylesheet" href="//ssl.gstatic.com/docs/script/css/add-ons1.css">
+<script>
+  var group_name = <?!= JSON.stringify(group_name) ?>;
+  var names = <?!= JSON.stringify(names) ?>;
+  var sample_is_hidden = <?!= sample_is_hidden ? "true" : "false" ?>
+</script>
+<style>
+  .swapped_out {
+    display: none;
+  }
+  #select_index--container {
+    overflow: auto;
+    max-height: 325px;
+  }
+  #select_index--container > * {
+    box-sizing: border-box;
+    height: 30px;
+  }
+  #select_index--container > div {
+    display: flex;
+    align-items: center;
+    padding-left: 6px;
+    border: 1px solid #dcdcdc;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  #select_index--container > #select_index--selector {
+    display: flex;
+    align-items: center;
+    padding-left: 6px;
+    background: #4a88f4;
+    border: 1px solid #3079ed;
+  }
+  #select_index--container > #select_index--selector::after {
+    content: "+";
+  }
+  #select_index--container > input {
+    display: block;
+  }
+</style>
+<body>
+<div class="block form-group">
+  <label>
+  <span id="select_index--caption_index">
+    Выберите позицию для вставки строк.</span>
+  <span id="select_index--caption_data_height" class="swapped_out">
+    Укажите количество вставляемых строк.</span>
+  </label>
+  <div id="select_index--container">
+  </div>
+</div>
+<div class="block"
+ ><button id="add_rows_button" type="button" class="action" onclick="add_rows()"
+      disabled
+    >Добавить колонки</button
+ ><button type="button" class="abort" onclick="google.script.host.close()"
+    >Отмена</button
+></div>
+<script>
+$(function() {
+  var $select_index_container = $("#select_index--container");
+  for (var i = sample_is_hidden ? 1 : 0; i < names.length; ++i) {
+    $select_index_container.append(
+      $('<div/>')
+        .text(i.toString() + ". " + names[i])
+        .data("index", i)
+    );
+  }
+  var $selector = $('<div/>')
+    .attr("id", "select_index--selector")
+    .data("index", names.length)
+    .on("click", function() {
+      $selector.off("click");
+      select_index($selector.data("index"));
+    });
+  $select_index_container.children()
+    .mouseenter(function() {
+      var $this = $(this);
+      var index = $this.data("index");
+      if ($selector.data("index") > index) {
+        $this.before($selector);
+        $selector.data("index", index);
+      } else {
+        // XXX instead of tinkering with scrolling, just add
+        // a half-height spacer at the end of the list.
+        let bottom_distance = $select_index_container[0].scrollHeight -
+          $select_index_container.scrollTop() -
+          $select_index_container.innerHeight();
+        $this.after($selector);
+        $selector.data("index", index + 1);
+        if (bottom_distance < 10) {
+          $select_index_container.scrollTop(
+            $select_index_container[0].scrollHeight -
+            $select_index_container.innerHeight() - bottom_distance );
+        }
+      }
+    });
+  $select_index_container.append($selector);
+  add_rows.enabled = false;
+  // XXX enable key controls:
+  // up-down should move selector
+  // enter should call select_index()
+  // also, for that purpose, maybe make container focusable
+});
+
+function select_index(index) {
+  var $selector = $("#select_index--selector");
+  $selector.after(
+    $("<input/>")
+      .attr("id", "edit_data_height--input")
+      .attr("type", "number")
+      .attr("min", "1")
+      .data("index", $selector.data("index"))
+      .val(1)
+      .select()
+      .on("keyup.enter", function(event) {
+        if (event.keyCode == 13) {
+          add_rows();
+        }
+      })
+  );
+  add_rows.enabled = true;
+  $selector.remove();
+  $("#select_index--container").children().off("mouseenter");
+  $("#select_index--caption_index").addClass("swapped_out");
+  $("#select_index--caption_data_height").removeClass("swapped_out");
+  $("#add_rows_button").prop("disabled", false);
+  $("#edit_data_height--input").focus();
+}
+
+function add_rows() {
+  if (!add_rows.enabled)
+    return;
+  add_rows.enabled = false;
+  $("#add_rows_button").prop('disabled', true);
+  var $input = $("#edit_data_height--input");
+  var row_index = $input.data("index");
+  var data_height = parseInt($input.val(), 10);
+  google.script.run
+    .withSuccessHandler(function() {
+      google.script.host.close();
+    })
+    .withFailureHandler(function(error) {
+      display_error(error);
+    })
+    .action_add_rows_finish(
+      group_name,
+      row_index, data_height );
+    // maybe align variable names with backend
+}
+
+// Promise
+function display_error(error) {
+  return new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .display_error(error.toString());
+  });
+}
+
+</script>
+</body>

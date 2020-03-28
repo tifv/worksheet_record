@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_blank">
+</head>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
+</script>
+<link rel="stylesheet" href="//ssl.gstatic.com/docs/script/css/add-ons1.css">
+<script>
+  var group_name = <?!= JSON.stringify(group_name) ?>;
+  var worksheet_location = <?!= JSON.stringify(worksheet_location) ?>;
+</script>
+<body>
+<div class="block form-group">
+  <label for="edit_title--input">Название раздела</label>
+  <input type="text" id="edit_title--input" style="width: 100%"
+    value="Добавка" />
+</div>
+<div id="edit_date" class="block form-group">
+  <label for="edit_date--input">Дата или пара</label>
+  <input type="text" id="edit_date--input" style="width: 100%"/>
+</div>
+<div class="block" style="display: flex; flex-directon: row; align-items: start;"
+ ><div class="inline form-group" style="vertical-align: top; flex: 2;">
+    <label for="edit_data_width--input">кол-во задач</label>
+    <input type="number" id="edit_data_width--input" min="1" value="3" style="width: 120px">
+  </div
+ ><div class="inline form-group" style="vertical-align: top; flex: 2;">
+    <label for="edit_weight--input">+ к весу в рейтинге</label>
+    <input type="number" id="edit_weight--input" step="0.1" min="0.0" max="1.0" value="0.5" style="width: 60px"/>
+  </div
+></div>
+<div class="block"
+ ><button id="add_section_button" type="button" class="action" onclick="add_section()"
+    >Добавить раздел</button
+ ><button type="button" class="abort" onclick="google.script.host.close()"
+    >Отмена</button
+></div>
+<script>
+$(function() {
+  $("#edit_date--input").val(format_date(<?!= JSON.stringify(date) ?>));
+});
+function add_section() {
+  var data_width = parseInt($("#edit_data_width--input").val(), 10);
+  var title = $("#edit_title--input").val();
+  var weight = parseFloat($("#edit_weight--input").val());
+  var date_s = $("#edit_date--input").val();
+  var date = parse_date(date_s);
+  if (date == null && date_s != "") {
+    $("#edit_date")
+      .append(
+        $("<div/>")
+          .addClass("secondary error")
+          .text("YYYY-MM-DD pP или YYYY-MM-DD или ничего")
+      );
+    return;
+  } else {
+    $("#edit_date").children(".secondary.error").remove();
+  }
+  $("#add_section_button").prop('disabled', true);
+  google.script.run
+    .withSuccessHandler(function() {
+      google.script.host.close();
+    })
+    .withFailureHandler(function(error) {
+      display_error(error);
+    })
+    .action_add_section_finish(
+      group_name,
+      worksheet_location,
+      {
+        data_width: data_width,
+        title: title,
+        weight: weight,
+        date: date }
+    );
+}
+function format_date(date) {
+  var string =
+    date.year.toString().padStart(4, "0") + '-' +
+    date.month.toString().padStart(2, "0") + '-' +
+    date.day.toString().padStart(2, "0");
+  if (date.period != null) {
+    string += " ";
+    string += "p" + date.period;
+  }
+  return string;
+};
+
+function parse_date(string) {
+  var match = /^(\d{4,})-(\d{2,})-(\d{2,})(?: p(\d+))?$/.exec(string);
+  if (match == null)
+    return null;
+  var
+    year = parseInt(match[1], 10),
+    month = parseInt(match[2], 10),
+    day = parseInt(match[3], 10),
+    period = parseInt(match[4], 10);
+  return {year: year, month: month, day: day, period: period};
+}
+
+// Promise
+function display_error(error) {
+  return new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .display_error(error.toString());
+  });
+}
+
+</script>
+</body>

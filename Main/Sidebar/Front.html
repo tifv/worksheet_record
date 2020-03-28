@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_blank">
+</head>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
+</script>
+<link rel="stylesheet" href="//ssl.gstatic.com/docs/script/css/add-ons1.css">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<?!= category_css ?>
+<style> /* based on Google CSS Package for Add-ons */
+  body {    
+  }
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+    .sidebar--title {
+      margin-top: 0;
+      font-size: 18px;
+      margin-bottom: 0;
+    }
+  .block.block__flex {
+    display: flex;
+  }
+    .block__flex > :not(:first-child) {
+      margin-left: 12px;
+    }
+  button.material-icons {
+    min-width: 30px;
+    max-height: 29px;
+    padding: 0 2px;
+  }
+  .contents {
+    display: flex;
+    flex-direction: column;
+    overflow-y: hidden;
+    margin-left: -12px;
+  }
+    .contents > * {
+      margin-left: 12px;
+    }
+    .contents > .contents--control {
+      flex: 0;
+    }
+    .contents > .contents--categories {
+      flex: 0;
+      margin-left: 8px;
+    }
+    .contents > .contents--worksheets {
+      flex: 1;
+      overflow-y: auto;
+      margin-left: 0px;
+    }
+  .contents_control {
+    overflow-y: visible;
+  }
+    .contents_control.block__flex > .contents_control--select_group {
+      flex: 1;
+    }
+    .contents_control--select_group {
+    }
+  .select_group {
+    font-size: 18px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .select_group.select_group__active_loading {
+    font-weight: normal;
+    font-style: italic;
+  }
+  .select_group.select_group__active_error {
+    font-weight: normal;
+    font-style: italic;
+    color: hsl(0, 50%, 30%);
+  }
+    .select_group--option {
+      font-style: normal;
+      color: #333;
+    }
+    .select_group--option__active {
+      font-style: italic;
+    }
+  /*
+  .multibutton {
+    display: inline-flex;
+    flex-direction: column;
+    max-height: 29px;
+    overflow-y: visible;
+  }
+  .multibutton:hover {
+    z-index: 1;
+  }
+    .multibutton > * {
+      min-height: 29px;
+    }
+    .multibutton > .multibutton--surface {
+    }
+    .multibutton > .multibutton--hidden {
+      margin-left: 0;
+    }
+    .multibutton:not(:hover) > .multibutton--hidden {
+      display: none;
+    }
+  */
+  .loading_animation {
+    animation-duration: 0.7s;
+    animation-name: loading;
+    animation-timing-function: ease;
+    animation-iteration-count: infinite;
+  }
+    @keyframes loading {
+        0% { color:     black; }
+       50% { color: lightgray; }
+      100% { color:     black; }
+    }
+  .contents_item {
+    border-width: 1px;
+    border-style: solid;
+    border-radius: 2px;
+    box-shadow: none;
+    padding: 4px;
+    font-size: 14px;
+    cursor: default;
+    background-color: hsl(0, 0%, 90%);
+    border-color: hsl(0, 0%, 80%);
+  }
+    .contents_item > .contents_item--antibutton {
+      float: right;
+      margin-left: 5px;
+    }
+  .antibutton {
+    height: 18px;
+    cursor: pointer;
+    color: #777;
+  }
+  .antibutton:hover {
+    background: hsla(0, 0%, 0%, 10%);
+    color: inherit;
+  }
+  .antibutton::before {
+    display: inline-block;
+    vertical-align: middle;
+    font-family: 'Material Icons';
+    font-size: 18px;
+  }
+  .category.hidden, .worksheet.hidden {
+    display: none;
+  }
+  .categories {
+    margin-top: -4px;
+    margin-left: -4px;
+  }
+    .categories > * {
+      margin-top: 4px;
+      margin-left: 4px;
+      height: 30px;
+      box-sizing: border-box;
+      display: inline-block;
+    }
+  .category {
+    min-width: 30px;
+    text-align: center;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+    .category--hide_button.antibutton::before {
+      content: "close";
+    }
+  .worksheets {
+    margin-left: -12px;
+    padding-left: 12px;
+  }
+    .worksheets > :not(:first-child){
+      margin-top: 4px;
+    }
+  .worksheet {
+  }
+    .worksheet--section {
+      margin-left: 12px;
+    }
+    .worksheet--section:not(:first-child){
+      margin-top: 4px;
+    }
+    .worksheet--section.worksheet--section__subsection {
+      margin-left: 36px;
+    }
+  .worksheet_section {
+    position: relative;
+  }
+  .worksheet_section__subsection {
+  }
+    .worksheet_section > .worksheet_section--goto_button {
+      position: absolute;
+      left: -22px;
+      top: 0;
+    }
+    .worksheet_section.worksheet_section__subsection > .worksheet_section--goto_button {
+      left: -46px;
+    }
+    .worksheet_section--goto_button {
+      height: 28px;
+      width: 20px;
+      box-sizing: border-box;
+    }
+    .worksheet_section--goto_button.antibutton {
+      padding: 5px 0;
+    }
+    .worksheet_section--goto_button.antibutton::before {
+      content: "arrow_left";
+    }
+    .worksheet_section--goto_button:not(.worksheet_section--goto_button__busy).antibutton:not(:hover) {
+      color: #888;
+    }
+    .worksheet_section--goto_button__busy.antibutton {
+      background: hsla(0, 0%, 0%, 10%);
+      color: inherit;
+    }
+    .worksheet_section--details {
+    }
+    .worksheet_section--details__hidden {
+      display: none;
+    }
+    .worksheet_section--labels {
+      font-size: smaller;
+      color: #777;
+    }
+    .worksheet_section--upload_button {
+      text-decoration: underline dotted;
+      cursor: pointer;
+    }
+    .worksheet_section--upload_button__disabled {
+      text-decoration: inherit;
+      cursor: inherit;
+    }
+  .title {
+  }
+    .title--hide_button.antibutton::before {
+      content: "close";
+    }
+    .title--details_button.antibutton::before {
+      content: "more_vert";
+    }
+    .title--details_button.title--details_button__active.antibutton {
+      background: hsla(0, 0%, 0%, 10%);
+      color: inherit;
+    }
+    .title--details_button.title--details_button__active.antibutton:hover {
+      background: hsla(0, 0%, 0%, 20%);
+    }
+    .title--name {
+      font-weight: bold;
+    }
+    a.title--name:not([href]) {
+      color: inherit;
+      text-decoration: inherit;
+      cursor: inherit;
+    }
+    a.title--name[href] {
+      color: #194cb3;
+      text-decoration: underline;
+    }
+    .title__upload {
+      margin-bottom: 12px;
+    }
+</style>
+<body>
+<div class="sidebar sidebar__contents">
+  <div class="block">
+  <!--<span>Оглавление</span> | <span>Меню</span>-->
+  <h3 class="sidebar--title">Оглавление</h3>
+  </div>
+  <div class="block sidebar--contents contents">
+    <div class="block block__flex contents--control contents_control"
+     ><select id="contents--select_group" class="contents--select_group contents_control--select_group select_group">
+        <option class="select_group--option select_group--option__control select_group--option__active"
+          >текущая группа</option>
+        <option class="select_group--option select_group--option__control select_group--option__active_loading" 
+          selected hidden>загрузка…</option>
+        <option class="select_group--option select_group--option__control select_group--option__active_error"
+          hidden>ошибка</option>
+      </select
+     ><button id="contents--button_reload" class="button material-icons"
+          title="перезагрузить оглавление" onclick="ContentsLoader.reset(); ContentsUploads.reset(); GroupSelector.reload();"
+       >refresh</button
+     ><button id="contents--button_restore" class="button material-icons"
+          title="вернуть скрытые листочки" onclick="ContentsDisplay.restore_hidden();" disabled
+       >undo</button
+     ><button id="contents--button_collapse" class="button material-icons"
+          title="свернуть в таблице листочки,<?!= "\n" ?>скрытые в оглавлении"
+          onclick="ContentsDisplay.collapse_expand();"
+       ><span style="display: inline-block; transform: rotate(0.25turn); max-width: 30px; overflow-x: hidden;"
+         >unfold_less</span
+     ></button
+   ></div>
+    <div id="contents--categories" class="contents--categories categories block">
+    </div>
+    <div id="contents--worksheets" class="contents--worksheets worksheets block">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+<script>
+
+
+////////////////////
+
+const categories = <?!= JSON.stringify(categories) ?>;
+const upload_enabled = <? if (upload_enabled) { ?>true<? } else { ?>false<? } ?>;
+
+var ContentsLoader = function() { // begin namespace
+
+const groups = new Map();
+
+function get_group(group_name) {
+  var group_contents = groups.get(group_name);
+  if (group_contents == null)
+    groups.set(group_name, group_contents = new GroupContents(group_name));
+  return group_contents;
+}
+
+function uncall() {
+  for (let group_contents of groups.values()) {
+    group_contents.uncall();
+  }
+}
+
+function reset() {
+  for (let group_contents of groups.values()) {
+    group_contents.halt();
+  }
+  groups.clear();
+}
+
+function GroupContents(group_name) {
+  this.group_name = group_name;
+  this.contents = new Map();
+  this.halted = false;
+  this.callbacks = {
+    group_name: [],
+    load:   [],
+    unload: [],
+    finish: [],
+    error:  [],
+  };
+  this.loading_promise = this.load_contents();
+  this.loading_promise.then(() => {
+    for (let callback of this.callbacks.finish) {
+      try {
+        callback();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    this.callbacks.finish.called = true;
+  }, (loading_error) => {
+    for (let callback of this.callbacks.error) {
+      try {
+        callback();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    this.callbacks.error.called = true;
+    throw loading_error;
+  });
+}
+
+GroupContents.prototype.call_on_group_name = function(callback) {
+  if (this.halted)
+    return;
+  if (this.group_name != null)
+    callback(this.group_name);
+  this.callbacks.group_name.push(callback);
+  return this;
+}
+
+GroupContents.prototype.call_on_load = function(callback) {
+  if (this.halted)
+    return;
+  for (let item of this.contents.values()) {
+    callback(item);
+  }
+  this.callbacks.load.push(callback);
+  return this;
+}
+
+GroupContents.prototype.call_on_unload = function(callback) {
+  if (this.halted)
+    return;
+  this.callbacks.unload.push(callback);
+  return this;
+}
+
+GroupContents.prototype.call_on_finish = function(callback) {
+  if (this.halted)
+    return;
+  if (this.callbacks.finish.called)
+    callback();
+  this.callbacks.finish.push(callback);
+  return this;
+}
+
+GroupContents.prototype.call_on_error = function(callback) {
+  if (this.halted)
+    return;
+  if (this.callbacks.error.called)
+    callback();
+  this.callbacks.error.push(callback);
+  return this;
+}
+
+GroupContents.prototype.uncall = function() {
+  for (let call_type in this.callbacks)
+    this.callbacks[call_type].length = 0;
+}
+
+GroupContents.prototype.halt = function() {
+  this.halted = true;
+  this.uncall();
+}
+
+GroupContents.prototype.delegate = function(other) {
+  for (let call_type in this.callbacks) {
+    for (let callback of this.callbacks[call_type]) {
+      try {
+        other["call_on_" + call_type](callback);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }
+  this.halt();
+}
+
+GroupContents.prototype.load_contents = async function() {
+  var unvalidated_contents = new Map();
+  for await (let item of this.iter_load_contents()) {
+    if (this.halted)
+      return;
+    let id = item.id;
+    if (unvalidated_contents.has(id)) {
+      let other_item = unvalidated_contents.get(id);
+      if (other_item != null) {
+        this.validate_item(other_item);
+        unvalidated_contents.set(id, null);
+      }
+      this.validate_item(item);
+      continue;
+    }
+    this._add_contents_item(item);
+  }
+}
+
+GroupContents.prototype._add_contents_item = function(item) {
+  let id = item.id;
+  if (typeof id != "number")
+    throw new Error("internal error");
+  if (!this.contents.has(id) || item.validated) {
+    Object.defineProperty(item, "validate", {
+      enumerable: false,
+      value: async () => await this.validate_item(item),
+    });
+    this.contents.set(id, item);
+    for (let callback of this.callbacks.load) {
+      try {
+        callback(item);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }
+}
+
+GroupContents.prototype.iter_load_contents = async function*() {
+  var continuation = null;
+  load_chunk: while (true) {
+    if (this.halted)
+      return;
+    var response = await new Promise((resolve, reject) =>
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(function(error) {
+          display_error(error.toString());
+          reject(error);
+        })
+        .sidebar_load_contents(this.group_name, {
+          continuation: continuation,
+          cached: this.group_name != null ? [] :
+            Array.from(groups.keys()).filter(a => (a != null))
+        })
+    );
+    if (response == null) {
+      if (this.group_name == null) {
+        for (let callback of this.callbacks.group_name) {
+          try {
+            callback(null);
+          } catch (error) {
+            console.error(error);
+          }
+        }
+        if (groups.get(null) === this) {
+          groups.delete(null);
+        }
+        throw new Error("active sheet does not represent a group")
+      } else {
+        throw new Error("internal error");
+      } 
+    }
+    for (let contents_item of response) {
+      if (contents_item.id != null) {
+        yield contents_item;
+        continue;
+      }
+      if (contents_item.group_name != null) {
+        if (this.group_name != null)
+          throw new Error("internal error");
+        this.group_name = contents_item.group_name;
+        if (groups.get(null) === this) {
+          groups.delete(null);
+        }
+        if (groups.has(this.group_name)) {
+          this.delegate(groups.get(this.group_name));
+          return;
+        } else {
+          groups.set(this.group_name, this);
+        }
+        for (let callback of this.callbacks.group_name) {
+          try {
+            callback(contents_item.group_name);
+          } catch (error) {
+            console.error(error);
+          }
+        }
+      } else if (contents_item.continuation != null) {
+        continuation = contents_item.continuation;
+        continue load_chunk;
+      } else {
+        throw new Error("internal error");
+      }
+    }
+    break;
+  }
+}
+
+GroupContents.prototype.validate_item = async function(item) {
+  if (this.halted)
+    return;
+  if (item.validated || item.is_being_validated)
+    return;
+  Object.defineProperty( item, "is_being_validated",
+    {enumerable: false, value: true} );
+  let id = item.id;
+  var response = await new Promise((resolve, reject) =>
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(function(error) {
+        display_error(error.toString());
+        reject(error);
+      })
+      .sidebar_load_contents_validate(item)
+  );
+  for (let contents_item of response) {
+    this._add_contents_item(contents_item);
+  }
+  if (this.contents.get(id) === item) {
+    for (let callback of this.callbacks.unload) {
+      try {
+        callback(item);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    this.contents.delete(id);
+  }
+}
+
+return {
+  get_group: get_group,
+  uncall: uncall,
+  reset: reset,
+};
+}(); // end Contents namespace
+
+
+////////////////////
+
+
+var GroupSelector = function() { // begin namespace
+
+// Two possible states of full group list:
+// • full group list is loaded
+// • full group list is not loaded
+
+// Three possible states of active group name:
+// • non-“active” group selected
+// • “active” option selected and is loading
+// • “active” option selected and loading failed (because active sheet is not a group)
+
+var group_names = new Set();
+var selected_group_name = null;
+var select_callback = function() {};
+
+function call_on_select(callback) {
+  // callback(group_name, set_active_group) where
+  //   set_active_group(group_name) is callback lvl 2
+  if (callback == null) {
+    select_callback = null;
+    return;
+  }
+  select_callback = callback;    
+  if (selected_group_name == null) {
+    select_callback(null, get_active_name_setter());
+  } else {
+    select_callback(selected_group_name);
+  }
+}
+
+const active_val = "active";
+const active_loading_val = "active_loading";
+const active_error_val = "active_error";
+
+function group_name_to_val(group_name) {
+  return "group:" + group_name;
+}
+
+function val_to_group_name(val) {
+  if (val == active_val)
+    return null;
+  if (!val.startsWith("group:")) {
+    throw new Error("internal error");
+  }
+  return val.substring(6);
+}
+
+var active_group_name_token = null;
+
+function get_active_name_setter() {
+  var token = active_group_name_token = {};
+  return function set_active_name(active_group_name) {
+    if (token !== active_group_name_token)
+      return; // we were superseded by another call
+    active_group_name_token = null;
+    if (selected_group_name != null)
+      return;
+    selected_group_name = active_group_name;
+    var $select_group = $("#contents--select_group");
+    if (active_group_name == null) {
+      $select_group
+        .val(active_error_val)
+        .removeClass("select_group__active_loading")
+        .addClass("select_group__active_error");
+    } else {
+      if (!group_names.has(active_group_name)) {
+        group_names.add(active_group_name);
+        $select_group.append(new_$option(active_group_name));
+      }
+      $select_group
+        .val(group_name_to_val(active_group_name))
+        .removeClass("select_group__active_loading select_group__active_error");
+    }
+  }
+}
+
+function new_$option(group_name) {
+  return $("<option/>")
+    .text(group_name)
+    .addClass("select_group--option")
+    .val(group_name_to_val(group_name));
+}
+
+async function reload() {
+  var group_names_promise = new Promise((resolve, reject) =>
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(function(error) {
+        display_error(error);
+        reject(error);
+      })
+      .sidebar_load_group_list()
+  );
+  var $select_group = $("#contents--select_group");
+  $select_group
+    .val(active_loading_val)
+    .removeClass("select_group__active_error")
+    .addClass("select_group__active_loading");
+  selected_group_name = null;
+  $select_group
+    .children(".select_group--option:not(.select_group--option__control)")
+      .remove();
+  var loading_group_names = group_names = new Set();
+  select_callback(null, get_active_name_setter());
+
+  var group_name_list = await group_names_promise;
+  if (group_names !== loading_group_names) {
+    return; // we were superseded by another call
+  }
+  for (let group_name of group_name_list) {
+    if (group_names.has(group_name)) {
+      // probably was loaded as active name
+      continue;
+    }
+    group_names.add(group_name);
+    $select_group.append(new_$option(group_name));
+  }
+}
+
+$(function() {
+  var $select_group = $("#contents--select_group");
+  $select_group.children(".select_group--option__active").first()
+    .val(active_val);
+  $select_group.children(".select_group--option__active_loading").first()
+    .val(active_loading_val);
+  $select_group.children(".select_group--option__active_error").first()
+    .val(active_error_val);
+  $select_group.on("change", function() {
+    var group_name = val_to_group_name($select_group.val());
+    if (group_name == null) {
+      $select_group
+        .val(active_loading_val)
+        .removeClass("select_group__active_error")
+        .addClass("select_group__active_loading");
+      selected_group_name = null;
+      select_callback(null, get_active_name_setter());
+    } else {
+      $select_group.removeClass("select_group__active_loading select_group__active_error");
+      selected_group_name = group_name;
+      select_callback(group_name);
+    }
+  });
+  reload();
+});
+
+return {
+  call_on_select: call_on_select,
+  reload: reload,
+};
+}(); // end GroupSelector namespace
+
+
+////////////////////
+
+
+var ContentsDisplay = function() { // begin namespace
+
+function CategoryDisplay(category) {
+  this.category = category;
+  this.$element = $("<div/>")
+    .addClass("category contents_item")
+    .addClass("category-" + (category || ""))
+    .attr('data-category', (category || ""))
+    .text(category || "\u2205"); // U+2205 EMPTY SET
+  if (category != null) {
+    this.$element.addClass("coloured");
+  }
+  this.$element.append( this.$hide_button = $("<span>")
+    .addClass("antibutton antibutton__hide contents_item--antibutton category--hide_button")
+    .attr("title", "скрыть категорию")
+    .click(() => {
+      this.$element.addClass("hidden");
+      $("#contents--worksheets > [data-category=\"" + (category || "") + "\"]")
+        .addClass("hidden");
+      $("#contents--button_restore").prop("disabled", false);
+    })
+  );
+}
+
+function WorksheetDisplay(contents_item) {
+  this.category = contents_item.category;
+  this.column = contents_item.worksheet_location.column;
+  this.$element = $("<div/>")
+    .addClass("worksheets--worksheet worksheet")
+    .attr("data-category", this.category || "");
+  this.sections = new Map();
+  if (contents_item.is_subsection) {
+    this.add_fake_section();
+  }
+  this.add_section(contents_item);
+}
+
+WorksheetDisplay.prototype.add_section = function(contents_item) {
+  if (this.sections.has(contents_item.id)) {
+    this.sections.get(contents_item.id).update(contents_item);
+  } else {
+    let section = new WorksheetSectionDisplay(contents_item);
+    if (!contents_item.is_subsection) {
+      if (this.sections.has(null))
+        this.remove_fake_section();
+      section.add_hide_button(() => this.hide());
+    }
+    let prev_section = null, prev_offset = -2;
+    for (let other of this.sections.values()) {
+      if (other.offset <= section.offset && other.offset >= prev_offset) {
+        prev_section = other;
+        prev_offset = prev_section.offset;
+      }
+    }
+    if (prev_section == null) {
+      this.$element.prepend(section.$element);
+    } else {
+      prev_section.$element.after(section.$element);
+    }
+    this.sections.set(contents_item.id, section);
+  }
+}
+
+WorksheetDisplay.prototype.remove_section = function(contents_item) {
+  let section = this.sections.get(contents_item.id);
+  if (section == null)
+    return;
+  section.$element.remove();
+}
+
+WorksheetDisplay.prototype.add_fake_section = function() {
+  let fake_section = new WorksheetSectionFake(this.category);
+  this.$element.prepend(fake_section.$element);
+  this.sections.set(null, fake_section);
+  fake_section.add_hide_button(() => this.hide());
+}
+
+WorksheetDisplay.prototype.remove_fake_section = function() {
+  let fake_section = this.sections.get(null);
+  if (fake_section == null)
+    throw new Error("internal error");
+  fake_section.$element.remove();
+  this.sections.delete(null);
+}
+
+WorksheetDisplay.prototype.hide = function() {
+  this.$element.addClass("hidden");
+  $("#contents--button_restore").prop("disabled", false);
+}
+
+function WorksheetSectionDisplay(contents_item) {
+  this.$element = $("<div/>")
+    .addClass("worksheet--section worksheet_section");
+  if (contents_item.is_subsection)
+    this.$element
+      .addClass("worksheet--section__subsection worksheet_section__subsection");
+  this.$element.append(this.$title = $("<div/>")
+    .addClass("worksheet_section--title title contents_item")
+  );
+  this.$title.append(this.$name = $("<a/>")
+    .addClass("title--name")
+  );
+  this.$hide_button = null;
+  this.$element.prepend(this.$goto_button = $("<span/>")
+    .addClass("antibutton worksheet_section--goto_button")
+    .attr("title", "перейти к листочку")
+    .click(() => this.goto())
+  );
+  this.$title.prepend(this.$details_button = $("<span/>")
+    .addClass("antibutton contents_item--antibutton title--details_button")
+    .attr("title", "функции")
+    .click(() => this.show_details())
+  );
+  this.$title.after(this.$details = $("<div/>")
+    .addClass("worksheet_section--details worksheet_section--details__hidden")
+    .append(this.$source = $("<div/>")
+      .addClass("worksheet_section--source")
+    )
+    .append(this.$labels = $("<div/>")
+      .addClass("worksheet_section--labels")
+    )
+  );
+  this.$upload_button = null;
+  this.update(contents_item);
+}
+
+WorksheetSectionDisplay.prototype.update = function(contents_item) {
+  this.offset = contents_item.section_location.offset;
+  let category = contents_item.category;
+  this.$element
+    .attr("data-category", contents_item.category || "");
+  this.$title
+    .addClass("category-" + (category || ""))
+    .attr('data-category', (category || ""));
+  if (category != null) {
+    this.$title.addClass("coloured");
+  } else {
+    this.$title.removeClass("coloured");
+  }
+  this.$name
+    .text(contents_item.title);
+  if (contents_item.title_link != null) {
+    this.set_title_href(contents_item.title_link);
+  } else {
+    this.$name.removeAttr("href");
+    this.$source.empty();
+  }
+  if (this.$upload_button != null) {
+    this.$upload_button.remove();
+    this.$upload_button = null;
+  }
+  if (upload_enabled) {
+    if (contents_item.validated) {
+      this.$upload_button = $("<div/>")
+        .addClass("worksheet_section--upload_button")
+        .on('click', () => this.run_upload_dialog())
+        .appendTo(this.$details);
+      if (contents_item.title_link != null) {
+        this.$upload_button.text("заменить PDF");
+      } else {
+        this.$upload_button.text("загрузить PDF");
+      }
+    } else {
+      this.$upload_button = $("<div/>")
+        .addClass("loading_message loading_animation")
+        .text("проверка данных…")
+        .appendTo(this.$details);
+    }
+  }
+  this.$labels.text(contents_item.labels.join(" "));
+  this.contents = contents_item;
+  this.$element.data("contents", contents_item);
+}
+
+WorksheetSectionDisplay.prototype.set_title_href = async function(title_link) {
+  var {filter, url} = title_link;
+  if (upload_enabled && filter != null) {
+    this.$name.removeAttr("href");
+    this.$source.empty();
+    let $loading_message = $("<div/>")
+        .addClass("loading_message loading_animation")
+        .text("получение ссылок…")
+        .appendTo(this.$source);
+    let urls;
+    try {
+      urls = await ContentsUploads.get_urls(filter);
+      $loading_message.remove();
+    } catch (error) {
+      $loading_message
+        .removeClass("loading_animation")
+        .addClass("error")
+        .text("ошибка при получении ссылок")
+      throw error;
+    }
+    if (urls == null)
+      return;
+    let [pdf_url, src_url] = urls;
+    this.$name.attr("href", pdf_url);
+    if (src_url) {
+      this.$source.append($("<a/>")
+        .addClass("worksheet_section--source_link")
+        .text("source")
+        .attr("href", src_url)
+      );
+    }
+  } else if (url != null) {
+    this.$name.attr("href", url);
+  } else {
+    throw new Error("internal error");
+  }
+}
+
+WorksheetSectionDisplay.prototype.add_hide_button = function(hide_callback) {
+  if (this.$hide_button != null)
+    return;
+  this.$title.prepend( this.$hide_button = $("<span/>")
+    .addClass("antibutton antibutton__hide contents_item--antibutton title--hide_button")
+    .attr("title", "скрыть листочек")
+    .click(hide_callback)
+  );
+}
+
+WorksheetSectionDisplay.prototype.remove_hide_button = function() {
+  if (this.$hide_button == null)
+    return;
+  this.$hide_button.remove();
+}
+
+WorksheetSectionDisplay.prototype.goto = async function() {
+  this.$goto_button.addClass("worksheet_section--goto_button__busy");
+  try {
+    await new Promise((resolve, reject) =>
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(function(error) {
+          display_error(error);
+          reject(error);
+        })
+        .sidebar_goto(this.contents.group_name, this.contents.column)
+    );
+  } finally {
+    this.$goto_button.removeClass("worksheet_section--goto_button__busy");
+  }
+}
+
+WorksheetSectionDisplay.prototype.show_details = function() {
+  this.$details
+    .toggleClass("worksheet_section--details__hidden");
+  this.$details_button
+    .toggleClass("title--details_button__active");
+  if (!this.contents.validated)
+    this.contents.validate();
+  // XXX also validate next item in the same category
+}
+
+WorksheetSectionDisplay.prototype.run_upload_dialog = async function() {
+  var category = this.contents.category;
+  var category_info = categories[category || "mixture"] || {};
+  var category_name = category_info.name ||
+    (category != null ? "категория " + category : "mixture");
+  var filename_base_nogroup; {
+    let filename_pieces = [];
+    filename_pieces.push( category_info.filename ||
+      (category == null ? "mixture" : "whatever") );
+    if (this.contents.date_filename != null) {
+      filename_pieces.push(this.contents.date_filename);
+    }
+    filename_base_nogroup = filename_pieces.join('-');
+  }
+  var upload_started = null;
+  try {
+    upload_started = await SidebarUpload.upload( this.$title,
+      {
+        group_name: this.contents.group_name,
+        category: category,
+        category_name: category_name,
+        title_id: this.contents.id,
+        title: this.contents.full_title,
+        date: this.contents.date,
+        date_s: this.contents.date_s,
+        filename_base_nogroup: filename_base_nogroup,
+      }
+    );
+  } finally {
+    if (upload_started || upload_started == null) {
+      this.contents.validated = false;
+      this.contents.title_link = null;
+      this.update(this.contents);
+      this.contents.validate();
+    }
+  }
+}
+
+function WorksheetSectionFake(category) {
+  this.offset = -1;
+  this.$element = $("<div/>")
+    .addClass("worksheet--section worksheet--section__fake worksheet_section")
+    .attr("data-category", category || "");
+  this.$element.append(this.$title = $("<div/>")
+    .addClass("worksheet_section--title title contents_item")
+    .addClass("category-" + (category || ""))
+    .attr('data-category', (category || ""))
+  );
+  if (category != null) {
+    this.$title.addClass("coloured");
+  } else {
+    this.$title.removeClass("coloured");
+  }
+  this.$title.append(this.$name = $("<span/>")
+    .addClass("title--name")
+    .text("???")
+  );
+  this.$hide_button = null;
+}
+
+WorksheetSectionFake.prototype.add_hide_button =
+  WorksheetSectionDisplay.prototype.add_hide_button;
+
+function display(group_name, set_active_group) {
+  var $contents_worksheets = $("#contents--worksheets");
+  if ($contents_worksheets.length < 1)
+    throw new Error("internal error");
+  $contents_worksheets.empty();
+  var $contents_categories = $("#contents--categories");
+  if ($contents_categories.length < 1)
+    throw new Error("internal error");
+  $contents_categories.empty();
+  restore_hidden();
+  ContentsLoader.uncall();
+
+  var $loading_status = $("<div/>")
+    .addClass("loading_message loading_animation")
+    .text("загрузка…")
+    .appendTo($contents_worksheets);
+  var displayed_categories = new Map();
+  var displayed_worksheets = new Map();
+  ContentsLoader.get_group(group_name)
+  .call_on_group_name(function(loaded_group_name) {
+    if (group_name == null) {
+      group_name = loaded_group_name;
+      set_active_group(loaded_group_name);
+    }
+  })
+  .call_on_load(function add_category(contents_item) {
+    var category = contents_item.category;
+    var category_d = displayed_categories.get(category);
+    if (category_d == null) {
+      category_d = new CategoryDisplay(category);
+      let prev_category_d = null, prev_category = null;
+      for (let other_d of displayed_categories.values()) {
+        if ( other_d.category <= category &&
+          ((prev_category == null) || (other_d.category >= prev_category))
+        ) {
+          prev_category_d = other_d;
+          prev_category = prev_category_d.category;
+        }
+      }
+      if (prev_category_d == null) {
+        $contents_categories.prepend(category_d.$element);
+      } else {
+        prev_category_d.$element.after(category_d.$element);
+      }
+      displayed_categories.set(category, category_d);
+    }
+  })
+  .call_on_load(function add_contents(contents_item) {
+    var worksheet_id = contents_item.worksheet_location.title_id;
+    var worksheet = displayed_worksheets.get(worksheet_id);
+    if (worksheet == null) {
+      worksheet = new WorksheetDisplay(contents_item);
+      let column = worksheet.column;
+      let prev_worksheet = null, prev_column = -1;
+      for (let other of displayed_worksheets.values()) {
+        if (other.column <= column && other.column >= prev_column) {
+          prev_worksheet = other;
+          prev_column = prev_worksheet.column;
+        }
+      }
+      if (prev_worksheet == null) {
+        $contents_worksheets.prepend(worksheet.$element);
+      } else {
+        prev_worksheet.$element.after(worksheet.$element);
+      }
+      displayed_worksheets.set(worksheet_id, worksheet);
+    } else {
+      worksheet.add_section(contents_item);
+    }
+  })
+  .call_on_unload(function(contents_item) {
+    var worksheet_id = contents_item.worksheet_location.title_id;
+    var worksheet = displayed_worksheets.get(worksheet_id);
+    if (worksheet == null)
+      return;
+    worksheet.remove_section(contents_item);
+    if (worksheet.sections.size == 0) {
+      worksheet.$element.remove();
+      displayed_worksheets.delete(worksheet_id);
+    }
+  })
+  .call_on_finish(function(contents_item) {
+    $loading_status.remove();
+  })
+  .call_on_error(function(contents_item) {
+    $loading_status
+      .removeClass("loading_animation")
+      .addClass("error")
+      .text("ошибка при загрузке оглавления");
+  });
+}
+
+function restore_hidden() {
+  $("#contents--worksheets, #contents--categories")
+    .find(".hidden")
+    .removeClass("hidden");
+  $("#contents--button_restore").prop("disabled", true);
+}
+
+function collapse_expand() {
+  var $collapse_button = $("#contents--button_collapse");
+  var group_name = null;
+  var column_actions = [];
+  $("#contents--worksheets")
+    .children(".worksheet").each(function() {
+      var $this = $(this);
+      var $section = $this.children(".worksheet--section:not(.worksheet--section__subsection)");
+      if ($section.length < 1)
+        return;
+      let contents_item = $section.data("contents");
+      if (contents_item == null)
+        return;
+      if (group_name == null) {
+        group_name = contents_item.group_name;
+      } else if (group_name != contents_item.group_name) {
+        throw Error("internal error");
+      }
+      if ($this.hasClass("hidden")) {
+          column_actions.push({column: contents_item.column, action: "collapse"});
+      } else {
+          column_actions.push({column: contents_item.column, action: "expand"});
+      }
+    });
+  if (group_name == null) {
+    return;
+  }
+  $collapse_button.prop('disabled', true);
+  new Promise((resolve, reject) =>
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(function(error) {
+        display_error(error);
+        reject(error);
+      })
+      .sidebar_collapse_expand(group_name, column_actions)
+  ).finally(() =>  { $collapse_button.prop('disabled', false); });
+}
+
+return {
+  display: display,
+  restore_hidden: restore_hidden,
+  collapse_expand: collapse_expand,
+};
+}(); // end ContentsDisplay namespace
+
+$(function() {
+  GroupSelector.call_on_select(ContentsDisplay.display);
+});
+
+
+////////////////////
+
+
+var ContentsUploads = function() { // begin namespace
+
+var
+  data,
+  data_promise,
+  data_by_initial_pdf,
+  failed_searches;
+
+function reset() {
+  data = null;
+  data_promise = null;
+  data_by_initial_pdf = null;
+  failed_searches = null;
+}
+reset();
+
+var active_search_count = 0;
+
+async function get_urls(initial_pdf) {
+  if (typeof initial_pdf != "string")
+    throw new Error("internal error");
+  if (data == null)
+    await load_uploads();
+  var datum = data_by_initial_pdf.get(initial_pdf);
+  if (datum == null) {
+    if (failed_searches.has(initial_pdf))
+      return null;
+    if (active_search_count >= 2) {
+      // too many simultaneouos searches, probably error of some sort
+      return null;
+    }
+    ++active_search_count;
+    try {
+      var search_result = await fetch_uploads_search(initial_pdf);
+    } finally {
+      -- active_search_count;
+    }
+    var missing_data = new Array();
+    for (let {index, entries} of search_result) {
+      missing_data.push(add_datum(index, entries));
+    }
+    if (missing_data.length < 1) {
+      failed_searches.add(initial_pdf);
+      return null;
+    } else if (missing_data.length > 1) {
+      console.error(initial_pdf);
+      console.error(JSON.stringify(missing_data.map(
+        datum => ({entries: Array.from(datum.entries()), index: datum.index})
+      )));
+      throw new Error("internal error");
+    }
+    [datum] = missing_data;
+  }
+  return [datum.get("pdf"), datum.get("src")];
+}
+
+async function load_uploads() {
+  var our_promise;
+  if (data_promise == null) {
+    our_promise = data_promise = load_uploads_promise();
+  } else {
+    our_promise = data_promise;
+  }
+  try {
+    await our_promise;
+    return;
+  } catch (error) {
+    if (our_promise === data_promise) {
+      data = data_promise = null;
+    }
+    throw error;
+  }
+}
+
+// XXX we really should review all async load logic of the sidebar
+
+var load_uploads_promise_token = null;
+
+async function load_uploads_promise() {
+  var token = load_uploads_promise_token = {};
+  let uploads = await fetch_uploads();
+  if (token !== load_uploads_promise_token)
+    return; // we were superseded by another call
+  data = new Array();
+  data_by_initial_pdf = new Map();
+  failed_searches = new Set();
+  for (let {index, entries} of uploads) {
+    add_datum(index, entries);
+  }
+}
+
+// Promise
+function fetch_uploads() {
+  return new Promise((resolve, reject) =>
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(function(error) {
+        display_error(error);
+        reject(error);
+      })
+      .sidebar_load_uploads()
+  );
+}
+
+function fetch_uploads_search(initial_pdf) {
+  return new Promise((resolve, reject) =>
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(function(error) {
+        display_error(error);
+        reject(error);
+      })
+      .sidebar_load_uploads_search(initial_pdf)
+  );
+}
+
+function add_datum(index, entries) {
+  if (index == null || entries == null)
+    throw Error("internal error");
+  var datum = new Map(entries);
+  datum.index = index;
+  if (data[index] != null)
+    remove_datum(index, data[index]);
+  data[index] = datum;
+  {
+    let initial_pdf = datum.get("initial_pdf");
+    if (initial_pdf == null)
+      throw Error("internal error");
+    if (initial_pdf != "")
+      data_by_initial_pdf.set(initial_pdf, datum);
+  }
+  return datum;
+}
+
+function remove_datum(index, datum) {
+  delete data[index];
+  {
+    let initial_pdf = datum.get("initial_pdf");
+    if (initial_pdf != "")
+      data_by_initial_pdf.delete(initial_pdf);
+  }
+}
+
+return {get_urls: get_urls, reset: reset};
+}(); // end ContentsUploads namespace
+
+
+////////////////////
+
+
+var SidebarUpload = function() { // begin namespace
+
+var upload_dialog_html = null;
+var upload_author = null;
+var upload_dialog_promise = null;
+
+async function upload($title, upload_info) {
+  var $sidebar = $(".sidebar");
+  var $dialog_container = $("<div/>")
+    .addClass("sidebar sidebar__upload_dialog")
+    .css({
+      'position': "absolute",
+      'left': "0", 'top': "0", 'width': "100%", 'height': "100%"
+    });
+  try {
+    if (upload_dialog_html == null)
+      var load_upload_dialog_promise = load_upload_dialog();
+    // refactor filename promise so that dialog will certainly receive a resolved value
+    // promise will have time to be executed wwhile animations move
+    upload_info.filename_base = get_group_filename(upload_info.group_name)
+      .then( group_filename =>
+        group_filename + "-" + upload_info.filename_base_nogroup );
+    var $dialog_title = $title.clone()
+      .addClass("title__upload")
+    $dialog_title.find(".antibutton").remove();
+    $dialog_title.find("a").removeAttr("href");
+    $("body").append($dialog_container);
+    $dialog_container.append($dialog_title);
+    $sidebar.css({'z-index': -1});
+    $title.css({'visibility': "hidden"});
+    var sidebar_fade_out_promise = Animator.fade_out($sidebar, 400);
+    await Animator.move_from($dialog_title, $title, {y: 400, x: 200});
+    await sidebar_fade_out_promise;
+    var $loading_status = $("<div/>")
+      .addClass("loading_message loading_animation")
+      .text("загрузка…")
+      .appendTo($dialog_container);
+
+    await load_upload_dialog_promise;
+    $loading_status.remove();
+    upload_info.author = upload_author;
+    var $dialog = $(upload_dialog_html);
+    $dialog_container.append($dialog);
+    var dialog = new UploadDialog($dialog, upload_info);
+    var upload_complete_promise = new Promise( (resolve, reject) =>
+      dialog.on_click_close(() => {
+        upload_author = dialog.find_an_$element(".upload_dialog--author_input").val();
+        resolve();
+      }) );
+    var dialog_fade_in_promise = Animator.fade_in($dialog, 400);
+    await dialog_fade_in_promise;
+
+    await upload_complete_promise;
+    await Animator.fade_out($dialog, 400);
+    Animator.fade_in($sidebar, 400)
+      .finally( () =>
+        $sidebar.css({'z-index': "", 'visibility': ""}) );
+    Animator.move_to($dialog_title, $title, {y: 400, x: 200})
+      .finally(() => {
+        $title.css({'visibility': ""});
+        $dialog_container.remove();
+      });
+    return dialog.upload_started;
+  } catch (error) {
+    $sidebar.css({'z-index': "", 'visibility': ""});
+    $title.css({'visibility': ""});
+    $dialog_container.remove();
+    throw error;
+  }
+}
+
+async function load_upload_dialog() {
+  if (upload_dialog_html != null && upload_author != null)
+    return;
+  var our_promise;
+  if (upload_dialog_promise == null) {
+    our_promise = upload_dialog_promise = load_upload_dialog_promise();
+  } else {
+    our_promise = upload_dialog_promise;
+  }
+  try {
+    await our_promise;
+    return
+  } catch (error) {
+    if (our_promise === upload_dialog_promise)
+      upload_dialog_promise = null;
+    throw error;
+  }
+}
+
+async function load_upload_dialog_promise() {
+  var {style, script, html, author} = await new Promise((resolve, reject) =>
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(function(error) {
+        display_error(error);
+        reject(error);
+      })
+      .sidebar_upload_get_dialog()
+  );
+  $('body')
+    .after($(script))
+    .after($(style));
+  upload_dialog_html = html;
+  upload_author = author;
+}
+
+var group_filenames = new Map();
+// group_name => {filename: null or string, promise: null or Promise}
+
+async function get_group_filename(group_name) {
+  var filename_item = group_filenames.get(group_name);
+  if (filename_item != null && filename_item.filename != null)
+    return filename_item.filename;
+  var our_promise;
+  if (filename_item == null) {
+    filename_item = {
+      filename: null,
+      promise: get_group_filename_promise(group_name) };
+    group_filenames.set(group_name, filename_item);
+  }
+  try {
+    let filename = await filename_item.promise;
+    filename_item.filename = filename;
+    return filename;
+  } catch (error) {
+    if (filename_item === group_filenames.get(group_name))
+      group_filenames.delete(group_name);
+    throw error;
+  }
+}
+
+function get_group_filename_promise(group_name) {
+  return new Promise((resolve, reject) =>
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(function(error) {
+        display_error(error);
+        reject(error);
+      })
+      .sidebar_upload_get_group_filename(group_name)
+  );
+}
+
+return {upload: upload};
+}(); // end SidebarUpload namespace
+
+
+////////////////////
+
+
+var Animator = function() { // begin namespace
+
+function get_outer_dim($element, {top = true, left = true, width = true} = {}) {
+  var outer_dim = $element.offset();
+  if (width)
+    outer_dim.width = $element.outerWidth();
+  return outer_dim;
+}
+
+function get_inner_dim($element, {top = true, left = true, width = true} = {}) {
+  var outer_dim = get_outer_dim( $element,
+    {top: top, left: left, width: width} );
+  var inner_dim = {};
+  var dim_diff = {};
+  const get_diff = ( (dir) =>
+    parseFloat($element.css('border-' + dir + '-width')) +
+      parseFloat($element.css('padding-' + dir)) );
+  if (top)
+    dim_diff.top = get_diff('top');
+  if (left || width)
+    dim_diff.left = get_diff('left');
+  if (width)
+    dim_diff.right = get_diff('right');
+  if (top)
+    inner_dim.top = outer_dim.top + dim_diff.top;
+  if (left)
+    inner_dim.left = outer_dim.left + dim_diff.left;
+  if (width)
+    inner_dim.width = outer_dim.width - dim_diff.left - dim_diff.right;
+  return inner_dim;
+}
+
+async function move_from($element, $original, durations = {}) {
+  ({
+    x: durations.x = 1000,
+    y: durations.y = 1000,
+  } = durations);
+  var original_dim = get_outer_dim($original);
+  var container_dim = get_inner_dim($element.offsetParent());
+  var css_transition = "top " + durations.y + "ms" + ", " +
+    "left " + durations.x + "ms" + ", " +
+    "width " + durations.x + "ms";
+  var initial_css = {
+    'position': "relative",
+    'box-sizing': "border-box",
+    'min-width': "0" };
+  var intermediate_css = Object.assign(
+    {transition: css_transition},
+    initial_css );
+  initial_css.top = original_dim.top - container_dim.top;
+  initial_css.left = original_dim.left - container_dim.left;
+  intermediate_css.top = intermediate_css.left = "0";
+  initial_css.width = original_dim.width;
+  intermediate_css.width = container_dim.width;
+  var final_css = {};
+  for (let property_name in intermediate_css)
+    final_css[property_name] = "";
+  var slowest_dims = [], slowest_duration = 0;
+  if (durations.x > durations.y) {
+    slowest_dims = ["left", "width"];
+    slowest_duration = durations.x;
+  } else {
+    slowest_dims = ["top"];
+    slowest_duration = durations.y;
+  }
+  try {
+    await new Promise( (resolve, reject) =>
+      window.requestAnimationFrame(() => {
+        $element.css(initial_css);
+        resolve();
+      }) );
+    await new Promise((resolve, reject) => {
+      window.requestAnimationFrame(() => {
+        $element.css(intermediate_css);
+        resolve();
+      });
+    });
+    await new Promise((resolve, reject) => {
+      window.setTimeout(resolve, slowest_duration);
+      $element.on('transitionend.move_from', (e) => {
+        if (slowest_dims.includes(e.originalEvent.propertyName)) {
+          $element.off('transitionend.move_from');
+          resolve();
+        }
+      });
+    });
+  } finally {
+    $element.css(final_css);
+  }
+}
+
+async function move_to($element, $original, durations = {}) {
+  ({
+    x: durations.x = 1000,
+    y: durations.y = 1000,
+  } = durations);
+  var original_dim = get_outer_dim($original);
+  var container_dim = get_inner_dim($element.offsetParent());
+  var css_transition = "top " + durations.y + "ms" + ", " +
+    "left " + durations.x + "ms" + ", " +
+    "width " + durations.x + "ms";
+  var initial_css = {
+    'position': "relative",
+    'box-sizing': "border-box",
+    'min-width': "0" };
+  var intermediate_css = Object.assign(
+    {transition: css_transition},
+    initial_css );
+  initial_css.top = initial_css.left = "0";
+  intermediate_css.top = original_dim.top - container_dim.top;
+  intermediate_css.left = original_dim.left - container_dim.left;
+  initial_css.width = container_dim.width;
+  intermediate_css.width = original_dim.width;
+  var final_css = {transition: ""};
+  var slowest_dims = [], slowest_duration = 0;
+  if (durations.x > durations.y) {
+    slowest_dims = ["left", "width"];
+    slowest_duration = durations.x;
+  } else {
+    slowest_dims = ["top"];
+    slowest_duration = durations.y;
+  }
+  try {
+    await new Promise( (resolve, reject) =>
+      window.requestAnimationFrame(() => {
+        $element.css(initial_css);
+        resolve();
+      }) );
+    await new Promise((resolve, reject) => {
+      window.requestAnimationFrame(() => {
+        $element.css(intermediate_css);
+        resolve();
+      });
+    });
+    await new Promise((resolve, reject) => {
+      window.setTimeout(resolve, slowest_duration);
+      $element.on('transitionend.move_to', (e) => {
+        if (slowest_dims.includes(e.originalEvent.propertyName)) {
+          $element.off('transitionend.move_to');
+          resolve();
+        }
+      });
+    });
+  } finally {
+    $element.css(final_css);
+  }
+}
+
+async function fade_in($element, duration) {
+  $element.css({visibility: ""});
+  var css_transition = "opacity " + duration + "ms";
+  var initial_css = {};
+  var intermediate_css = Object.assign(
+    {transition: css_transition},
+    initial_css );
+  initial_css.opacity = 0;
+  intermediate_css.opacity = 1;
+  var final_css = {};
+  for (let value_name in intermediate_css)
+    final_css[value_name] = "";
+  try {
+    await new Promise( (resolve, reject) =>
+      window.requestAnimationFrame(() => {
+        $element.css(initial_css);
+        resolve();
+      }) );
+    await new Promise((resolve, reject) => {
+      window.requestAnimationFrame(() => {
+        $element.css(intermediate_css);
+        resolve();
+      });
+    });
+    await new Promise((resolve, reject) => {
+      window.setTimeout(resolve, duration);
+      $element.on('transitionend.fade_in', (e) => {
+        if (e.originalEvent.propertyName == "opacity") {
+          $element.off('transitionend.fade_in');
+          resolve();
+        }
+      });
+    });
+  } finally {
+    $element.css(final_css);
+  }
+}
+
+async function fade_out($element, duration) {
+  var css_transition = "opacity " + duration + "ms";
+  var initial_css = {};
+  var intermediate_css = Object.assign(
+    {transition: css_transition},
+    initial_css );
+  initial_css.opacity = 1;
+  intermediate_css.opacity = 0;
+  var final_css = {};
+  for (let value_name in intermediate_css)
+    final_css[value_name] = "";
+  final_css.visibility = "hidden";
+  try {
+    await new Promise( (resolve, reject) =>
+      window.requestAnimationFrame(() => {
+        $element.css(initial_css);
+        resolve();
+      }) );
+    await new Promise((resolve, reject) => {
+      window.requestAnimationFrame(() => {
+        $element.css(intermediate_css);
+        resolve();
+      });
+    });
+    await new Promise((resolve, reject) => {
+      window.setTimeout(resolve, duration);
+      $element.on('transitionend.fade_out', (e) => {
+        if (e.originalEvent.propertyName == "opacity") {
+          $element.off('transitionend.fade_out');
+          resolve();
+        }
+      });
+    });
+  } finally {
+    $element.css(final_css);
+  }
+}
+
+
+return {
+  move_from: move_from,
+  move_to: move_to,
+  fade_in: fade_in,
+  fade_out: fade_out,
+};
+}(); // end namespace
+
+
+////////////////////
+
+
+// Promise
+function display_error(error) {
+  return new Promise((resolve, reject) =>
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .display_error(error.toString())
+  );
+}
+
+
+</script>
+
+
+</body>
+</html>
+
+
