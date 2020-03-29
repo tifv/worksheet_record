@@ -32,7 +32,7 @@ function action_add_rows_finish(group_name, row_index, row_count) {
   var group = StudyGroup.find_by_name(spreadsheet, group_name);
   var sheet = group.sheet;
   function get_row_range(row, height) {
-    return sheet.getRange(row, 1, height, group.dim.sheet_width);
+    return sheet.getRange(row, 1, height, group.sheetbuf.dim.sheet_width);
   }
   var sample_range;
   if (row_index > 0) {
@@ -137,7 +137,7 @@ function action_remove_excess_rows() {
     if (excess_rows[0] == names.length - 1) {
       group.sheet.getRange(
         group.dim.data_row + group.dim.data_height - 1 - excess_rows.length, 1,
-        1, group.dim.sheet_width
+        1, group.sheetbuf.dim.sheet_width
       )
         .setBorder(
           null, null, true, null, null, null );
@@ -145,7 +145,7 @@ function action_remove_excess_rows() {
     if (excess_rows[excess_rows.length - 1] == 0) {
       group.sheet.getRange(
         group.dim.data_row, 1,
-        1, group.dim.sheet_width
+        1, group.sheetbuf.dim.sheet_width
       )
         .setBorder(
           true, null, null, null, null, null );

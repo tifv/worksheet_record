@@ -1,17 +1,3 @@
-/* StudyGroup
- *   .list(spreadsheet) → list of StudyGroup objects
- *   .list_names(spreadsheet) → list of group names
- *   .add(name) → new StudyGroup
- *
- * StudyGroup(sheet, name?)
- *  .sheet
- *  .name → name of the sheet
- *  .check()
- *     true if worksheet group metadatum is present and
- *     this group will be found when listing
- *  .add_metadatum()
- */
-
 class StudyGroupError extends SpreadsheetError {};
 class StudyGroupInitError   extends StudyGroupError {};
 class StudyGroupDetectError extends StudyGroupError {};
@@ -19,24 +5,24 @@ class StudyGroupCheckError  extends StudyGroupError {};
 
 var StudyGroup = function() { // namespace {{{1
 
-const metadata_keys = {
+const metadata_keys = { // {{{
   main:         "worksheet_group",
 //  category:     "worksheet_group-categories",
   filename:     "worksheet_group-filename",
 //  color_scheme: "worksheet_group-color_scheme",
 //  timetable:    "worksheet_group-timetable",
-};
+}; // }}}
 
-const row_info = {
+const row_info = { // {{{
   mirror_row:   { marker: "κ" },
   category_row: { marker: "τ" },
   title_row:    { marker: "α" },
   weight_row:   { marker: "σ" },
   max_row:      { marker: "μ" },
   label_row:    { marker: "β" },
-}
+}; // }}}
 
-const initial = {
+const initial = { // {{{
   data_height: 20,
   attendance: {
     columns: 20,
@@ -54,10 +40,11 @@ const initial = {
     weight_row:   2,
     max_row:      3,
     label_row:    7,
-    data_row:     8
+    data_row:     8,
    }
-};
+}; // }}}
 
+// StudyGroup constructor (sheet, name) {{{
 var StudyGroup = function(sheet, name) {
   if (sheet == null) {
     throw new StudyGroupError("sheet must not be null");
@@ -66,8 +53,9 @@ var StudyGroup = function(sheet, name) {
   if (name != null) {
     Object.defineProperty(this, "name", {value: name});
   }
-}
+} // }}}
 
+// StudyGroup properties: name, sheetbuf, dim {{{
 define_lazy_properties_(StudyGroup.prototype, {
   name: function() {
     return this.sheet.getName(); },
@@ -78,9 +66,10 @@ define_lazy_properties_(StudyGroup.prototype, {
       this.dim );
   },
   dim: generate_group_dim,
-});
+}); // }}}
 
-function generate_group_dim(initial_rows) { // {{{
+// generate_group_dim (initial_rows) {{{
+function generate_group_dim(initial_rows) {
   // this = group
   const sheet = this.sheet;
   var dim = {}, dim_rev = {};
@@ -92,8 +81,6 @@ function generate_group_dim(initial_rows) { // {{{
       return sheet.getMaxRows(); },
     frozen_height: function() {
       return sheet.getFrozenRows(); },
-    sheet_width: function() { // XXX remove in favor of sheet_buffer.dim
-      return sheet.getMaxColumns(); },
   });
   function set_row(name, row) {
     if (row >= dim.data_row) {
@@ -165,14 +152,15 @@ function generate_group_dim(initial_rows) { // {{{
   return dim;
 } // }}}
 
+// initialize {{{2
+
+// StudyGroup.add (spreadsheet, name, options) {{{
 StudyGroup.add = function(spreadsheet, name, options) {
   var sheet = spreadsheet.insertSheet(name);
   var initializer = new Initializer(sheet, name, options);
   var group = initializer.group;
   return group;
-}
-
-// initialize {{{2
+} // }}}
 
 /* options: {{{
  *   rows (object)
@@ -241,7 +229,7 @@ StudyGroup.add = function(spreadsheet, name, options) {
  *   attendance.columns.date_lists[*].title (string)
  * }}} */
 
-function Initializer(sheet, name, options) {
+function Initializer(sheet, name, options) { // {{{
   this.sheet = sheet;
   this.options = this.rectify_options(options);
   this.dim = {};
@@ -306,10 +294,10 @@ function Initializer(sheet, name, options) {
   this.push_rating_cf_rules();
   Array.prototype.unshift.apply(this.cf_rules, this.cf_rules_error);
   this.sheet.setConditionalFormatRules(this.cf_rules);
-}
+} // }}}
 
-Initializer.prototype.rectify_options // [options -> options] {{{
-= function(options) {
+// Initializer().rectify_options [options -> options] {{{
+Initializer.prototype.rectify_options = function(options) {
   if (options == null)
     options = {};
   ({
@@ -350,8 +338,8 @@ Initializer.prototype.rectify_options // [options -> options] {{{
   return options;
 } // }}}
 
-Initializer.prototype.init_rows // {{{
-= function() {
+// Initializer().init_rows {{{
+Initializer.prototype.init_rows = function() {
   const sheet = this.sheet;
   const sheet_height = this.dim.sheet_height;
   const max_columns = sheet.getMaxColumns();
@@ -391,8 +379,8 @@ Initializer.prototype.init_rows // {{{
   sheet.setRowHeights(this.dim.data_row, this.dim.data_height, 21);
 } // }}}
 
-Initializer.prototype.init_columns // {{{
-= function() {
+// Initializer().init_columns {{{
+Initializer.prototype.init_columns = function() {
   const sheet = this.sheet;
   const frozen_columns = 4;
   const header_columns = frozen_columns - 1;
@@ -460,8 +448,8 @@ Initializer.prototype.init_columns // {{{
   sheet.setColumnWidths(frozen_columns + 1, max_columns - frozen_columns, 21);
 } // }}}
 
-Initializer.prototype.allocate_columns // [num_columns -> start_column] {{{
-= function(num_columns) {
+// Initializer().allocate_columns (num_columns) => (start_column) {{{
+Initializer.prototype.allocate_columns = function(num_columns) {
   if (typeof num_columns != "number" || isNaN(num_columns)) {
     throw new StudyGroupInitError(
       "allocate_columns: invalid argument num_columns" );
@@ -483,8 +471,8 @@ Initializer.prototype.allocate_columns // [num_columns -> start_column] {{{
   return start_column;
 } // }}}
 
-Initializer.prototype.add_attendance_sum // [-> range] {{{
-= function() {
+// Initializer().add_attendance_sum () => (range) {{{
+Initializer.prototype.add_attendance_sum = function() {
   const sheet = this.sheet;
   var column = this.allocate_columns(1);
   sheet.setColumnWidth(column, 40);
@@ -524,8 +512,8 @@ Initializer.prototype.add_attendance_sum // [-> range] {{{
   return range;
 } // }}}
 
-Initializer.prototype.add_ratinglike_range // [label, note -> range] {{{
-= function(label, note) {
+// Initializer().add_ratinglike_range (label, note) => (range) {{{
+Initializer.prototype.add_ratinglike_range = function(label, note) {
   const sheet = this.sheet;
   var column = this.allocate_columns(1);
   this.sheet.setColumnWidth(column, 40);
@@ -542,18 +530,18 @@ Initializer.prototype.add_ratinglike_range // [label, note -> range] {{{
   //add_ratinglike_range.call(this, rating_range);
 } // }}}
 
-Initializer.prototype.add_rating_range // [-> range] {{{
-= function() {
+// Initializer().add_rating_range () => (range) {{{
+Initializer.prototype.add_rating_range = function() {
   return this.add_ratinglike_range("ΣΣ", "рейтинг");
 } // }}}
 
-Initializer.prototype.add_sum_range // [-> range] {{{
-= function() {
+// Initializer().add_sum_range () => (range) {{{
+Initializer.prototype.add_sum_range = function() {
   return this.add_ratinglike_range("SS", "кол-во задач");
 } // }}}
 
-Initializer.prototype.prepare_category_info // [-> object] {{{
-= function() {
+// Initializer().prepare_category_info () => (object) {{{
+Initializer.prototype.prepare_category_info = function() {
   function prepare_rating_info(rating_type) {
     var codes = [], weights = [], integrate = false;
     this.options.categories.forEach(function(category) {
@@ -579,8 +567,8 @@ Initializer.prototype.prepare_category_info // [-> object] {{{
   }
 } // }}}
 
-Initializer.prototype.add_category_ratinglike_range // [info, label -> range] {{{
-= function(info, label) {
+// Initializer().add_category_ratinglike_range (info, label) => (range) {{{
+Initializer.prototype.add_category_ratinglike_range = function(info, label) {
   const sheet = this.sheet;
   var width = info.codes.length;
   var column = this.allocate_columns(width);
@@ -605,18 +593,18 @@ Initializer.prototype.add_category_ratinglike_range // [info, label -> range] {{
   return range;
 } // }}}
 
-Initializer.prototype.add_category_rating_range // [-> range] {{{
-= function() {
+// Initializer().add_category_rating_range () => (range) {{{
+Initializer.prototype.add_category_rating_range = function() {
   return this.add_category_ratinglike_range(this.category_info.rating, "Σ");
 } // }}}
 
-Initializer.prototype.add_category_sum_range // [-> range] {{{
-= function() {
+// Initializer().add_category_sum_range () => (range) {{{
+Initializer.prototype.add_category_sum_range = function() {
   return this.add_category_ratinglike_range(this.category_info.sum, "S");
 } // }}}
 
-Initializer.prototype.generate_date_list // [start, end, weekdays -> array] {{{
-= function(start, end, weekdays) {
+// Initializer().generate_date_list (start, end, weekdays) => (array) {{{
+Initializer.prototype.generate_date_list = function(start, end, weekdays) {
   var dates = [];
   for (
     var i = new Date(start.getTime());
@@ -629,8 +617,8 @@ Initializer.prototype.generate_date_list // [start, end, weekdays -> array] {{{
   return dates;
 } // }}}
 
-Initializer.prototype.add_attendance // [-> range] {{{
-= function() {
+// Initializer().add_attendance () => (range) {{{
+Initializer.prototype.add_attendance = function() {
   const total_row = this.attendance_total_row;
   var columns, date_list, date_lists;
   const columns_option = this.options.attendance.columns;
@@ -798,8 +786,8 @@ Initializer.prototype.add_attendance // [-> range] {{{
   return data_ext_range;
 } // }}}
 
-Initializer.prototype.format_attendance_data // [range ->] {{{
-= function(data_range) {
+// Initializer().format_attendance_data (range) {{{
+Initializer.prototype.format_attendance_data = function(data_range) {
   const total_row = this.attendance_total_row;
   data_range.setFontFamily("Georgia");
   for (let row of [total_row, this.dim.max_row]) {
@@ -825,8 +813,8 @@ Initializer.prototype.format_attendance_data // [range ->] {{{
         "black", SpreadsheetApp.BorderStyle.DOTTED );
 } // }}}
 
-Initializer.prototype.monthize_attendance // [range, dates ->] {{{
-= function(title_range, dates) {
+// Initializer().monthize_attendance (range, dates) {{{
+Initializer.prototype.monthize_attendance = function(title_range, dates) {
   const first_column = title_range.getColumn();
   for (let {start, end, length, value} of
     group_by_(dates, function(date) {
@@ -847,15 +835,15 @@ Initializer.prototype.monthize_attendance // [range, dates ->] {{{
   };
 } // }}}
 
-Initializer.prototype.get_worksheet_row_R1C1 // [row -> R1C1] {{{
-= function(row_R1) {
+// Initializer().get_worksheet_row_R1C1 (row_R1) => (R1C1) {{{
+Initializer.prototype.get_worksheet_row_R1C1 = function(row_R1) {
   if (typeof row_R1 == "number")
     row_R1 = 'R' + row_R1;
   return row_R1 + 'C' + this.worksheet_start_column + ':' + row_R1;
 } // }}}
 
-Initializer.prototype.set_ratinglike_formulas // {{{
-= function() {
+// Initializer().set_ratinglike_formulas {{{
+Initializer.prototype.set_ratinglike_formulas = function() {
   if (this.options.attendance && this.options.attendance.sum)
     this.set_attendance_sum_formulas();
   if (this.options.rating) {
@@ -876,8 +864,8 @@ Initializer.prototype.set_ratinglike_formulas // {{{
     this.set_category_sum_formulas();
 } // }}}
 
-Initializer.prototype.set_attendance_sum_formulas // {{{
-= function() {
+// Initializer().set_attendance_sum_formulas {{{
+Initializer.prototype.set_attendance_sum_formulas = function() {
   var attendance_R1C1 =
     'R[0]C' + this.attendance_range.getColumn() + ':' +
     'R[0]C' + this.attendance_range.getLastColumn();
@@ -888,8 +876,8 @@ Initializer.prototype.set_attendance_sum_formulas // {{{
     .setFormulaR1C1(attendance_sum_formula_R1C1);
 } // }}}
 
-Initializer.prototype.set_rating_direct_formulas // {{{
-= function() {
+// Initializer().set_rating_direct_formulas {{{
+Initializer.prototype.set_rating_direct_formulas = function() {
   var rating_formula_R1C1 = ''.concat('=sum(iferror(filter( ',
     'arrayformula(',
       this.get_worksheet_row_R1C1('R[0]'), '*',
@@ -906,8 +894,8 @@ Initializer.prototype.set_rating_direct_formulas // {{{
     .setNumberFormat("0.00;−0.00");
 } // }}}
 
-Initializer.prototype.set_rating_category_formulas // {{{
-= function() {
+// Initializer().set_rating_category_formulas {{{
+Initializer.prototype.set_rating_category_formulas = function() {
   const category_rating_range = this.category_rating_range;
   function get_category_rating_row(row_R1) {
     if (typeof row_R1 == "number")
@@ -931,8 +919,8 @@ Initializer.prototype.set_rating_category_formulas // {{{
     .setNumberFormat("00%;−00%");
 } // }}}
 
-Initializer.prototype.set_sum_direct_formulas // {{{
-= function() {
+// Initializer().set_sum_direct_formulas {{{
+Initializer.prototype.set_sum_direct_formulas = function() {
   var sum_formula_R1C1 = ''.concat('=sum(iferror(filter( ',
     this.get_worksheet_row_R1C1('R[0]'), '; ',
     this.get_worksheet_row_R1C1(this.dim.mirror_row), '="S"',
@@ -945,8 +933,8 @@ Initializer.prototype.set_sum_direct_formulas // {{{
     .setNumberFormat("0");
 } // }}}
 
-Initializer.prototype.set_sum_category_formulas // {{{
-= function() {
+// Initializer().set_sum_category_formulas {{{
+Initializer.prototype.set_sum_category_formulas = function() {
   const category_sum_range = this.category_sum_range;
   function get_category_sum_row(row_R1) {
     if (typeof row_R1 == "number")
@@ -967,8 +955,8 @@ Initializer.prototype.set_sum_category_formulas // {{{
     .setNumberFormat("0");
 } // }}}
 
-Initializer.prototype.set_category_rating_formulas // {{{
-= function() {
+// Initializer().set_category_rating_formulas {{{
+Initializer.prototype.set_category_rating_formulas = function() {
   var category_rating_formula_R1C1 = ''.concat('=sum(iferror(filter( ',
     'arrayformula(',
       this.get_worksheet_row_R1C1('R[0]'), '*',
@@ -988,8 +976,8 @@ Initializer.prototype.set_category_rating_formulas // {{{
     .setNumberFormat("0.00;−0.00");
 } // }}}
 
-Initializer.prototype.set_category_sum_formulas // {{{
-= function() {
+// Initializer().set_category_sum_formulas {{{
+Initializer.prototype.set_category_sum_formulas = function() {
   var category_sum_formula_R1C1 = ''.concat('=sum(iferror(filter( ',
     this.get_worksheet_row_R1C1('R[0]'), '; ',
     this.get_worksheet_row_R1C1(this.dim.mirror_row), '="S"; ',
@@ -1005,8 +993,8 @@ Initializer.prototype.set_category_sum_formulas // {{{
     .setNumberFormat("0");
 } // }}}
 
-Initializer.prototype.push_worksheet_cf_rules // {{{
-= function() {
+// Initializer().push_worksheet_cf_rules {{{
+Initializer.prototype.push_worksheet_cf_rules = function() {
   const sheet = this.sheet;
   var mirror_A1 = sheet.getRange(this.dim.mirror_row, this.worksheet_start_column)
     .getA1Notation()
@@ -1051,8 +1039,8 @@ Initializer.prototype.push_worksheet_cf_rules // {{{
   }
 } // }}}
 
-Initializer.prototype.push_category_cf_rules // {{{
-= function() {
+// Initializer().push_category_cf_rules {{{
+Initializer.prototype.push_category_cf_rules = function() {
   const sheet = this.sheet;
   var ranges = [];
   if (this.category_rating_range) {
@@ -1090,8 +1078,8 @@ Initializer.prototype.push_category_cf_rules // {{{
   }
 } // }}}
 
-Initializer.prototype.push_rating_cf_rules // {{{
-= function() {
+// Initializer().push_rating_cf_rules {{{
+Initializer.prototype.push_rating_cf_rules = function() {
   const max_delta = this.dim.max_row - this.dim.data_row;
   var ranges = [];
   [
@@ -1112,8 +1100,10 @@ Initializer.prototype.push_rating_cf_rules // {{{
   ));
 } // }}}
 
-StudyGroup.prototype.new_cf_rule_rating // {{{
-= function(ranges, colour_mid, colour_top) {
+// StudyGroup().new_cf_rule_rating (ranges, colour_mid, colour_top) {{{
+StudyGroup.prototype.new_cf_rule_rating = function(
+  ranges, colour_mid, colour_top
+) {
   var range = ranges[0];
   var max_A1 = range.offset(this.dim.max_row - range.getRow(), 0, 1, 1)
     .getA1Notation().replace(/([A-Z]+)([0-9]+)/, "$1$$$2");
@@ -1130,8 +1120,8 @@ StudyGroup.prototype.new_cf_rule_rating // {{{
     .setRanges(ranges).build();
 } // }}}
 
-StudyGroup.prototype.add_metadatum // {{{
-= function(options = {}) {
+// StudyGroup().add_metadatum (options) {{{
+StudyGroup.prototype.add_metadatum = function(options = {}) {
   ({
     skip_remove: options.skip_remove = false,
       // make the call faster by not trying to remove old metadata
@@ -1150,8 +1140,9 @@ StudyGroup.prototype.add_metadatum // {{{
     SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT );
 } // }}}
 
-// }}}2
+// initialize }}}2
 
+// StudyGroup().check (options) {{{
 StudyGroup.prototype.check = function(options = {}) {
   ({
     metadata: options.metadata = true,
@@ -1167,14 +1158,16 @@ StudyGroup.prototype.check = function(options = {}) {
         "sheet " + this.name + " " +
         "is not marked as group by metadata" );
   }
-}
+} // }}}
 
+// StudyGroup.find_by_name (spreadsheet, group_name) {{{
 StudyGroup.find_by_name = function(spreadsheet, group_name) {
   var group = new StudyGroup(spreadsheet.getSheetByName(group_name), group_name);
   group.check();
   return group;
-}
+} // }}}
 
+// StudyGroup.get_active (spreadsheet) {{{
 StudyGroup.get_active = function(spreadsheet) {
   var sheet = spreadsheet.getActiveSheet();
   var group = new StudyGroup(sheet);
@@ -1186,8 +1179,9 @@ StudyGroup.get_active = function(spreadsheet) {
     throw error;
   }
   return group;
-}
+} // }}}
 
+// StudyGroup.list* (spreadsheet) {{{
 StudyGroup.list = function*(spreadsheet) {
   for ( let metadatum of
     spreadsheet.createDeveloperMetadataFinder()
@@ -1198,35 +1192,41 @@ StudyGroup.list = function*(spreadsheet) {
   ) {
     yield new StudyGroup(metadatum.getLocation().getSheet());
   }
-}
+} // }}}
 
+// StudyGroup.list_names* (spreadsheet) {{{
 StudyGroup.list_names = function*(spreadsheet) {
   for (let workgroup of StudyGroup.list(spreadsheet)) {
     yield workgroup.name;
   }
-}
+} // }}}
 
+// StudyGroup().get_filename {{{
 StudyGroup.prototype.get_filename = function() {
   var filename = SheetMetadata.get(this.sheet, metadata_keys.filename);
   if (filename == null)
     return this.name;
-}
+} // }}}
 
+// StudyGroup().set_filename (filename) {{{
 StudyGroup.prototype.set_filename = function(filename) {
   if (filename == null) {
     SheetMetadata.unset(this.sheet, metadata_keys.filename);
   } else {
     SheetMetadata.set(this.sheet, metadata_keys.filename, filename);
   }
-}
+} // }}}
 
+// StudyGroup().get_color_scheme {{{
 StudyGroup.prototype.get_color_scheme = function() {
   // XXX
   return ColorSchemes.get_default();
-}
+} // }}}
+
+// StudyGroup().set_color_scheme (code) {{{
 StudyGroup.prototype.set_color_scheme = function(code) {
   // XXX
-}
+} // }}}
 
 return StudyGroup;
 }(); // end StudyGroup namespace }}}1

@@ -526,7 +526,7 @@ function SheetBuffer_insert_columns(column, num_columns) {
 }
 
 SheetBuffer.prototype.insert_columns_after = function(column, num_columns) {
-    if (column < 1 || column >= this.dim.sheet_width)
+    if (column < 1 || column > this.dim.sheet_width)
         throw new SheetBufferError( "insert_columns_after: " +
             "index out of bounds" );
     SheetBuffer_insert_columns.call(this, column + 1, num_columns);
@@ -535,7 +535,7 @@ SheetBuffer.prototype.insert_columns_after = function(column, num_columns) {
 }
 
 SheetBuffer.prototype.insert_columns_before = function(column, num_columns) {
-    if (column < 1 || column >= this.dim.sheet_width)
+    if (column < 1 || column > this.dim.sheet_width)
         throw new SheetBufferError( "insert_columns_before: " +
             "index out of bounds" );
     SheetBuffer_insert_columns.call(this, column, num_columns);

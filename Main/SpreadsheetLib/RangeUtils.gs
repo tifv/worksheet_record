@@ -14,20 +14,15 @@ function get_row_range_(range) {
   return range.getSheet().getRange(row_ref);
 }
 
-function set_marker_guard_(range, value) {
-  // XXX remove setting the value from here
+function set_fixed_value_validation_(range, value) {
   range
-    .setValue(value)
     .setDataValidation( SpreadsheetApp.newDataValidation()
       .requireTextEqualTo(value)
-      .setHelpText("This cell must contain a marker (" + value + ")")
+      .setHelpText(
+        value != "" ?
+          "This cell must contain a marker (" + value + ")" :
+          "This cell must remain blank"
+      )
       .setAllowInvalid(false).build() );
-}
-
-function set_blank_guard_(range) {
-  range.setDataValidation( SpreadsheetApp.newDataValidation()
-    .requireTextEqualTo("")
-    .setHelpText("This cell must be blank")
-    .setAllowInvalid(false).build() );
 }
 
