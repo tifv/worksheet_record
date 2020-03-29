@@ -131,6 +131,8 @@ function sidebar_load_contents_section_(section, validated = false) {
     section_location: section_location,
     column: section.dim.title,
     width: section.dim.width,
+    is_unused: worksheet.get_title().startsWith("{"),
+      // XXX hide such worksheets in the sidebar
     is_subsection: section.dim.offset > 0,
     title: section.get_title(),
     full_title: worksheet.get_title() +

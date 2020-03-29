@@ -38,6 +38,7 @@ function action_add_columns_finish(
   var worksheet = Worksheet.find_by_location(group, worksheet_location);
   var section = worksheet.find_section_by_location(section_location);
   section.add_columns(data_index, data_width);
+  //group.sheetbuf.test();
 }
 
 function action_add_section() {
@@ -82,7 +83,8 @@ function action_add_section_finish(
   var weightcell = worksheet.metaweight_cell;
   var weight = weightcell.getValue() + weight;
   worksheet.add_section_after(last_section, {data_width: data_width, title: title, date: date});
-  weightcell.setValue(weight);
+  group.sheetbuf.set_value("weight_row", worksheet.dim.rating, weight);
+  //group.sheetbuf.test();
 }
 
 function action_remove_excess_columns() {
@@ -93,6 +95,7 @@ function action_remove_excess_columns() {
   var group = worksheet.group;
   try {
     var remove_count = section.remove_excess_columns();
+    //section.group.sheetbuf.test();
     if (remove_count == 0) {
       throw "Колонки не удалены. " +
         "Автоматически удаляются только пустые колонки без номера задачи.";

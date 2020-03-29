@@ -144,8 +144,10 @@ Worksheet.prototype.check = function(options = {}) {
 // XXX add alternative initializer that creates standalone title
 // like worksheet with markers, but without formatting datarange etc.
 
-// XXX this initializer breaks group.values structure.
-// So, it must not return value.
+// XXX add alternative initializer that creates a series of worksheets
+// and returns an array
+
+// XXX Use group.sheetbuf setter methods
 Worksheet.add = function(group, range, options) {
   /* options:
    *   data_width (number)
@@ -565,7 +567,7 @@ Worksheet.prototype.get_category = function() {
 }
 
 // XXX this method should be able to function in initialization,
-// when group.values is broken.
+// when group.sheetbuf is broken.
 Worksheet.prototype.set_category = function(code, options = {}) {
   ({
     ignore_sections: options.ignore_sections = true,
@@ -584,7 +586,7 @@ Worksheet.prototype.set_category = function(code, options = {}) {
 
 Worksheet.prototype.get_title = function() {
   // also applies to WorksheetSection
-  return this.group.sheetbuf.get_value("title_row", this.dim.title);
+  return this.group.sheetbuf.get_value("title_row", this.dim.title).toString();
 }
 
 Worksheet.prototype.set_title = function(value) {
@@ -1044,7 +1046,7 @@ Worksheet.surrounding_section = function(group, worksheet, range) {
     get_column_range_(worksheet.sheet.getRange(
       1, section_start, 1, section_end - section_start + 1 ))
   );
-  section.check();
+  section.check({dimensions: true, title: false});
   return section;
 }
 
@@ -1127,12 +1129,11 @@ Worksheet.prototype.add_section_after = function(section, options = {}) {
   if (weight_formula_R1C1 === "")
     weight_formula_R1C1 = null;
   if (section.dim.end > section.dim.data_end) {
-    section.title_range.breakApart();
+    this.group.sheetbuf.unmerge("title_row", section.dim.start, section.dim.end);
   }
-  // XXX use sheetbuf's set and insert methods
-  this.sheet.insertColumnsAfter(dim.prev_end, options.data_width);
+  this.group.sheetbuf.insert_columns_after(dim.prev_end, options.data_width)
   if (section.dim.end > section.dim.data_end) {
-    section.title_range.offset(0,0,1,section.dim.data_end - section.dim.start + 1).merge();
+    this.group.sheetbuf.merge("title_row", section.dim.start, section.dim.data_end);
   }
   dim.start = dim.title = dim.data_start = dim.prev_end + 1;
   dim.data_end = dim.prev_end + options.data_width;
@@ -1142,16 +1143,15 @@ Worksheet.prototype.add_section_after = function(section, options = {}) {
 
   // XXX reset backgrounds
   // XXX and maybe in worksheet creation too
-  // XXX and in add_columns
+  // XXX and also in add_columns
 
-  this.sheet.getRange(this.group.dim.max_row, dim.data_start, 1, dim.data_width)
-    .setFormulaR1C1(max_formula_R1C1);
+  this.group.sheetbuf.set_formulas( "max_row",
+    dim.data_start, dim.data_end, max_formula_R1C1, 0 );
   if (weight_formula_R1C1 != null)
-    this.sheet.getRange(this.group.dim.weight_row, dim.data_start, 1, dim.data_width)
-      .setFormulaR1C1(weight_formula_R1C1);
+    this.group.sheetbuf.set_formulas( "weight_row",
+      dim.data_start, dim.data_end, weight_formula_R1C1, 0 );
   if (category != null)
-    this.sheet.getRange(this.group.dim.category_row, dim.start)
-      .setValue(category);
+    this.group.sheetbuf.set_value("category_row", dim.start, category);
 
   this.sheet.setColumnWidths(this.dim.data_start, this.dim.data_width, 21);
 
@@ -1160,14 +1160,12 @@ Worksheet.prototype.add_section_after = function(section, options = {}) {
     {
       open_left: false,
       open_right: false,
-      skip_weight: (weight_formula_R1C1 == null) }
+      skip_weight: (weight_formula_R1C1 == null) },
   );
-  var title_range = this.sheet.getRange(this.group.dim.title_row, dim.start, 1, dim.width);
-  title_range.merge();
-  title_range
+  this.group.sheetbuf.merge("title_row", dim.start, dim.end);
+  this.sheet.getRange(this.group.dim.title_row, dim.start, 1, dim.width)
     .setBorder(true, true, null, true, null, null);
-  var title_id;
-  {
+  var title_id; {
     let quasi_section = {
       title_column_range: get_column_range_(this.sheet.getRange(1, dim.title)),
     };
@@ -1176,9 +1174,8 @@ Worksheet.prototype.add_section_after = function(section, options = {}) {
   }
   var title_note = Worksheet.format_title_note({ lines: [],
     date: options.date, title_id: title_id });
-  title_range.getCell(1,1)
-    .setValue(options.title)
-    .setNote(title_note);
+  this.group.sheetbuf.set_value("title_row", dim.start, options.title);
+  this.group.sheetbuf.set_note ("title_row", dim.start, title_note);
 }
 
 WorksheetSection.prototype.add_columns = function(data_index, data_width) {
@@ -1197,12 +1194,11 @@ WorksheetSection.prototype.add_columns = function(data_index, data_width) {
   var weight_formula_R1C1 = this.group.sheetbuf.get_formula("weight_row", insert_column);
   if (weight_formula_R1C1 === "")
     weight_formula_R1C1 = null;
-  // XXX use sheetbuf's set and insert methods
   if (data_index > 0) {
-    this.sheet.insertColumnsAfter(insert_column, dim.data_width);
-    if (insert_column == this.dim.end) {
-      this.title_range.offset(0, 0, 1, this.dim.width + data_width).merge();
-    }
+    this.group.sheetbuf.insert_columns_after(insert_column, dim.data_width);
+    if (insert_column == this.dim.end)
+      this.group.sheetbuf.merge( "title_row",
+        this.dim.start, this.dim.end + dim.data_width );
   } else {
     if (dim.data_start == this.dim.start) {
       var category = this.worksheet.get_category();
@@ -1210,20 +1206,20 @@ WorksheetSection.prototype.add_columns = function(data_index, data_width) {
       var metadata_range = this.title_column_range;
       this.set_category(null);
     }
-    this.sheet.insertColumnsBefore(insert_column, dim.data_width);
+    this.group.sheetbuf.insert_columns_before(insert_column, dim.data_width);
     if (dim.data_start == this.dim.start) {
-      let title_range = this.title_range.offset(0, 0, 1, this.dim.width + dim.data_width);
-      title_range.merge();
-      title_range.offset(this.group.dim.category_row - this.group.dim.title_row, 0, 1, 1)
-        .setValue(category);
+      this.group.sheetbuf.merge( "title_row",
+        this.dim.start, this.dim.end + dim.data_width );
+      this.group.sheetbug.set_value( "category_row",
+        this.dim.title, category );
       metadata.moveToColumn(metadata_range);
     }
   }
-  this.sheet.getRange(this.group.dim.max_row, dim.data_start, 1, dim.data_width)
-    .setFormulaR1C1(max_formula_R1C1);
+  this.group.sheetbuf.set_formulas( "max_row",
+    dim.data_start, dim.data_end, max_formula_R1C1 );
   if (weight_formula_R1C1 != null)
-    this.sheet.getRange(this.group.dim.weight_row, dim.data_start, 1, dim.data_width)
-      .setFormulaR1C1(weight_formula_R1C1);
+    this.group.sheetbuf.set_formulas( "weight_row",
+      dim.data_start, dim.data_end, weight_formula_R1C1 );
 
   this.sheet.setColumnWidths(this.dim.data_start, this.dim.data_width, 21);
 
@@ -1232,7 +1228,7 @@ WorksheetSection.prototype.add_columns = function(data_index, data_width) {
     {
       open_left: data_index > 0,
       open_right: data_index < this.dim.data_width,
-      skip_weight: (weight_formula_R1C1 == null) }
+      skip_weight: (weight_formula_R1C1 == null) },
   );
 }
 
@@ -1240,7 +1236,6 @@ WorksheetSection.prototype.remove_excess_columns = function() { // {{{
   var label_values = this.group.sheetbuf.slice_values("label_row", this.dim.data_start, this.dim.data_end);
   var data_values = this.data_range.getValues();
 
-  // XXX use sheetbuf's set and insert methods
   var removed_count = 0;
   var removing_series = 0;
   for (let i = this.dim.data_width - 1; i >= -1; --i) {
@@ -1270,16 +1265,16 @@ WorksheetSection.prototype.remove_excess_columns = function() { // {{{
           var title_note = this.get_title_note();
           var category = this.worksheet.get_category();
           var metadata = this.get_title_metadata();
-          metadata.moveToColumn(get_column_range_(this.sheet.getRange(1, this.dim.title + removing_series)));
+          metadata.moveToColumn(get_column_range_(
+            this.sheet.getRange(1, this.dim.title + removing_series) ));
         }
       }
-      this.sheet.deleteColumns(this.dim.data_start + i + 1, removing_series);
+      this.group.sheetbuf.delete_columns(this.dim.data_start + i + 1, removing_series);
       if (i < 0 && this.dim.start == this.dim.data_start) {
-        this.title_range.getCell(1,1)
-          .setValue(title)
-          .setNote(title_note)
-        .offset(this.group.dim.category_row - this.group.dim.title_row, 0)
-          .setValue(category);
+        this.group.sheetbuf.set_value("title_row", this.dim.title, title);
+        this.group.sheetbuf.set_note ("title_row", this.dim.title, title_note);
+        if (category != null)
+          this.group.sheetbuf.set_value("category_row", this.dim.title, category);
       }
       removing_series = 0;
     }
