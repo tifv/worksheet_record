@@ -30,8 +30,8 @@ MergedRangesBuffer.prototype.ensure_loaded = function() {
     var merged_ranges = this.sheet.getRange(
         1, 1, this.dim.frozen_height, this.dim.sheet_width
     ).getMergedRanges();
-    var rev_row_map = Object.fromEntries(
-        Object.entries(this._row_map).map(([k,v]) => [v,k])
+    var rev_row_map = Object.fromEntries( Object.entries(this._row_map)
+      .map(([k,v]) => [v,k])
     );
     for (let range of merged_ranges) {
         if (range.getNumRows() != 1)

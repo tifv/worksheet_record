@@ -122,8 +122,8 @@ function action_alloy_subproblems() {
 }
 
 const finished_colours = {
-  label: [60, 0.7, 0.75],
-  data:  [60, 0.7, 0.85],
+  label: {h:  60, s: 0.70, l: 0.75},
+  data:  {h:  60, s: 0.70, l: 0.85},
 };
 
 function action_mark_columns_finished() {

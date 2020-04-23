@@ -7,9 +7,8 @@ var StudyGroup = function() { // namespace {{{1
 
 const metadata_keys = { // {{{
   main:         "worksheet_group",
-//  category:     "worksheet_group-categories",
   filename:     "worksheet_group-filename",
-//  color_scheme: "worksheet_group-color_scheme",
+  color_scheme: "worksheet_group-color_scheme",
 //  timetable:    "worksheet_group-timetable",
 }; // }}}
 
@@ -27,9 +26,9 @@ const initial = { // {{{
   attendance: {
     columns: 20,
     colors: {
-      mark:    [ 60, .55, .80],
-      past:    [  0, .00, .90],
-      present: [  0, .00, .95]
+      mark:    {h:  60, s: 0.55, l: 0.80},
+      past:    {h:   0, s: 0.00, l: 0.90},
+      present: {h:   0, s: 0.00, l: 0.95}
     }
   },
   separator_col_width: 13,
@@ -169,6 +168,9 @@ StudyGroup.add = function(spreadsheet, name, options) {
  *   data_height (number)
  *     number of data rows, excluding the first (hidden) data row
  *     default is initial.data_height
+ *   filename (string)
+ *     filename prefix for uploads
+ *     default will use group name (even if it will change)
  *   color_scheme (string)
  *     code, must match spreadsheet metadata
  *     default will use default color scheme
@@ -251,7 +253,15 @@ function Initializer(sheet, name, options) { // {{{
 
   this.group = new StudyGroup(sheet, name);
   this.group.add_metadatum({skip_remove: true});
-  this.color_scheme = this.group.get_color_scheme();
+  if (this.options.filename != null) {
+    this.group.set_filename(this.options.filename);
+  }
+  if (this.options.color_scheme != null) {
+    this.color_scheme = ColorSchemes.copy(this.options.color_scheme);
+    this.group.set_color_scheme(this.options.color_scheme);
+  } else {
+    this.color_scheme = ColorSchemes.get_default();
+  }
   Object.defineProperty(this.group, "dim", {value:
     generate_group_dim.call(this.group, this.options.rows) });
 
@@ -303,9 +313,9 @@ Initializer.prototype.rectify_options = function(options) {
   ({
     rows: options.rows = initial.rows,
     data_height: options.data_height = initial.data_height,
+    filename: options.filename = null,
+    color_scheme: options.color_scheme = null,
   } = options);
-  if (options.color_scheme != null)
-    throw "XXX color_scheme is not functional yet";
   ({
     rating: options.rating = true,
     sum: options.sum = true,
@@ -616,6 +626,7 @@ Initializer.prototype.generate_date_list = function(start, end, weekdays) {
   }
   return dates;
 } // }}}
+
 
 // Initializer().add_attendance () => (range) {{{
 Initializer.prototype.add_attendance = function() {
@@ -1219,13 +1230,29 @@ StudyGroup.prototype.set_filename = function(filename) {
 
 // StudyGroup().get_color_scheme {{{
 StudyGroup.prototype.get_color_scheme = function() {
-  // XXX
-  return ColorSchemes.get_default();
+  // returned color_scheme may include one additional field, 'name'
+  var color_scheme = SheetMetadata.get_object(this.sheet, metadata_keys.color_scheme);
+  if (color_scheme == null)
+    return ColorSchemes.get_default();
+  var name = color_scheme.name;
+  color_scheme = ColorSchemes.copy(color_scheme);
+  if (name != null)
+    color_scheme.name = name;
+  return color_scheme;
 } // }}}
 
-// StudyGroup().set_color_scheme (code) {{{
-StudyGroup.prototype.set_color_scheme = function(code) {
-  // XXX
+// StudyGroup().set_color_scheme (color_scheme) {{{
+StudyGroup.prototype.set_color_scheme = function(color_scheme) {
+  // color_scheme may include one additional field, 'name'
+  if (color_scheme == null) {
+    SheetMetadata.unset(this.sheet, metadata_keys.color_scheme);
+  } else {
+    var name = color_scheme.name;
+    color_scheme = ColorSchemes.copy(color_scheme);
+    if (name != null)
+      color_scheme.name = name;
+    SheetMetadata.set_object(this.sheet, metadata_keys.color_scheme, color_scheme);
+  }
 } // }}}
 
 return StudyGroup;

@@ -19,6 +19,15 @@ const emoji = {
 function create_menu() {
   const ui = SpreadsheetApp.getUi();
   const menu = ui.createMenu("Ведомость");
+  { let test_menu = ui.createMenu(emoji.devil + " Тест");
+    test_menu
+      .addItem("Редактор метаданных", "metadata_editor")
+      .addItem("Обновить меню", "create_menu")
+      ;
+    menu
+//      .addSeparator()
+      .addSubMenu(test_menu);
+  }
   menu
     .addItem(emoji.koala + " Оглавление (панель)", "sidebar_show")
     .addSeparator();
@@ -48,14 +57,6 @@ function create_menu() {
     menu.addSubMenu(worksheets_menu);
   }
   menu.addItem(emoji.sun + " Выложить листочек…", "upload_worksheet_init");
-  { let test_menu = ui.createMenu(emoji.devil + " Тест");
-    test_menu
-      .addItem("Обновить меню", "create_menu")
-      ;
-    menu
-      .addSeparator()
-      .addSubMenu(test_menu);
-  }
   menu.addToUi();
 };
 

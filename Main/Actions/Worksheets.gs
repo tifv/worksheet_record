@@ -5,6 +5,7 @@ function action_insert_worksheet() {
   }
   try {
     var note_info = Worksheet.parse_title_note(worksheet.get_title_note());
+    // XXX check that the next column exists and is empty
     Worksheet.add(
       worksheet.group,
       worksheet.sheet.getRange(1, worksheet.dim.end + 1),

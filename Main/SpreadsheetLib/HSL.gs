@@ -1,50 +1,45 @@
 /* HSL
- *   .to_hsl([H,S,L]) → [H,S,L]
- *       validating copy; may return null
- *   .to_rgb([H,S,L]) → [R,G,B]
+ *   .copy({h,s,l}) → {h,s,l}
+ *       validating copy
+ *   .to_rgb({h,s,l}) → {r,g,b}
  *       return the color as three 0-255 components
- *   .to_hex([H,S,L]) → hex string
+ *   .to_hex({h,s,l}) → hex string
  *       return color as hex value
- *   .to_css([H,S,L]) → CSS color string
+ *   .to_css({h,s,l}) → CSS color string
  *       return color as CSS hsl() function
  */
 
 var HSL = function() { // namespace
 
-function to_hsl(hsl) {
-  if (hsl == null)
-    return null;
-  var [H, S, L] = hsl;
-  if (typeof H != "number" || typeof S != "number" || typeof L != "number") {
-    return null;
+function copy(hsl) {
+  var {h, s, l} = hsl;
+  if (typeof h != "number" || typeof s != "number" || typeof l != "number") {
+    throw new Error("invalid HSL value");
   }
-  return [H, S, L];
+  return {h: h, s: s, l: l};
 }
 
 function deepen(hsl, factor=1) {
-  var [H, S, L] = hsl;
-  return [H, S, 1 - (1 - L) * factor];
+  var {h, s, l} = copy(hsl);
+  return {h: h, s: s, l: Math.max(0, 1 - (1 - l) * factor)};
 }
 
 function to_rgb(hsl) {
-  hsl = to_hsl(hsl);
-  if (hsl == null)
-    return null;
-  var [H, S, L] = hsl;
-  var m2 = (L <= 0.5) ? L * (S + 1) : L + S - L * S;
-  var m1 = 2 * L - m2;
-  return [
-    Math.round(255 * hue2g(m1, m2, H + 120)),
-    Math.round(255 * hue2g(m1, m2, H)),
-    Math.round(255 * hue2g(m1, m2, H - 120))
-  ]
+  var {h, s, l} = copy(hsl);
+  var m2 = (l <= 0.5) ? l * (s + 1) : l + s - l * s;
+  var m1 = 2 * l - m2;
+  return {
+    r: Math.round(255 * hue2g(m1, m2, h + 120)),
+    g: Math.round(255 * hue2g(m1, m2, h)),
+    b: Math.round(255 * hue2g(m1, m2, h - 120))
+  };
 }
 
-function hue2g(m1, m2, H) {
-  H = (H + 360) % 360;
-  if (H <  60) return m1 + (m2 - m1) * H / 60;
-  if (H < 180) return m2;
-  if (H < 240) return m1 + (m2 - m1) * (240 - H) / 60;
+function hue2g(m1, m2, h) {
+  h = (h + 360) % 360;
+  if (h <  60) return m1 + (m2 - m1) * h / 60;
+  if (h < 180) return m2;
+  if (h < 240) return m1 + (m2 - m1) * (240 - h) / 60;
                return m1;
 }
 
@@ -54,16 +49,14 @@ function hex2(n) {
 
 function to_hex(hsl) {
   var rgb = to_rgb(hsl);
-  if (rgb == null)
-    return null;
-  return "#" + hex2(rgb[0]) + hex2(rgb[1]) + hex2(rgb[2]);
+  return "#" + hex2(rgb.r) + hex2(rgb.g) + hex2(rgb.b);
 }
 
 function to_css(hsl) {
-  return "hsl(" + hsl[0] + "," + (100 * hsl[1]) + "%," + (100 * hsl[2]) + "%)";
+  return "hsl(" + hsl.h + "," + (100 * hsl.s) + "%," + (100 * hsl.l) + "%)";
 }
 
-return {to_hsl: to_hsl, deepen: deepen, to_rgb: to_rgb, to_hex: to_hex, to_css: to_css};
+return {copy: copy, deepen: deepen, to_rgb: to_rgb, to_hex: to_hex, to_css: to_css};
 }(); // end HSL namespace
 
 // XXX add function that sets hyperlink color to hsl(220, 75%, 40%)

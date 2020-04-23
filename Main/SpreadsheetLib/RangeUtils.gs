@@ -1,17 +1,33 @@
-// Get unbounded column range from bounded range.
-function get_column_range_(range) {
-  var col_ref = range.getA1Notation().replace(/[0-9]+/g, "");
-  if (col_ref.indexOf(":") < 0)
-    col_ref = col_ref + ":" + col_ref;
-  return range.getSheet().getRange(col_ref);
+var ACodec = {
+  encode: function(n) {
+    var pieces = [];
+    while (n > 0) {
+      var i = (n - 1) % 26;
+      pieces.unshift(letters[i]);
+      n = (n - i - 1) / 26;
+    }
+    return pieces.join("");
+  },
+  decode: function(s) {
+    var n = 0;
+    while (s.length > 0) {
+      n *= 26;
+      n += letters.indexOf(s[0]) + 1;
+      s = s.substring(1);
+    }
+    return n;
+  },
+};
+
+// Get unbounded row range
+function get_row_range_(sheet, row, last_row = row) {
+  return sheet.getRange(row.toString() + ":" + last_row.toString());
 }
 
-// Get unbounded row range from bounded range.
-function get_row_range_(range) {
-  var row_ref = range.getA1Notation().replace(/[A-Z]+/g, "");
-  if (row_ref.indexOf(":") < 0)
-    row_ref = row_ref + ":" + row_ref;
-  return range.getSheet().getRange(row_ref);
+// Get unbounded column range
+function get_column_range_(sheet, column, width = 1) {
+  return sheet.getRange(
+    ACodec.encode(column) + ":" + ACodec.encode(column + width - 1) );
 }
 
 function set_fixed_value_validation_(range, value) {

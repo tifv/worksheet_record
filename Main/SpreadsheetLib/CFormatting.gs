@@ -1,3 +1,57 @@
+/* Possible actions:
+ * • find all rules that:
+ *    (a) have given condition
+ *    (b) (optional) cover given range
+ *    (c) (optional) have given effect
+ * • find existing rule with (ac) and extend it to given range or create a new rule that covers this range
+ *   • ensure that this new rule comes before any other rule specified with (a)
+ * • find all rules with (ab) or (abc) and remove them from given range
+ *   • replace them
+ * • find all rules with (a) and replace them with similar rule that covers the same ranges and has given effect
+ */
+
+var ConditionalFormatting = function() {
+
+class CFCondition {
+}
+
+class CFBooleanCondition extends CFCondition {
+}
+
+class CFGradientCondition extends CFCondition {
+}
+
+class CFRangeList {
+}
+
+class CFEffect {
+}
+
+class CFBooleanEffect extends CFEffect {
+}
+
+class CFGradientEffect extends CFEffect {
+}
+
+class CFRule {
+  match({condition, range, effect}) {
+  }
+}
+
+class CFRuleList {
+  static load(sheet) {
+  }
+  insert() {
+  }
+  remove() {
+  }
+}
+
+return {};
+}();
+
+
+
 var CFormatting = function() { // namespace
 
 // Known pitfalls:
@@ -152,7 +206,8 @@ function normalize_colour(colour) {
     else if (colour == "red")
       return "#FF0000";
     else
-      throw "CFormatting.encode: colour is presented in a non-standard form: " + colour;
+      throw Error( "CFormatting.encode: " +
+        "colour is presented in a non-standard form: " + colour );
   }
   return colour.toUpperCase();
 }
@@ -166,7 +221,7 @@ function encode_formula(formula, R1C1_refcell, R1C1_mustdo) {
   }
   if (formula.indexOf('"') > 0 || formula.indexOf(':') > 0) {
     if (R1C1_mustdo)
-      throw "impossible to encode " + formula;
+      throw Error("impossible to encode " + formula);
     return "=~" + formula;
   }
   formula = formula

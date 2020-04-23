@@ -1,9 +1,10 @@
 /* ColorSchemes
- *   .get() → schemes
+ *   .get(ss) → schemes
+ *   .set(ss, schemes)
  *   .get_default() → scheme
- *   .set(schemes)
+ *   .copy(scheme) → scheme
  * schemes = {`name` : scheme for each `name`}
- * scheme = {mars: [h,s,l], marks_deep: …, rating_mid: …, rating_top: …}
+ * scheme = {marks: hsl, rating_mid: hsl, rating_top: hsl}
  */
 
 /* Categories
@@ -17,47 +18,51 @@
 var ColorSchemes = function() { // namespace
 
 const metadata_key = "worksheet_meta-color_schemes";
-const colors = ["marks", "marks_deep", "rating_mid", "rating_top"];
+const colors = ["marks", "rating_mid", "rating_top"];
 
 function get(spreadsheet) {
-  SpreadsheetMetadata.get_object(spreadsheet, metadata_key);
+  var color_schemes = SpreadsheetMetadata.get_object(spreadsheet, metadata_key);
+  if (color_schemes == null)
+    return {};
+  return multicopy(color_schemes);
 }
 
-function set(schemes) {
-  var schemes_object = {};
-  for (var key in schemes) {
-    var scheme = schemes[key];
-    var scheme_object = schemes_object[key] = {};
-    scheme_object.marks =
-      HSL.to_hsl(scheme.marks) || HSL.to_hsl(default_scheme.marks);
-    scheme_object.marks_deep =
-      HSL.to_hsl(scheme.marks_deep) || HSL.deepen(scheme_object.marks_deep, 2.0);
-    scheme_object.rating_mid =
-      HSL.to_hsl(scheme.rating_mid) || HSL.to_hsl(default_scheme.rating_mid);
-    scheme_object.rating_top =
-      HSL.to_hsl(scheme.rating_top) || HSL.to_hsl(default_scheme.rating_top);
+function set(spreadsheet, schemes) {
+  SpreadsheetMetadata.set_object( spreadsheet, metadata_key,
+    multicopy(schemes) );
+}
+
+function copy(scheme) {
+  return {
+    marks:      HSL.copy(scheme.marks),
+    rating_mid: HSL.copy(scheme.rating_mid),
+    rating_top: HSL.copy(scheme.rating_top),
   }
-  SpreadsheetMetadata.set_object(spreadsheet, metadata_key, schemes_object);
+}
+
+function multicopy(schemes) {
+  return Object.fromEntries( Object.entries(schemes)
+    .map(([key, scheme]) => [key, copy(scheme)])
+  );
 }
 
 const default_scheme = {
-  marks:      [  0, .00, .90],
-  marks_deep: [  0, .00, .80],
-  rating_mid: [300, .50, .85],
-  rating_top: [180, .60, .70]
+  marks:      {h:   0, s: 0.00, l: 0.90},
+  rating_mid: {h: 300, s: 0.50, l: 0.85},
+  rating_top: {h: 180, s: 0.60, l: 0.70},
 };
 
 function get_default() {
-  var scheme = {};
-  for (var i = 0; i < colors.length; ++i) {
-    scheme[colors[i]] = HSL.to_hsl(default_scheme[colors[i]]);
-  }
-  return scheme;
+  return {
+    marks:      HSL.copy(default_scheme.marks),
+    rating_mid: HSL.copy(default_scheme.rating_mid),
+    rating_top: HSL.copy(default_scheme.rating_top),
+  };
 }
 
 return {
   get: get, set: set,
-  get_default: get_default };
+  get_default: get_default, copy: copy };
 }(); // end ColorSchemes namespace
 
 
@@ -69,19 +74,26 @@ function get(spreadsheet) {
   var categories = SpreadsheetMetadata.get_object(spreadsheet, metadata_key);
   if (categories == null)
     return {};
-  return categories;
+  return multicopy(categories);
 }
 
 function set(spreadsheet, categories) {
-  var categories_object = {};
-  for (var key in categories) {
-    var category = categories[key];
-    var category_object = categories_object[key] = {};
-    category_object.color = HSL.to_hsl(category.color);
-    category_object.name = category.name;
-    category_object.filename = category.filename;
-  }
-  SpreadsheetMetadata.set_object(spreadsheet, metadata_key, categories_object);
+  SpreadsheetMetadata.set_object( spreadsheet, metadata_key,
+    multicopy(categories) );
+}
+
+function copy(category) {
+  return {
+    name: category.name,
+    filename: category.filename,
+    color: category.color != null ? HSL.copy(category.color) : null
+  };
+}
+
+function multicopy(categories) {
+  return Object.fromEntries( Object.entries(categories)
+    .map(([key, category]) => [key, copy(category)])
+  );
 }
 
 return {get: get, set: set};
@@ -91,13 +103,13 @@ function format_category_css_(categories) {
   const category_list = Object.keys(categories).sort();
   var css_pieces = ["<style>"];
   for (let c of category_list) {
-    let colour = categories[c].color;
-    if (colour == null)
+    let color = categories[c].color;
+    if (color == null)
       continue;
     css_pieces.push(
       ".coloured.category-" + c + " { " +
-        "background-color: " + HSL.to_css(colour) + "; " +
-        "border-color: " + HSL.to_css(HSL.deepen(colour, 1.50)) + "; "+
+        "background-color: " + HSL.to_css(color) + "; " +
+        "border-color: " + HSL.to_css(HSL.deepen(color, 1.50)) + "; "+
       "}"
     )
   }

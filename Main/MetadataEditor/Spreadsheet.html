@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_blank">
+</head>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
+</script>
+<link rel="stylesheet" href="//ssl.gstatic.com/docs/script/css/add-ons1.css">
+<script>
+  var color_scheme_default = <?!= JSON.stringify(color_scheme_default) ?>;
+</script>
+<body>
+<div class="block">
+  <h3>Цветовые схемы</h3>
+  <table id="color_schemes" class="color_schemes">
+    <colgroup>
+      <col class="color_schemes--col color_schemes--col__name">
+      <col class="color_schemes--col color_schemes--col__color">
+      <col class="color_schemes--col color_schemes--col__color">
+      <col class="color_schemes--col color_schemes--col__color">
+      <col class="color_schemes--col color_schemes--col__button">
+    </colgroup>
+    <thead>
+      <tr class="color_schemes--row color_schemes--row__header">
+        <th>name</th>
+        <th>marks</th>
+        <th alt="rating_mid">mid</th>
+        <th alt="rating_top">top</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+    <tfoot>
+      <tr class="color_schemes--row color_schemes--row__new">
+        <td><input type="text" id="color_schemes--new_name"/></td>
+        <td colspan="5"><button id="color_schemes--new_button action" onclick="color_schemes_new()">Add</button></td>
+      </tr>
+    </tfoot>
+  </table>
+  <div
+   ><button id="color_schemes--save_button" class="action">Сохранить</button
+ ></div>
+</div>
+</body>
+<script>
+$(function() {
+  var color_schemes = <?!= JSON.stringify(color_schemes) ?>;
+  var $color_schemes = $("#color_schemes > tbody");
+  for (let name in color_schemes) {
+    let color_scheme = color_schemes[name];
+    $color_schemes.append($("<tr/>")
+      .append($("<td/>").text(name))
+      .append($("<td/>").css('background-color', hsl_to_css(color_scheme.marks)))
+      .append($("<td/>").css('background-color', hsl_to_css(color_scheme.mid)))
+      .append($("<td/>").css('background-color', hsl_to_css(color_scheme.top)))
+    );
+  }
+});
+
+function hsl_to_css(hsl) {
+  return "hsl(" + hsl.h + "," + (100 * hsl.s) + "%," + (100 * hsl.l) + "%)";
+}
+
+
+</script>
+</html>

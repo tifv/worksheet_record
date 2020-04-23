@@ -3,6 +3,7 @@ SpreadsheetLib/Error
 SpreadsheetLib/LangUtils
 SpreadsheetLib/RangeUtils
 SpreadsheetLib/HSL
+SpreadsheetLib/Formula
 SpreadsheetLib/CFormatting
 SpreadsheetLib/Metadata
 SpreadsheetLib/Flusher
@@ -27,6 +28,5 @@ Upload/Back
 Upload/Dialog
 Sidebar/Back
 Sidebar/Front
-TODO
-test
 MetadataEditor/Back
+MetadataEditor/Spreadsheet

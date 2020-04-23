@@ -100,8 +100,7 @@ define_lazy_properties_(Worksheet.prototype, { // {{{
             1, this.dim.width );
     },
     title_column_range: function() {
-        return get_column_range_(this.sheet.getRange(
-            1, this.dim.title ));
+        return get_column_range_(this.sheet, this.dim.title);
     },
     metaweight_cell: function() {
         return this.sheet.getRange(
@@ -179,8 +178,8 @@ Worksheet.add = function(group, range, options) {
         group.sheetbuf.insert_columns_after(
             range.getColumn(), full_width + 2 - range_width );
     }
-    var full_range = get_column_range_(sheet.getRange(
-        1, range.getColumn() + 1, 1, full_width ));
+    var full_range = get_column_range_( sheet,
+        range.getColumn() + 1, full_width );
     var initializer = new Initializer(group, full_range, options);
     var worksheet = initializer.worksheet;
     return worksheet;
@@ -191,10 +190,9 @@ Worksheet.add = function(group, range, options) {
  *         default is initial.title
  *     date (WorksheetDate)
  *         default is no date
- *     color_scheme
- *         code (string), must match spreadsheet metadata
+ *     color_scheme (object)
  *         default will use group color scheme
- *     category
+ *     category (string)
  *         default is not to set category
  * }}} */
 
@@ -204,8 +202,11 @@ function Initializer(group, full_range, options) { // {{{
     this.options = this.rectify_options(options);
     this.worksheet = new Worksheet(group, full_range);
     this.dim = this.worksheet.dim;
-    this.color_scheme = this.group.get_color_scheme();
-        // XXX options
+    if (this.options.color_scheme == null) {
+        this.color_scheme = this.group.get_color_scheme();
+    } else {
+        this.color_scheme = ColorSchemes.copy(this.options.color_scheme);
+    }
     this.worksheet.reset_column_widths();
     this.init_markers();
     this.title_id = this.add_title_metadata();
@@ -347,7 +348,7 @@ Initializer.prototype.init_rating_range = function() {
         'R[0]C[' + (this.dim.data_start - 1 - this.dim.rating) + ']:' +
         'R[0]C[' + (this.dim.data_end   + 1 - this.dim.rating) + ']';
     var rating_formula_R1C1 = ''.concat(
-        '=sumproduct( ',
+        '=sumproduct(',
             weight_row_rating_R1C1, ';',
             data_row_rating_R1C1,
         ')'
@@ -745,7 +746,7 @@ Worksheet.parse_title_note = function(note) {
         if (note_info.title_id == null) {
             let title_match = /^id=(\d+)$/.exec(line);
             if (title_match != null) {
-                note_info.title_id = parseInt(title_match[1]);
+                note_info.title_id = parseInt(title_match[1], 10);
                 note_info.title_id_line = i;
                 lines[i] = ""; continue;
             }
@@ -863,9 +864,9 @@ Worksheet.list = function*(group, start = 1, end) {
             continue;
         }
         yield new Worksheet( group,
-            get_column_range_(group.sheet.getRange(
-                1, marker_start - data_offset.start + 1,
-                1, marker_end - marker_start + 1 + data_offset.width - 2 ))
+            get_column_range_( group.sheet,
+                marker_start - data_offset.start + 1,
+                marker_end - marker_start + 1 + data_offset.width - 2 )
         );
         if (last_end >= marker_end)
             throw new Error("Worksheet.list: internal error");
@@ -893,9 +894,9 @@ Worksheet.surrounding = function(group, range) {
             range );
     }
     var worksheet = new Worksheet( group,
-        get_column_range_(group.sheet.getRange(
-            1, start - data_offset.start + 1,
-            1, end - start + 1 + data_offset.width - 2 ))
+        get_column_range_( group.sheet,
+            start - data_offset.start + 1,
+            end - start + 1 + data_offset.width - 2 )
     );
     try {
         worksheet.check();
@@ -932,8 +933,7 @@ Worksheet.find_by_location = function(group, location) {
     var sheet = group.sheet;
     find_column: {
         if (column != null) {
-            var title_column_range = get_column_range_(
-                sheet.getRange(1, column) );
+            var title_column_range = get_column_range_(sheet, column);
             var title_metadata = title_column_range
                 .createDeveloperMetadataFinder()
                 .withLocationType(
@@ -961,10 +961,8 @@ Worksheet.find_by_location = function(group, location) {
     let end_column = group.sheetbuf.find_value( "label_row",
         marker.end, column );
     var worksheet = new Worksheet( group,
-        get_column_range_(
-            sheet.getRange(
-                1, column, 1, end_column + data_offset.end - column
-            ) )
+        get_column_range_( sheet,
+            column, end_column + data_offset.end - column )
     );
     worksheet.check();
     return worksheet;
@@ -1036,8 +1034,7 @@ define_lazy_properties_(WorksheetSection.prototype, {
             1, this.dim.width );
     },
     title_column_range: function() {
-        return get_column_range_(this.sheet.getRange(
-            1, this.dim.title ));
+        return get_column_range_(this.sheet, this.dim.title);
     },
 }); // }}}
 
@@ -1144,8 +1141,8 @@ Worksheet.prototype.list_sections = function*() {
                     this.title_range );
             }
             let section = new WorksheetSection( this,
-                get_column_range_(this.sheet.getRange(
-                    1, section_start, 1, section_end - section_start + 1 ))
+                get_column_range_( this.sheet,
+                    section_start, section_end - section_start + 1 )
             );
             //section.check();
             yield section;
@@ -1199,8 +1196,8 @@ Worksheet.surrounding_section = function(group, worksheet, range) {
             range );
     }
     var section = new WorksheetSection( worksheet,
-        get_column_range_(worksheet.sheet.getRange(
-            1, section_start, 1, section_end - section_start + 1 ))
+        get_column_range_( worksheet.sheet,
+            section_start, section_end - section_start + 1 )
     );
     section.check({dimensions: true, title: false});
     return section;
@@ -1227,8 +1224,7 @@ Worksheet.prototype.find_section_by_location = function(location) {
     var sheet = this.group.sheet;
     find_column: {
         if (column != null) {
-            let title_column_range = get_column_range_(
-                sheet.getRange(1, column) );
+            let title_column_range = get_column_range_(sheet, column);
             var title_metadata = title_column_range
                 .createDeveloperMetadataFinder()
                 .withLocationType(
@@ -1269,8 +1265,7 @@ Worksheet.prototype.find_section_by_location = function(location) {
         }
     }
     var section = new WorksheetSection( this,
-        get_column_range_(sheet.getRange(
-            1, column, 1, end_column - column + 1 ))
+        get_column_range_(sheet, column, end_column - column + 1)
     );
     section.check();
     return section;
@@ -1338,8 +1333,7 @@ Worksheet.prototype.add_section_after = function(section, options = {}) {
         .setBorder(true, true, null, true, null, null);
     var title_id; {
         let quasi_section = {
-            title_column_range:
-                get_column_range_(this.sheet.getRange(1, dim.title)),
+            title_column_range: get_column_range_(this.sheet, dim.title),
         };
         add_title_metadata.call(quasi_section);
         title_id = Worksheet.prototype.get_title_metadata.call(quasi_section)
@@ -1445,10 +1439,8 @@ WorksheetSection.prototype.remove_excess_columns = function() {
                     var title_note = this.get_title_note();
                     var category = this.worksheet.get_category();
                     var metadata = this.get_title_metadata();
-                    metadata.moveToColumn(
-                        get_column_range_(this.sheet.getRange(
-                            1, this.dim.title + removing_series ))
-                    );
+                    metadata.moveToColumn(get_column_range_( this.sheet,
+                        this.dim.title + removing_series ));
                 }
             }
             this.group.sheetbuf.delete_columns(
