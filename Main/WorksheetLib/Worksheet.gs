@@ -276,7 +276,8 @@ Initializer.prototype.init_title_range = function() {
     }
     note_info.title_id = this.title_id;
     let note = Worksheet.format_title_note(note_info);
-    this.group.sheetbuf.set_value("title_row", this.dim.title, this.options.title);
+    this.group.sheetbuf.set_value( "title_row",
+        this.dim.title, this.options.title );
     this.group.sheetbuf.set_note("title_row", this.dim.title, note);
     this.group.sheetbuf.merge("title_row", this.dim.start, this.dim.end);
     this.worksheet.title_range
@@ -492,15 +493,15 @@ Initializer.prototype.init_borders = function() {
 
 // Initializer().add_cf_rules {{{
 Initializer.prototype.add_cf_rules = function() {
-    CFormatting.merge(this.sheet, [
-        this.worksheet.new_cf_rule_data(HSL.to_hex(this.color_scheme.marks)),
-        this.worksheet.new_cf_rule_weight(
+    ConditionalFormatting.merge(this.sheet,
+        this.worksheet.new_cfrule_data(HSL.to_hex(this.color_scheme.marks)),
+        this.worksheet.new_cfrule_weight(
             HSL.to_hex(HSL.deepen(this.color_scheme.marks, 0.35)),
             HSL.to_hex(HSL.deepen(this.color_scheme.marks, 4.35)) ),
-        this.worksheet.new_cf_rule_rating(
+        this.worksheet.new_cfrule_rating(
             HSL.to_hex(this.color_scheme.rating_mid),
             HSL.to_hex(this.color_scheme.rating_top) )
-    ]);
+    );
 } // }}}
 
 // Worksheet().reset_column_widths {{{
@@ -587,78 +588,76 @@ Worksheet.prototype.add_column_group = function() {
     this.title_range.shiftColumnGroupDepth(+1);
 } // }}}
 
-// Worksheet().new_cf_rule_data {{{
-Worksheet.prototype.new_cf_rule_data = function(colour) {
-    return SpreadsheetApp.newConditionalFormatRule()
-        .whenNumberGreaterThan(0)
-        .setBackground(colour)
-        .setRanges([
-            this.sheet.getRange(
+// Worksheet().new_cfrule_data {{{
+Worksheet.prototype.new_cfrule_data = function(color) {
+    return { type: "boolean",
+        condition: {
+            type: SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN,
+            values: [0] },
+        ranges: [
+            [
                 this.group.dim.data_row, this.dim.data_start - 1,
-                this.group.dim.data_height, this.dim.data_width + 2 ),
-            this.sheet.getRange(
+                this.group.dim.data_height, this.dim.data_width + 2 ],
+            [
                 this.group.dim.max_row, this.dim.data_start - 1,
-                1, this.dim.data_width + 2 )
-        ])
-        .build();
+                1, this.dim.data_width + 2 ]
+        ],
+        effect: {background: color},
+    };
 } // }}}
 
-// Worksheet().new_cf_rule_weight {{{
-Worksheet.prototype.new_cf_rule_weight = function(colour_min, colour_max) {
-    var cell_A1 = this.sheet.getRange(
-        this.group.dim.weight_row, this.dim.data_start - 1
-    ).getA1Notation();
-    var weight_A1 = this.sheet.getRange(
-        this.group.dim.weight_row, this.dim.data_start - 1
-    ).getA1Notation().replace(/([A-Z]+)([0-9]+)/, "$1$$$2");
-    var max_A1 = this.sheet.getRange(
-        this.group.dim.max_row, this.dim.data_start - 1
-    ).getA1Notation().replace(/([A-Z]+)([0-9]+)/, "$1$$$2");
-    return SpreadsheetApp.newConditionalFormatRule()
-        .setGradientMinpointWithValue( colour_min,
-            SpreadsheetApp.InterpolationType.NUMBER,
-            "=" + cell_A1 +
-                " - 1/power(" + weight_A1 + "*max(" + max_A1 + ";1);2) + 1" )
-        .setGradientMaxpointWithValue( colour_max,
-            SpreadsheetApp.InterpolationType.NUMBER,
-            "=" + cell_A1 +
-                " - 1/power(" + weight_A1 + "*max(" + max_A1 + ";1);2) + 21" )
-        .setRanges([
-            this.sheet.getRange(
+// Worksheet().new_cfrule_data_limit {{{
+Worksheet.prototype.new_cfrule_data_limit = function(color) {
+    return { type: "boolean",
+        condition: {
+            type:
+                SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN_OR_EQUAL_TO,
+            values: ["=R" + this.group.dim.weight_row + "C" + this.dim.sum] },
+        ranges: [
+            [
+                this.group.dim.data_row, this.dim.data_start - 1,
+                this.group.dim.data_height, this.dim.data_width + 2 ],
+            [
+                this.group.dim.max_row, this.dim.data_start - 1,
+                1, this.dim.data_width + 2 ]
+        ],
+        effect: {background: color},
+    };
+} // }}}
+
+// Worksheet().new_cfrule_weight {{{
+Worksheet.prototype.new_cfrule_weight = function(color_min, color_max) {
+    var weight_R1C1 = "R" + this.group.dim.weight_row + "C[0]";
+    var max_R1C1 = "R" + this.group.dim.max_row + "C[0]";
+    var formula_base = ( "=R[0]C[0]" +
+        " - 1/power(" + weight_R1C1 + "*max(" + max_R1C1 + ",1),2)" );
+    return { type: "gradient",
+        condition: {
+            min_type: SpreadsheetApp.InterpolationType.NUMBER,
+            min_value: formula_base + " + 1",
+            max_type: SpreadsheetApp.InterpolationType.NUMBER,
+            max_value: formula_base + " + 21",
+        },
+        ranges: [
+            [
                 this.group.dim.weight_row, this.dim.data_start - 1,
-                1, this.dim.data_width + 2 )
-        ])
-        .build();
+                1, this.dim.data_width + 2 ]
+        ],
+        effect: {
+            min_color: color_min,
+            max_color: color_max
+        },
+    };
 } // }}}
 
-// Worksheet().new_cf_rule_data_limit {{{
-Worksheet.prototype.new_cf_rule_data_limit = function(colour) {
-    var limit_A1 = this.sheet.getRange(this.group.dim.weight_row, this.dim.sum)
-        .getA1Notation().replace(/([A-Z]+)([0-9]+)/, "$$$1$$$2");
-    return SpreadsheetApp.newConditionalFormatRule()
-        .withCriteria(
-            SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN_OR_EQUAL_TO,
-            ["=" + limit_A1] )
-        .setBackground(colour)
-        .setRanges([
-            this.sheet.getRange(
-                this.group.dim.data_row, this.dim.data_start - 1,
-                this.group.dim.data_height, this.dim.data_width + 2 ),
-            this.sheet.getRange(
-                this.group.dim.max_row, this.dim.data_start - 1,
-                1, this.dim.data_width + 2 )
-        ])
-        .build();
-} // }}}
-
-// Worksheet().new_cf_rule_rating {{{
-Worksheet.prototype.new_cf_rule_rating = function(colour_mid, colour_top) {
-    return this.group.new_cf_rule_rating([
-        this.sheet.getRange(
+// Worksheet().new_cfrule_rating {{{
+Worksheet.prototype.new_cfrule_rating = function(color_mid, color_top) {
+    return this.group.new_cfrule_rating([
+        [
             this.group.dim.data_row, this.dim.rating,
-            this.group.dim.data_height, 2 ),
-        this.sheet.getRange(this.group.dim.max_row, this.dim.rating, 1, 2)
-    ], colour_mid, colour_top);
+            this.group.dim.data_height, 2 ],
+        [this.group.dim.max_row, this.dim.rating, 1, 2],
+    ], color_mid, color_top);
 } // }}}
 
 // }}}2 initialize
@@ -1234,8 +1233,6 @@ Worksheet.prototype.find_section_by_location = function(location) {
             if (title_metadata.length > 0)
                 break find_column;
         }
-        console.log(this.full_range.getA1Notation());
-        console.log(title_id);
         title_metadata = this.full_range
             .createDeveloperMetadataFinder()
             .withLocationType(

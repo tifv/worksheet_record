@@ -1,23 +1,29 @@
-var ACodec = {
-  encode: function(n) {
-    var pieces = [];
-    while (n > 0) {
-      var i = (n - 1) % 26;
-      pieces.unshift(letters[i]);
-      n = (n - i - 1) / 26;
-    }
-    return pieces.join("");
-  },
-  decode: function(s) {
-    var n = 0;
-    while (s.length > 0) {
-      n *= 26;
-      n += letters.indexOf(s[0]) + 1;
-      s = s.substring(1);
-    }
-    return n;
-  },
-};
+var ACodec = function() { // begin namespace
+
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+function encode(n) {
+  var pieces = [];
+  while (n > 0) {
+    var i = (n - 1) % 26;
+    pieces.unshift(letters[i]);
+    n = (n - i - 1) / 26;
+  }
+  return pieces.join("");
+}
+
+function decode(s) {
+  var n = 0;
+  while (s.length > 0) {
+    n *= 26;
+    n += letters.indexOf(s[0]) + 1;
+    s = s.substring(1);
+  }
+  return n;
+}
+
+return {encode: encode, decode: decode};
+}(); // end ACodec namespace
 
 // Get unbounded row range
 function get_row_range_(sheet, row, last_row = row) {

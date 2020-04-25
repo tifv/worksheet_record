@@ -31,10 +31,10 @@
     border-radius: 2px;
     overflow: hidden;
   }
-  #select_index--container > #select_index--selector {
-    display: flex;
-    align-items: center;
-    padding-left: 6px;
+  #select_index--container > div:last-child {
+    margin-bottom: 15px;
+  }
+  #select_index--container > div#select_index--selector {
     background: #4a88f4;
     border: 1px solid #3079ed;
   }
@@ -90,16 +90,16 @@ $(function() {
       } else {
         // XXX instead of tinkering with scrolling, just add
         // a half-height spacer at the end of the list.
-        let bottom_distance = $select_index_container[0].scrollHeight -
-          $select_index_container.scrollTop() -
-          $select_index_container.innerHeight();
+        //let bottom_distance = $select_index_container[0].scrollHeight -
+        //  $select_index_container.scrollTop() -
+        //  $select_index_container.innerHeight();
         $this.after($selector);
         $selector.data("index", index + 1);
-        if (bottom_distance < 10) {
-          $select_index_container.scrollTop(
-            $select_index_container[0].scrollHeight -
-            $select_index_container.innerHeight() - bottom_distance );
-        }
+        //if (bottom_distance < 10) {
+        //  $select_index_container.scrollTop(
+        //    $select_index_container[0].scrollHeight -
+        //    $select_index_container.innerHeight() - bottom_distance );
+        //}
       }
     });
   $select_index_container.append($selector);

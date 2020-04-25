@@ -40,10 +40,6 @@ class Formula {
     static *tokenize(formula, options) {
         var index = 0, length = formula.length;
         try {
-            if (!formula.startsWith('=')) {
-                throw new FormulaError("formula does not start with \"=\"");
-            }
-            index = 1;
             var context = "toplevel", contexts = [context];
                 // "toplevel" or "arguments" or "expression" or "array"
             while (index < length) {
@@ -90,11 +86,14 @@ class Formula {
     }
     toString(options) {
         options = this.constructor.rectify_options(options);
-        var pieces = ["="];
+        var pieces = [];
         for (let token of this.tokens) {
             pieces.push(token.toString(options));
         }
         return pieces.join("");
+    }
+    static translate(formula, from_options, to_options) {
+      return (new Formula(formula, from_options)).toString(to_options);
     }
 }
 
@@ -308,18 +307,6 @@ function encode_R1C1_col_index(index) {
     return encode_R1C1_index("C", index);
 }
 
-const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-function decode_A(s) {
-    var n = 0;
-    while (s.length > 0) {
-        n *= 26;
-        n += letters.indexOf(s[0]) + 1;
-        s = s.substring(1);
-    }
-    return n;
-}
-
 function decode_A1_row_index(index_s, ref_row) {
     if (index_s == null)
         return null;
@@ -337,23 +324,13 @@ function decode_A1_col_index(index_s, ref_col) {
     if (index_s == null)
         return null;
     if (/^\$[A-Za-z]+$/.exec(index_s)) {
-        return {absolute: decode_A(index_s.substring(1))};
+        return {absolute: ACodec.decode(index_s.substring(1))};
     }
     if (/^[A-Za-z]+$/.exec(index_s)) {
-        return {relative: decode_A(index_s) - ref_col};
+        return {relative: ACodec.decode(index_s) - ref_col};
     }
     throw new FormulaError( "internal error: " +
         index_s + " is not a valid A1 column index");
-}
-
-function encode_A(n) {
-    var pieces = [];
-    while (n > 0) {
-        var i = (n - 1) % 26;
-        pieces.unshift(letters[i]);
-        n = (n - i - 1) / 26;
-    }
-    return pieces.join("");
 }
 
 function encode_A1_row_index(index, ref_row) {
@@ -372,9 +349,9 @@ function encode_A1_col_index(index, ref_col) {
     if (index == null)
         return "";
     if (index.relative != null) {
-        return encode_A(ref_col + index.relative);
+        return ACodec.encode(ref_col + index.relative);
     } else if (index.absolute != null) {
-        return "$" + encode_A(index.absolute);
+        return "$" + ACodec.encode(index.absolute);
     } else {
         throw new FormulaError("internal error");
     }
@@ -581,10 +558,10 @@ class NumberToken extends LocalizedToken {
         super();
         this.value = value;
     }
-    static match_contructor_en(match, context, options) {
+    static match_constructor_en(match, context, options) {
         return new this(parseFloat(match[0]));
     }
-    static match_contructor_ru(match, context, options) {
+    static match_constructor_ru(match, context, options) {
         return new this(parseFloat(match[0].replace(",", ".")));
     }
     toString_en() {
@@ -594,8 +571,8 @@ class NumberToken extends LocalizedToken {
         return this.value.toString().replace(".", ",");
     }
 };
-NumberToken.regex_en = /^(?:\d+\.?|\d*\.\d+)(?:[Ee][+\-]\d+)?/;
-NumberToken.regex_ru = /^(?:\d+,?|\d*,\d+)(?:[Ee][+\-]\d+)?/;
+NumberToken.regex_en = /^(?:\d+\.\d+|\d+\.|\.\d+|\d+)(?:[Ee][+\-]\d+)?/;
+NumberToken.regex_ru = /^(?:\d+,\d+|\d+,|,\d+|\d+)(?:[Ee][+\-]\d+)?/;
 
 class StringToken extends Token {
     constructor(value) {
