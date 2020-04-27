@@ -160,7 +160,8 @@ function upload_worksheet_finish({
   const uploads = UploadRecord.get("minimal");
   uploads.append(new Map([
     ["group", "'" + group_name],
-    ["category", "'" + category],
+    ["category", (category != null) ?
+      "'" + category : null ],
     ["title", "'" + title],
     ["date", (date != null) ?
       "'" + WorksheetDate.from_object(date).format() :

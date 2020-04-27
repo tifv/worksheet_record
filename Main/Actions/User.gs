@@ -1,49 +1,88 @@
-/*
+/* Amdministrative priviliges
+ * • anyone can acquire administrative priviliges
+ *   • the only requirement is to answer the question
+ *   • spreadsheet owner can acquire privileges without any questions
+ * • anyone can relinquish administrative priviliges
+ * • some menu items will be hidden unless priviliges are enabled
+ */
 
-var Admin = function() { // begin namespace
+var User = function() { // begin namespace
 
-const user_is_admin_key_base = "is_admin";
-const document_has_admin_key = "has_admin";
+const user_status_key = "user_status";
+var user_status = null;
 
-function get_user_is_admin_key() {
-  return user_is_admin_key_base + "/" + SpreadsheetApp.getActiveSpreadsheet().getId();
+function get_user_status() {
+    if (user_status == null) {
+        user_status = JSON.parse(
+            PropertiesService.getUserProperties()
+                .getProperty(user_status_key) ||
+            "{}" );
+    }
+    return user_status;
 }
 
-function set_self_admin() {
-  PropertiesService.getUserProperties().setProperty(
-    get_user_is_admin_key(), "true" );
-  PropertiesService.getDocumentProperties().setProperty(
-    document_has_admin_key, "true" );
+function save_user_status() {
+    PropertiesService.getUserProperties()
+        .setProperty(user_status_key, JSON.stringify(get_user_status()));
 }
 
-function unset_self_admin() {
-  PropertiesService.getUserProperties().deleteProperty(
-    get_user_is_admin_key() );
+function admin_is_acquired() {
+    return get_user_status().admin == "true";
 }
 
-function admin_exists() {
-  return PropertiesService.getDocumentProperties().getProperty(document_has_admin_key) != null;
+function admin_acquire() {
+    get_user_status().admin = "true";
+    save_user_status();
 }
 
-function self_is_admin() {
-  return PropertiesService.getUserProperties().getProperty(
-    get_user_is_admin_key() ) != null;
+function admin_relinquish() {
+    get_user_status().admin = "false";
+    save_user_status();
 }
 
-function self_is_owner() {
-  var user = Session.getActiveUser();
-  var email = user.getEmail();
-  if (email == "") {
-    throw new Error("Admin.self_is_owner: unable to determine");
-  }
-  return (email == SpreadsheetApp.getActiveSpreadsheet().getOwner().getEmail());
+function menu_is_enabled() {
+    return get_user_status().enabled == "true";
+}
+
+function menu_enable() {
+    get_user_status().enabled = "true";
+    save_user_status();
 }
 
 return {
-  admin_exists: admin_exists, self_is_admin: self_is_admin,
-  self_is_owner: self_is_owner,
-  set_self_admin: set_self_admin, unset_self_admin: unset_self_admin,
-};
-}(); // end Admin namespace
+    admin_is_acquired: admin_is_acquired,
+    admin_acquire: admin_acquire,
+    admin_relinquish: admin_relinquish,
+    menu_is_enabled: menu_is_enabled,
+    menu_enable: menu_enable,
+}
+}(); // end User namespace
 
-*/
+function user_admin_acquire() {
+    var user = Session.getActiveUser();
+    var email = user.getEmail();
+    if ( email == "" ||
+        email != SpreadsheetApp.getActiveSpreadsheet().getOwner().getEmail()
+    ) {
+        const ui = SpreadsheetApp.getUi();
+        let response = ui.prompt( "Функции администратора",
+            "Чтобы получить доступ к функциям администратора, " +
+            "введите «я хочу сломать ведомость»:",
+            ui.ButtonSet.OK_CANCEL );
+        if (
+            response.getSelectedButton() != ui.Button.OK ||
+            response.getResponseText() != "я хочу сломать ведомость"
+        ) {
+            return;
+        }
+    }
+    User.admin_acquire();
+    menu_create();
+}
+
+function user_admin_relinquish() {
+    User.admin_relinquish();
+    menu_create();
+}
+
+// vim: set fdm=marker sw=4 :

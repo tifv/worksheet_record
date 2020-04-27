@@ -588,6 +588,31 @@ Worksheet.prototype.add_column_group = function() {
     this.title_range.shiftColumnGroupDepth(+1);
 } // }}}
 
+// Worksheet().recolor_cf_rules {{{
+Worksheet.prototype.recolor_cf_rules = function(color_scheme) {
+    var cfrules = ConditionalFormatting.RuleList.load(this.sheet);
+    var cfrule_data_obj = this.new_cfrule_data(
+        HSL.to_hex(color_scheme.marks) );
+    cfrules.remove(Object.assign({}, cfrule_data_obj, {effect: null}));
+    cfrules.insert(cfrule_data_obj);
+    var cfrule_weight_obj = this.new_cfrule_weight(
+        HSL.to_hex(HSL.deepen(color_scheme.marks, 0.35)),
+        HSL.to_hex(HSL.deepen(color_scheme.marks, 4.35)) );
+    cfrules.remove(Object.assign({}, cfrule_weight_obj, {effect: null}));
+    cfrules.insert(cfrule_weight_obj);
+    var cfrule_rating_obj = this.new_cfrule_rating(
+        HSL.to_hex(color_scheme.rating_mid),
+        HSL.to_hex(color_scheme.rating_top) );
+    cfrules.remove(Object.assign({}, cfrule_rating_obj, {effect: null}));
+    cfrules.insert(cfrule_rating_obj);
+    var cfrule_data_limit_obj = this.new_cfrule_data_limit(
+        HSL.to_hex(HSL.deepen(color_scheme.marks, 2)) );
+    cfrules.replace(
+        Object.assign({}, cfrule_data_limit_obj, {effect: null}),
+        cfrule_data_limit_obj.effect );
+    cfrules.save(this.sheet);
+} // }}}
+
 // Worksheet().new_cfrule_data {{{
 Worksheet.prototype.new_cfrule_data = function(color) {
     return { type: "boolean",
