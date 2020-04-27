@@ -545,7 +545,7 @@ Initializer.prototype.add_attendance_sum = function() {
             min_color: "#ffffff",
             mid_color: HSL.to_hex(initial.attendance.colors.mark),
             max_color: HSL.to_hex(
-                HSL.deepen(initial.attendance.colors.mark, 2.5) ),
+                HSL.deepen(initial.attendance.colors.mark, 4) ),
         },
     });
     return range;
@@ -846,7 +846,7 @@ Initializer.prototype.add_attendance = function() {
             min_color: "#ffffff",
             mid_color: HSL.to_hex(initial.attendance.colors.mark),
             max_color: HSL.to_hex(
-                HSL.deepen(initial.attendance.colors.mark, 2.5) ),
+                HSL.deepen(initial.attendance.colors.mark, 4) ),
         },
     });
     return data_ext_range;
@@ -1175,15 +1175,13 @@ Initializer.prototype.push_rating_cfrules = function() {
         );
     }
     this.cfrule_objs.push(this.group.new_cfrule_rating(
-        cfranges,
-        HSL.to_hex(this.color_scheme.rating_mid),
-        HSL.to_hex(this.color_scheme.rating_top),
+        cfranges, this.color_scheme,
     ));
 } // }}}
 
 // StudyGroup().new_cfrule_rating (ranges, color_mid, color_top) {{{
 StudyGroup.prototype.new_cfrule_rating = function(
-    cfranges, color_mid, color_top
+    cfranges, color_scheme
 ) {
     var max_R1C1 = "R" + this.dim.max_row + "C[0]";
     return { type: "gradient",
@@ -1198,8 +1196,8 @@ StudyGroup.prototype.new_cfrule_rating = function(
         ranges: cfranges,
         effect: {
             min_color: "#ffffff",
-            mid_color: color_mid,
-            max_color: color_top,
+            mid_color: HSL.to_hex(color_scheme.rating_mid),
+            max_color: HSL.to_hex(color_scheme.rating_top),
         },
     };
 } // }}}

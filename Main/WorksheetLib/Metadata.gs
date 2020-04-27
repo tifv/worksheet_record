@@ -4,7 +4,7 @@
  *   .get_default() → scheme
  *   .copy(scheme) → scheme
  * schemes = {`name` : scheme for each `name`}
- * scheme = {marks: hsl, rating_mid: hsl, rating_top: hsl}
+ * scheme = {mark: hsl, rating_mid: hsl, rating_top: hsl}
  */
 
 /* Categories
@@ -18,7 +18,7 @@
 var ColorSchemes = function() { // namespace
 
 const metadata_key = "worksheet_meta-color_schemes";
-const colors = ["marks", "rating_mid", "rating_top"];
+const colors = ["mark", "rating_mid", "rating_top"];
 
 function get(spreadsheet) {
   var color_schemes = SpreadsheetMetadata.get_object(spreadsheet, metadata_key);
@@ -34,7 +34,7 @@ function set(spreadsheet, schemes) {
 
 function copy(scheme) {
   return {
-    marks:      HSL.copy(scheme.marks),
+    mark:       HSL.copy(scheme.mark),
     rating_mid: HSL.copy(scheme.rating_mid),
     rating_top: HSL.copy(scheme.rating_top),
   }
@@ -47,14 +47,14 @@ function multicopy(schemes) {
 }
 
 const default_scheme = {
-  marks:      {h:   0, s: 0.00, l: 0.90},
+  mark:       {h:   0, s: 0.00, l: 0.90},
   rating_mid: {h: 300, s: 0.50, l: 0.85},
   rating_top: {h: 180, s: 0.60, l: 0.70},
 };
 
 function get_default() {
   return {
-    marks:      HSL.copy(default_scheme.marks),
+    mark:       HSL.copy(default_scheme.mark),
     rating_mid: HSL.copy(default_scheme.rating_mid),
     rating_top: HSL.copy(default_scheme.rating_top),
   };

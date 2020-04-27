@@ -20,8 +20,15 @@ function copy(hsl) {
 }
 
 function deepen(hsl, factor=1) {
+  if (!(factor > 0)) {
+    throw new Error("factor must be a positive number");
+  }
   var {h, s, l} = copy(hsl);
-  return {h: h, s: s, l: Math.max(0, 1 - (1 - l) * factor)};
+  var lratio = l / (1 - l);
+  if (!isFinite(lratio) || !(lratio > 0))
+    return {h: h, s: s, l: l}
+  lratio /= factor;
+  return {h: h, s: s, l: lratio / (lratio + 1)};
 }
 
 function to_rgb(hsl) {
@@ -60,3 +67,4 @@ return {copy: copy, deepen: deepen, to_rgb: to_rgb, to_hex: to_hex, to_css: to_c
 }(); // end HSL namespace
 
 // XXX add function that sets hyperlink color to hsl(220, 75%, 40%)
+

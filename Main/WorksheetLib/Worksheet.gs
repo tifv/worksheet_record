@@ -494,13 +494,9 @@ Initializer.prototype.init_borders = function() {
 // Initializer().add_cf_rules {{{
 Initializer.prototype.add_cf_rules = function() {
     ConditionalFormatting.merge(this.sheet,
-        this.worksheet.new_cfrule_data(HSL.to_hex(this.color_scheme.marks)),
-        this.worksheet.new_cfrule_weight(
-            HSL.to_hex(HSL.deepen(this.color_scheme.marks, 0.35)),
-            HSL.to_hex(HSL.deepen(this.color_scheme.marks, 4.35)) ),
-        this.worksheet.new_cfrule_rating(
-            HSL.to_hex(this.color_scheme.rating_mid),
-            HSL.to_hex(this.color_scheme.rating_top) )
+        this.worksheet.new_cfrule_data(this.color_scheme),
+        this.worksheet.new_cfrule_weight(this.color_scheme),
+        this.worksheet.new_cfrule_rating(this.color_scheme),
     );
 } // }}}
 
@@ -591,22 +587,16 @@ Worksheet.prototype.add_column_group = function() {
 // Worksheet().recolor_cf_rules {{{
 Worksheet.prototype.recolor_cf_rules = function(color_scheme) {
     var cfrules = ConditionalFormatting.RuleList.load(this.sheet);
-    var cfrule_data_obj = this.new_cfrule_data(
-        HSL.to_hex(color_scheme.marks) );
+    var cfrule_data_obj = this.new_cfrule_data(color_scheme);
     cfrules.remove(Object.assign({}, cfrule_data_obj, {effect: null}));
     cfrules.insert(cfrule_data_obj);
-    var cfrule_weight_obj = this.new_cfrule_weight(
-        HSL.to_hex(HSL.deepen(color_scheme.marks, 0.35)),
-        HSL.to_hex(HSL.deepen(color_scheme.marks, 4.35)) );
+    var cfrule_weight_obj = this.new_cfrule_weight(color_scheme);
     cfrules.remove(Object.assign({}, cfrule_weight_obj, {effect: null}));
     cfrules.insert(cfrule_weight_obj);
-    var cfrule_rating_obj = this.new_cfrule_rating(
-        HSL.to_hex(color_scheme.rating_mid),
-        HSL.to_hex(color_scheme.rating_top) );
+    var cfrule_rating_obj = this.new_cfrule_rating(color_scheme);
     cfrules.remove(Object.assign({}, cfrule_rating_obj, {effect: null}));
     cfrules.insert(cfrule_rating_obj);
-    var cfrule_data_limit_obj = this.new_cfrule_data_limit(
-        HSL.to_hex(HSL.deepen(color_scheme.marks, 2)) );
+    var cfrule_data_limit_obj = this.new_cfrule_data_limit(color_scheme);
     cfrules.replace(
         Object.assign({}, cfrule_data_limit_obj, {effect: null}),
         cfrule_data_limit_obj.effect );
@@ -614,7 +604,7 @@ Worksheet.prototype.recolor_cf_rules = function(color_scheme) {
 } // }}}
 
 // Worksheet().new_cfrule_data {{{
-Worksheet.prototype.new_cfrule_data = function(color) {
+Worksheet.prototype.new_cfrule_data = function(color_scheme) {
     return { type: "boolean",
         condition: {
             type: SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN,
@@ -627,12 +617,12 @@ Worksheet.prototype.new_cfrule_data = function(color) {
                 this.group.dim.max_row, this.dim.data_start - 1,
                 1, this.dim.data_width + 2 ]
         ],
-        effect: {background: color},
+        effect: {background: HSL.to_hex(color_scheme.mark)},
     };
 } // }}}
 
 // Worksheet().new_cfrule_data_limit {{{
-Worksheet.prototype.new_cfrule_data_limit = function(color) {
+Worksheet.prototype.new_cfrule_data_limit = function(color_scheme) {
     return { type: "boolean",
         condition: {
             type:
@@ -646,12 +636,12 @@ Worksheet.prototype.new_cfrule_data_limit = function(color) {
                 this.group.dim.max_row, this.dim.data_start - 1,
                 1, this.dim.data_width + 2 ]
         ],
-        effect: {background: color},
+        effect: {background: HSL.to_hex(HSL.deepen(color_scheme.mark, 2))},
     };
 } // }}}
 
 // Worksheet().new_cfrule_weight {{{
-Worksheet.prototype.new_cfrule_weight = function(color_min, color_max) {
+Worksheet.prototype.new_cfrule_weight = function(color_scheme) {
     var weight_R1C1 = "R" + this.group.dim.weight_row + "C[0]";
     var max_R1C1 = "R" + this.group.dim.max_row + "C[0]";
     var formula_base = ( "=R[0]C[0]" +
@@ -669,20 +659,20 @@ Worksheet.prototype.new_cfrule_weight = function(color_min, color_max) {
                 1, this.dim.data_width + 2 ]
         ],
         effect: {
-            min_color: color_min,
-            max_color: color_max
+            min_color: HSL.to_hex(HSL.deepen(color_scheme.mark, 0.35)),
+            max_color: HSL.to_hex(HSL.deepen(color_scheme.mark, 7.00))
         },
     };
 } // }}}
 
 // Worksheet().new_cfrule_rating {{{
-Worksheet.prototype.new_cfrule_rating = function(color_mid, color_top) {
+Worksheet.prototype.new_cfrule_rating = function(color_scheme) {
     return this.group.new_cfrule_rating([
         [
             this.group.dim.data_row, this.dim.rating,
             this.group.dim.data_height, 2 ],
         [this.group.dim.max_row, this.dim.rating, 1, 2],
-    ], color_mid, color_top);
+    ], color_scheme);
 } // }}}
 
 // }}}2 initialize
