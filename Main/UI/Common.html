@@ -1,0 +1,66 @@
+<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
+</script>
+<link rel="stylesheet" href="//ssl.gstatic.com/docs/script/css/add-ons1.css">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+
+  .block + .block.block__ish {
+    margin-top: 12px;
+  }  
+  .block.block__flex {
+    display: flex;
+    align-items: center;
+  }
+    .block__flex > :not(:first-child) {
+      margin-left: 12px;
+    }
+  button.material-icons {
+    min-width: 30px;
+    max-height: 29px;
+    padding: 0 2px;
+  }
+
+  .loading_animation {
+    animation-duration: 0.7s;
+    animation-name: loading;
+    animation-timing-function: ease;
+    animation-iteration-count: infinite;
+  }
+    @keyframes loading {
+        0% { color:     black; }
+       50% { color: lightgray; }
+      100% { color:     black; }
+    }
+
+  .warning_animation {
+    position: relative;
+    animation-duration: 0.3s;
+    animation-name: warning;
+    animation-timing-function: linear;
+  }
+    @keyframes warning {
+        0% { top:  0px; }
+       25% { top: +7px; }
+       75% { top: -7px; }
+      100% { top:  0px; }
+    }
+
+</style>
+
+<script>
+
+  function animate_warning($element) {
+    $element
+      .addClass("warning_animation");
+    let cancel_warning = () => {
+      cancel_warning = () => null;
+      $element
+        .removeClass("warning_animation")
+        .off("animationend.warning");
+    }
+    $element
+      .on("animationend.warning", () => cancel_warning());
+    window.setTimeout(() => cancel_warning(), 300);
+  }
+
+</script>

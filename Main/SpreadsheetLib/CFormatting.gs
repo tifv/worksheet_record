@@ -23,7 +23,7 @@ class CFBooleanCondition extends CFCondition {
     constructor({type, values}) {
         super();
         this.type = type;
-        this.values = values;
+        this.values = Array.from(values);
     }
     static from_condition(boolean_condition, value_encode) {
         return new this({
@@ -35,16 +35,16 @@ class CFBooleanCondition extends CFCondition {
     impose_on_rule_builder(builder, value_decode) {
         builder.withCriteria(this.type, this.values.map(value_decode));
     }
-    match(other) {
-        if (!(other instanceof CFBooleanCondition)) {
+    match(cfcondition) {
+        if (!(cfcondition instanceof CFBooleanCondition)) {
             return false;
         }
-        var other_values = other.values;
+        var filter_values = this.values;
         return (
-            this.type == other.type &&
-            this.values.length == other.values.length &&
-            this.values.every( (element, index) =>
-                (element == other_values[index]) )
+            cfcondition.type == this.type &&
+            cfcondition.values.length == filter_values.length &&
+            cfcondition.values.every( (element, index) =>
+                (element == filter_values[index]) )
         );
     }
 }
@@ -73,17 +73,17 @@ class CFGradientCondition extends CFCondition {
             max_value: value_encode(gradient_condition.getMaxValue()),
         });
     }
-    match(other) {
-        if (!(other instanceof CFGradientCondition)) {
+    match(cfcondition) {
+        if (!(cfcondition instanceof CFGradientCondition)) {
             return false;
         }
         return (
-            this.min_type == other.min_type &&
-                this.min_values == other.min_values &&
-            this.mid_type == other.mid_type &&
-                this.mid_values == other.mid_values &&
-            this.max_type == other.max_type &&
-                this.max_values == other.max_values
+            cfcondition.min_type == this.min_type &&
+                cfcondition.min_values == this.min_values &&
+            cfcondition.mid_type == this.mid_type &&
+                this.mid_values == this.mid_values &&
+            cfcondition.max_type == this.max_type &&
+                cfcondition.max_values == this.max_values
         );
     }
 }
@@ -102,42 +102,47 @@ class CFRange {
             range.getRow(), range.getColumn(),
             range.getHeight(), range.getWidth() );
     }
-    match(cfrange) {
+    subset(cfrange) {
+        return (
+            this.start_row >= cfrange.start_row &&
+            this.end_row <= cfrange.end_row &&
+            this.start_col >= cfrange.start_col &&
+            this.end_col <= cfrange.end_col );
+    }
+    superset(cfrange) {
         return (
             this.start_row <= cfrange.start_row &&
             this.end_row >= cfrange.end_row &&
             this.start_col <= cfrange.start_col &&
             this.end_col >= cfrange.end_col );
     }
-    minus(cfrange) {
-        if (!this.match(cfrange))
+    detract_from(cfrange) {
+        if (!this.subset(cfrange))
             return null;
         var rest = [];
-        if (this.start_row < cfrange.start_row) {
-            rest.push(new this.constructor(
-                this.start_row, this.start_col,
-                cfrange.start_row - this.start_row, this.width ));
+        if (cfrange.start_row < this.start_row) {
+            rest.push(new cfrange.constructor(
+                cfrange.start_row, cfrange.start_col,
+                this.start_row - cfrange.start_row, cfrange.width ));
         }
-        if (this.end_row > cfrange.end_row) {
-            rest.push(new this.constructor(
-                cfrange.end_row + 1, this.start_col,
-                this.end_row - cfrange.end_row, this.width ));
+        if (cfrange.end_row > this.end_row) {
+            rest.push(new cfrange.constructor(
+                this.end_row + 1, cfrange.start_col,
+                cfrange.end_row - this.end_row, cfrange.width ));
         }
-        if (this.start_col < cfrange.start_col) {
-            rest.push(new this.constructor(
-                cfrange.start_row, this.start_col,
-                cfrange.height, cfrange.start_col - this.start_col ));
+        if (cfrange.start_col < this.start_col) {
+            rest.push(new cfrange.constructor(
+                this.start_row, cfrange.start_col,
+                this.height, this.start_col - cfrange.start_col ));
         }
-        if (this.end_col > cfrange.end_col) {
-            rest.push(new this.constructor(
-                cfrange.start_row, cfrange.end_col + 1,
-                cfrange.height, this.end_col - cfrange.end_col ));
+        if (cfrange.end_col > this.end_col) {
+            rest.push(new cfrange.constructor(
+                this.start_row, this.end_col + 1,
+                this.height, cfrange.end_col - this.end_col ));
         }
         return rest;
     }
     *[Symbol.iterator]() {
-        // effectively allows supplying a CFRangeList object
-        // to CFRangeList.from_dimensions()
         yield this.start_row;
         yield this.start_col;
         yield this.height;
@@ -155,38 +160,80 @@ class CFRangeList extends Array {
     impose_on_rule_builder(builder, sheet) {
         builder.setRanges(this.map(cfrange => sheet.getRange(...cfrange)));
     }
-    match(other) {
-        return other.every( other_cfrange =>
-            this.some( cfrange =>
-                cfrange.match(other_cfrange)
+    match(cfranges) {
+        return this.every( filter_range =>
+            cfranges.some( cfrange =>
+                filter_range.subset(cfrange)
             )
         );
     }
-    split_match(other) {
+    split_match(cfranges) {
         // Return
-        //     [this, null] if there are no intersections;
-        //     [null, this] if other has all our ranges;
-        //     [this, split] if some ranges from other are contained
-        //         in our ranges (modifies this);
-        var split = new this.constructor();
-        other:
-        for (let other_cfrange of other) {
-            for (let [index, cfrange] of this.entries()) {
-                var rest = cfrange.minus(other_cfrange);
+        //     [copy, null ] if there are no intersections;
+        //     [null, copy ] if we have all cfranges' ranges;
+        //     [rest, split] if some our ranges are contained
+        //         in cfranges' ranges (they go in split).
+        cfranges = cfranges.constructor.from(cfranges);
+        var filter_ranges = Array.from(this);
+        var split_cfranges = new cfranges.constructor();
+        for (let i = 0; i < cfranges.length; ++i) {
+            let cfrange = cfranges[i];
+            for (let j = 0; j < filter_ranges.length; ++j) {
+                let filter_range = filter_ranges[j];
+                let rest = filter_range.detract_from(cfrange);
                 if (rest == null)
                     continue;
-                this.splice(index, 1, ...rest);
-                split.push(other_cfrange);
-                continue other;
+                cfranges.splice(i, 1, ...rest);
+                --i;
+                split_cfranges.push(filter_range);
+                filter_ranges.splice(j, 1);
+                break;
             }
         }
-        if (split.length == 0)
-            return [this, null];
-        if (this.length == 0) {
-            this.push(...split);
-            return [null, this];
+        if (split_cfranges.length == 0)
+            return [cfranges, null];
+        if (cfranges.length == 0) {
+            return [null, split_cfranges];
         }
-        return [this, split];
+        return [cfranges, split_cfranges];
+    }
+}
+
+class CFLocationList extends CFRangeList {
+    match(cfranges) {
+        return this.some( filter_range =>
+            cfranges.some( cfrange =>
+                filter_range.superset(cfrange)
+            )
+        );
+    }
+    split_match(cfranges) {
+        // Return
+        //     [copy, null ] if there are no intersections,
+        //         where copy is cfranges' copy;
+        //     [null, copy ] if we superset all cfranges' ranges;
+        //     [rest, split] if some our ranges superset
+        //         some cfranges' ranges.
+        cfranges = cfranges.constructor.from(cfranges);
+        var split_cfranges = new cfranges.constructor();
+        for (let i = 0; i < cfranges.length; ++i) {
+            let cfrange = cfranges[i];
+            for (let j = 0; j < this.length; ++j) {
+                let filter_range = this[j];
+                if (!filter_range.superset(cfrange))
+                    continue;
+                cfranges.splice(i, 1);
+                --i;
+                split_cfranges.push(cfrange);
+                break;
+            }
+        }
+        if (split_cfranges.length == 0)
+            return [cfranges, null];
+        if (cfranges.length == 0) {
+            return [null, split_cfranges];
+        }
+        return [cfranges, split_cfranges];
     }
 }
 
@@ -233,17 +280,17 @@ class CFBooleanEffect extends CFEffect {
             .setStrikethrough(this.strikethrough)
             .setUnderline(this.underline);
     }
-    match(other) {
-        if (!(other instanceof CFBooleanEffect)) {
+    match(cfeffect) {
+        if (!(cfeffect instanceof CFBooleanEffect)) {
             return false;
         }
         return (
-            this.background == other.background &&
-            this.font_color == other.font_color &&
-            this.bold   == other.bold &&
-            this.italic == other.italic &&
-            this.strikethrough == other.strikethrough &&
-            this.underline == other.underline
+            cfeffect.background == this.background &&
+            cfeffect.font_color == this.font_color &&
+            cfeffect.bold   == this.bold &&
+            cfeffect.italic == this.italic &&
+            cfeffect.strikethrough == this.strikethrough &&
+            cfeffect.underline == this.underline
         );
     }
 }
@@ -262,14 +309,14 @@ class CFGradientEffect extends CFEffect {
             max_color: gradient_condition.getMaxColor(),
         });
     }
-    match(other) {
-        if (!(other instanceof CFGradientEffect)) {
+    match(cfeffect) {
+        if (!(cfeffect instanceof CFGradientEffect)) {
             return false;
         }
         return (
-            this.min_color == other.min_color &&
-            this.mid_color == other.mid_color &&
-            this.max_color == other.max_color
+            cfeffect.min_color == this.min_color &&
+            cfeffect.mid_color == this.mid_color &&
+            cfeffect.max_color == this.max_color
         );
     }
 }
@@ -378,64 +425,33 @@ class CFRule {
         }
         return builder.build();
     }
-    match(cfrule_filter) {
-        var {
-            condition: cfcondition,
-            ranges: cfranges,
-            effect: cfeffect
-        } = cfrule_filter;
-        return ( this.condition.match(cfcondition) &&
-            (cfranges == null || this.ranges.match(cfranges)) &&
-            (cfeffect == null || this.effect.match(cfeffect)) );
-    }
-    split_match(cfrule_filter) {
-        // Return
-        //     [this, null] if there is no match;
-        //     [null, this] if all ranges match
-        //         (or there is match and filter does not specify ranges);
-        //     [this, split] if some ranges match (modify this);
-        var {
-            condition: cfcondition,
-            ranges: cfranges,
-            effect: cfeffect
-        } = cfrule_filter;
-        if (!this.condition.match(cfcondition))
-            return [this, null];
-        if (cfeffect != null && !this.effect.match(cfeffect))
-            return [this, null];
-        if (cfranges == null)
-            return [null, this];
-        var [our_cfranges, split_cfranges] = this.ranges.split_match(cfranges);
-        if (split_cfranges == null)
-            return [this, null];
-        if (our_cfranges == null)
-            return [null, this];
-        this.ranges = our_cfranges;
-        var split = new this.constructor(
-            new this.condition.constructor(this.condition),
-            split_cfranges,
-            new this.effect.constructor(this.effect) );
-        return [this, split];
-    }
 }
 
 class CFRuleFilter {
     // Essentially a partial CFRule object, for matching against.
-    // Must contain a condition; ranges and effect are optional.
-    constructor(cfcondition, cfranges, cfeffect) {
+    // Must contain a condition; ranges, locations, and effect are optional.
+    // locations are like ranges, but to match they must be a superset
+    //   of the target range, not a subset.
+    constructor(cfcondition, cfranges, cfeffect, cflocations) {
         if (cfcondition instanceof CFGradientCondition) {
             this.type = "gradient";
         } else {
             this.type = "boolean";
         }
+        if (cfranges != null && cflocations != null) {
+            throw new Error(
+                "filter can only have ranges or locations, not both" );
+        }
         this.condition = cfcondition;
         this.ranges = cfranges;
         this.effect = cfeffect;
+        this.locations = cflocations;
     }
     static from_object(filter_obj) {
-        var cfcondition, cfranges = null, cfeffect = null;
+        var cfcondition, cfranges = null, cfeffect = null, cflocations = null;
         var { type: rule_type,
             condition, ranges = null, effect = null,
+            locations = null
         } = filter_obj;
         if (ranges != null)
             cfranges = CFRangeList.from_dimensions(ranges);
@@ -450,7 +466,61 @@ class CFRuleFilter {
         } else {
             throw new Error("invalid rule type");
         }
-        return new this(cfcondition, cfranges, cfeffect);
+        if (locations != null)
+            cflocations = CFLocationList.from_dimensions(locations);
+        return new this(cfcondition, cfranges, cfeffect, cflocations);
+    }
+    static convert_object(filter_obj) {
+        if (filter_obj instanceof this) {
+            return filter_obj;
+        } else {
+            return this.from_object(filter_obj);
+        }
+    }
+    match(cfrule) {
+        var {
+            condition: cfcondition,
+            ranges: cfranges,
+            effect: cfeffect
+        } = cfrule;
+        var filter_ranges = this.ranges || this.locations;
+        return ( this.condition.match(cfcondition) &&
+            (filter_ranges == null || filter_ranges.match(cfranges)) &&
+            (this.effect == null || this.effect.match(cfeffect))
+        );
+    }
+    split_match(cfrule) {
+        // Return
+        //     [copy, null ] if there is no match;
+        //     [null, copy ] if all ranges match
+        //         (or if there is match and we do not specify ranges);
+        //     [rest, split] if some ranges match;
+        var {
+            condition: cfcondition,
+            ranges: cfranges,
+            effect: cfeffect
+        } = cfrule;
+        if (!this.condition.match(cfcondition))
+            return [cfrule, null];
+        if (this.effect != null && !this.effect.match(cfeffect))
+            return [cfrule, null];
+        var filter_ranges = this.ranges || this.locations;
+        if (filter_ranges == null)
+            return [null, cfrule];
+        var [rest_cfranges, split_cfranges] = filter_ranges.split_match(cfranges);
+        if (split_cfranges == null)
+            return [cfrule, null];
+        if (rest_cfranges == null)
+            return [null, cfrule];
+        var rest_cfrule = new cfrule.constructor(
+            new cfcondition.constructor(cfcondition),
+            rest_cfranges,
+            new cfeffect.constructor(cfeffect) );
+        var split_cfrule = new cfrule.constructor(
+            new cfcondition.constructor(cfcondition),
+            split_cfranges,
+            new cfeffect.constructor(cfeffect) );
+        return [rest_cfrule, split_cfrule];
     }
 }
 
@@ -462,22 +532,22 @@ class CFRuleList extends Array {
         return cfrules;
     }
     insert(cfrule_obj, ...before_filter_objs) {
-        // Note: if new rule is merged into existing rule,
+        // Note: if the new rule is merged into existing rule,
         // before_filters are not checked.
         var new_cfrule = CFRule.from_object(cfrule_obj);
-        var cfrule_filter = CFRuleFilter.from_object(cfrule_obj);
+        var cfrule_filter = CFRuleFilter.from_object(new_cfrule);
         cfrule_filter.ranges = null;
         for (let cfrule of this) {
-            if (!cfrule.match(cfrule_filter))
+            if (!cfrule_filter.match(cfrule))
                 continue;
             cfrule.ranges.push(...new_cfrule.ranges);
             return;
         }
         var splice_index = this.length;
         for (let before_filter_obj of before_filter_objs) {
-            let before_filter = CFRuleFilter.from_object(before_filter_obj);
+            let before_filter = CFRuleFilter.convert_object(before_filter_obj);
             for (let [index, cfrule] of this.entries()) {
-                if (!cfrule.match(before_filter))
+                if (!before_filter.match(cfrule))
                     continue;
                 splice_index = splice_index > index ? index : splice_index;
             }
@@ -485,17 +555,19 @@ class CFRuleList extends Array {
         this.splice(splice_index, 0, new_cfrule);
     }
     remove(filter_obj) {
-        var cfrule_filter = CFRuleFilter.from_object(filter_obj);
-        var old_cfrules = Array.from(this);
-        this.length = 0;
-        for (let cfrule of old_cfrules) {
-            [cfrule,] = cfrule.split_match(cfrule_filter);
-            if (cfrule != null)
-                this.push(cfrule);
+        var cfrule_filter = CFRuleFilter.convert_object(filter_obj);
+        for (let i = 0; i < this.length; ++i) {
+            let cfrule = this[i];
+            [cfrule,] = cfrule_filter.split_match(cfrule);
+            if (cfrule != null) {
+                this[i] = cfrule;
+            } else {
+                this.splice(i, 1);
+            }
         }
     }
     replace(filter_obj, effect_obj) {
-        var cfrule_filter = CFRuleFilter.from_object(filter_obj);
+        var cfrule_filter = CFRuleFilter.convert_object(filter_obj);
         var cfeffect;
         if (cfrule_filter.type == "boolean") {
             cfeffect = new CFBooleanEffect(effect_obj);
@@ -508,7 +580,7 @@ class CFRuleList extends Array {
         this.length = 0;
         var new_cfrules = new Array();
         for (let cfrule of old_cfrules) {
-            let [rest_cfrule, split_cfrule] = cfrule.split_match(cfrule_filter);
+            let [rest_cfrule, split_cfrule] = cfrule_filter.split_match(cfrule);
             if (rest_cfrule != null)
                 this.push(rest_cfrule);
             if (split_cfrule != null) {
@@ -522,7 +594,7 @@ class CFRuleList extends Array {
             let new_cfrule_filter = CFRuleFilter.from_object(new_cfrule);
             new_cfrule_filter.ranges = null;
             for (let cfrule of this) {
-                if (!cfrule.match(new_cfrule_filter))
+                if (!new_cfrule_filter.match(cfrule))
                     continue;
                 cfrule.ranges.push(...new_cfrule.ranges);
                 continue merge_new_cfrules;
@@ -532,9 +604,28 @@ class CFRuleList extends Array {
     }
     save(sheet) {
         sheet.setConditionalFormatRules(
-          this.map(cfrule => cfrule.to_rule(sheet)) );
+            this.map(cfrule => cfrule.to_rule(sheet)) );
+    }
+    save_find_error(sheet) {
+        try {
+            sheet.setConditionalFormatRules(
+                this.map(cfrule => cfrule.to_rule(sheet)) );
+        } catch (error) {
+            while (this.length > 0) {
+                let rogue_cfrule = this.pop();
+                try {
+                    sheet.setConditionalFormatRules(
+                        this.map(cfrule => cfrule.to_rule(sheet)) );
+                    console.error(JSON.stringify(rogue_cfrule));
+                    break;
+                } catch (another_error) {
+                }
+            }
+            throw error;
+        }
     }
 }
+//CFRuleList.prototype.save = CFRuleList.prototype.save_find_error;
 
 function merge(sheet, ...cfrule_objs) {
     var cfrules = CFRuleList.load(sheet);
@@ -547,9 +638,11 @@ function merge(sheet, ...cfrule_objs) {
 return {
     merge: merge,
     RuleList:   CFRuleList,
-    Rule:       CFRule,
-    RuleFilter: CFRuleFilter,
-    Range:      CFRange,
+    Rule: CFRule, RuleFilter: CFRuleFilter,
+    RangeList: CFRangeList, LocationList: CFLocationList,
+    Range: CFRange,
+    BooleanCondition: CFBooleanCondition, GradientCondition: CFGradientCondition,
+    BooleanEffect: CFBooleanEffect, GradientEffect: CFGradientEffect,
 };
 }();
 

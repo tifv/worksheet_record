@@ -59,9 +59,11 @@ function menu_create() {
     { let worksheets_menu = ui.createMenu("Таблички-листочки");
         worksheets_menu
             .addItem( emoji.plus + " Вставить бланк рядом справа",
-                "action_insert_worksheet" )
+                "action_worksheet_insert" )
             .addItem( emoji.plus + " Добавить бланк в конец",
-                "action_add_worksheet" )
+                "action_worksheet_add" )
+            .addItem( "Перекрасить листочек…",
+                "action_worksheet_recolor" )
             ;
         menu.addSubMenu(worksheets_menu);
     }
@@ -79,12 +81,14 @@ function menu_create() {
 
 function menu_add_admin_(menu) {
     menu
-        .addItem("(тест) Редактор метаданных", "metadata_editor")
+        .addItem("Метаданные ведомости…", "metadata_editor")
         .addItem("Обновить меню", "menu_create")
         .addSeparator()
         .addItem( emoji.devil + " Скрыть функции адм-ра",
             "user_admin_relinquish" )
         ;
 }
+
+// XXX add function that sets hyperlink color of the spreadsheet to hsl(220, 75%, 40%)
 
 // vim: set fdm=marker sw=4 :

@@ -17,6 +17,7 @@
 
 var ColorSchemes = function() { // namespace
 
+// XXX rename mark → data ? or main ?
 const metadata_key = "worksheet_meta-color_schemes";
 const colors = ["mark", "rating_mid", "rating_top"];
 
@@ -32,12 +33,22 @@ function set(spreadsheet, schemes) {
     multicopy(schemes) );
 }
 
-function copy(scheme) {
-  return {
+function copy(scheme, extra_keys = []) {
+  var copy = {
     mark:       HSL.copy(scheme.mark),
     rating_mid: HSL.copy(scheme.rating_mid),
     rating_top: HSL.copy(scheme.rating_top),
-  }
+  };
+  for (let name of extra_keys)
+    copy[name] = scheme[name];
+  return copy;
+}
+
+function equal(scheme1, scheme2) {
+  return (
+    HSL.equal(scheme1.mark, scheme2.mark) &&
+    HSL.equal(scheme1.rating_mid, scheme2.rating_mid) &&
+    HSL.equal(scheme1.rating_top, scheme2.rating_top) );
 }
 
 function multicopy(schemes) {

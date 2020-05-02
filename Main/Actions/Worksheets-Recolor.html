@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_blank">
+</head>
+<?!= include_html_("UI/Common") ?>
+<?!= include_html_("UI/ColorScheme") ?>
+<script>
+  var color_scheme_default = <?!= JSON.stringify(color_scheme_default) ?>;
+  var color_schemes = <?!= JSON.stringify(color_schemes) ?>;
+  var color_scheme_group = <?!= JSON.stringify(color_scheme_group) ?>;
+  var group_name = <?!= JSON.stringify(group_name) ?>;
+</script>
+<style>
+  .switchform {
+    display: flex;
+    flex-direction: column;
+  }
+  .switchform--item {
+    display: flex;
+    flex-direction: row;
+    align-items: first baseline;
+  }
+  .color_scheme--select {
+  }
+  .color_scheme--select__special {
+    font-style: italic;
+  }
+  .color_scheme--option {
+    font-style: initial;
+  }
+  .color_scheme--option.color_scheme--option__special {
+    font-style: italic;
+  }
+</style>
+<body>
+<!--<h3>Перекрасить листочек</h3>-->
+<div class="block block__flex">
+  <select id="color_scheme--select" class="color_scheme--select">
+    <option class="color_scheme--option color_scheme--option__special" value="custom"
+      hidden>custom</option>
+  </select>
+  <div id="color_scheme--colors">
+  </div>
+</div>
+<div id="color_schemes--control" class="block">
+  <button id="recolor_button" class="action" onclick="worksheet_recolor();">Перекрасить</button>
+</div>
+<div class="block switchform">
+  <label class="switchform--item">
+    <input type="radio" name="recolor--scope" class="recolor--scope"
+      value="worksheet" id="recolor--scope__worksheet" checked />
+    Перекрасить листочек с выделенной клеткой</label>
+  <div class="switchform--item">
+    <input type="radio" name="recolor--scope" class="recolor--scope"
+      value="group" id="recolor--scope__group" />
+    <div class="block switchform">
+      <label for="recolor--scope__group">Массовое перекрашивание (группа <?= group_name ?>)</label>
+      <label class="switchform--item"><input type="checkbox" class="recolor--group" id="recolor--group__worksheets" checked disabled />
+        Перекрасить все имеющиеся листочки группы</label>
+      <label class="switchform--item"><input type="checkbox" class="recolor--group" id="recolor--group__rating" checked disabled />
+        Перекрасить рейтинг группы</label>
+      <label class="switchform--item"><input type="checkbox" class="recolor--group" id="recolor--group__group" checked disabled />
+        Установить для новых листочков группы</label>
+    </div>
+  </div>
+</div>
+</body>
+<script>
+
+var $scheme_select = $("#color_scheme--select");
+var $color_container = $("#color_scheme--colors");
+var scheme_option_default = "default";
+var scheme_option_group = "group";
+
+$(function() {
+  for (let name of Object.keys(color_schemes).sort()) {
+    $scheme_select.append( $("<option/>")
+      .text(name)
+      .addClass("color_scheme--option")
+      .val("scheme:" + name)
+      .data("scheme", color_schemes[name])
+    );
+  }
+  if ( color_schemes.default != null &&
+    scheme_equal(color_schemes.default, color_scheme_default)
+  ) {
+    scheme_option_default = "scheme:default";
+  } else {
+    $scheme_select.append( $("<option/>")
+      .text("default")
+      .addClass("color_scheme--option color_scheme--option__special")
+      .val("default")
+      .data("scheme", color_scheme_default)
+    );
+    scheme_option_default = "default";
+  }
+  var group_scheme_name = color_scheme_group.name;
+  if ( group_scheme_name != null &&
+    color_schemes[group_scheme_name] != null &&
+    scheme_equal(color_schemes[group_scheme_name], color_scheme_group)
+  ) {
+    scheme_option_group = "scheme:" + group_scheme_name;
+  } else if ( group_scheme_name == null &&
+    scheme_equal(color_scheme_default, color_scheme_group)
+  ) {
+    scheme_option_group = scheme_option_default;
+  } else {
+    $scheme_select.append( $("<option/>")
+      .text("group")
+      .addClass("color_scheme--option color_scheme--option__special")
+      .val("group")
+      .data("scheme", color_scheme_group)
+    );
+    scheme_option_group = "group";
+  }
+  $scheme_select.on('change', function() {
+    var name = $scheme_select.val();
+    var color_scheme;
+    if (name.startsWith("scheme:")) {
+      $scheme_select.removeClass("color_scheme--select__special");
+      name = name.substring("scheme:".length);
+      color_scheme = color_schemes[name];
+    } else if (name == "default") {
+      $scheme_select.addClass("color_scheme--select__special");
+      color_scheme = color_scheme_default;
+    } else if (name == "group") {
+      $scheme_select.addClass("color_scheme--select__special");
+      color_scheme = color_scheme_group;
+    }
+    if (color_scheme == null)
+      throw new Error("internal error");
+    show_color_scheme(scheme_copy(color_scheme));
+  });
+  $scheme_select.val(scheme_option_group);
+  $scheme_select.trigger('change');
+});
+
+$(function() {
+  var $recolor_scope = $(".recolor--scope");
+  var $recolor_scope_group = $("#recolor--scope__group");
+  var $recolor_group = $(".recolor--group");
+  $recolor_scope.on('change', function() {
+    $recolor_group.prop('disabled', !$recolor_scope_group.prop('checked'));
+  })
+});
+
+function show_color_scheme(color_scheme) {
+  $color_container.empty();
+  let editor = (
+    new ColorScheme<? if (editable) { ?>Editor<? } else { ?>Viewer<? } ?>
+      (color_scheme, $color_container) );
+  editor.on_change(() =>
+    $scheme_select
+      .val("custom")
+      .addClass("color_scheme--select__special")
+  );
+  $color_container.data("scheme_editor", editor);
+}
+
+async function worksheet_recolor() {
+  var color_scheme = scheme_copy($color_container.data("scheme_editor").scheme);
+  var scheme_option = $scheme_select.val()
+  if (scheme_option == scheme_option_default) {
+    color_scheme.origin = "default";
+  } else if (scheme_option == scheme_option_group) {
+    color_scheme.origin = "group";
+  } else if (scheme_option.startsWith("scheme:")) {
+    color_scheme.origin = "name";
+    color_scheme.name = scheme_option.substring("scheme:".length);
+  }
+  $("#color_schemes--control > .error").remove();
+  var $status = $("<span/>")
+    .addClass("loading_message loading_animation")
+    .text("выполнение…")
+    .appendTo("#color_schemes--control");
+  $("#color_schemes--control > button").prop('disabled', true);
+  try {
+    await new Promise((resolve, reject) =>
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .action_worksheet_recolor_finish(
+          group_name,
+          color_scheme,
+          {
+            scope: $(".recolor--scope[name=\"recolor--scope\"]:checked").val(),
+            group: {
+              worksheets: $("#recolor--group__worksheets").prop('checked'),
+              rating: $("#recolor--group__rating").prop('checked'),
+              group: $("#recolor--group__group").prop('checked'),
+            }
+          }
+        )
+    );
+  } catch(error) {
+    $("<div/>")
+      .addClass("error")
+      .text(error.toString())
+      .appendTo("#color_schemes--control");
+  } finally {
+    $("#color_schemes--control > button").prop('disabled', false);
+    $status.remove();
+  }
+}
+
+</script>
+</html>

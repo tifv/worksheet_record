@@ -44,4 +44,8 @@ function define_lazy_properties_(object, generators) {
     lazy_properties_factory_.call(object, generators) );
 }
 
+function include_html_(filename) {
+    return HtmlService.createHtmlOutputFromFile(filename)
+        .getContent();
+}
 

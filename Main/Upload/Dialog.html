@@ -12,10 +12,7 @@
 <head>
     <base target="_blank">
 </head>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
-</script>
-<link rel="stylesheet" href="//ssl.gstatic.com/docs/script/css/add-ons1.css">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<?!= include_html_("UI/Common") ?>
 <?!= category_css ?>
 <? } /* end if standalone */ ?>
 <? if (standalone || partial == "style") { ?>
@@ -23,27 +20,12 @@
   .upload_dialog--phase__swapped_out {
     display: none
   }
-  .block + .block.blockish {
-    margin-top: 12px;
-  }  
   .upload_dialog--title_input {
     width: 100%;
   }
   .upload_dialog--author_input {
     width: 100%;
   }
-  .warning_animation {
-    position: relative;
-    animation-duration: 0.3s;
-    animation-name: warning;
-    animation-timing-function: linear;
-  }
-    @keyframes warning {
-        0% { top:  0px; }
-       25% { top: +7px; }
-       75% { top: -7px; }
-      100% { top:  0px; }
-    }
   .metadata--inline {
     display: inline-block;
   }
@@ -53,11 +35,6 @@
   }
   .metadata__warning {
     font-weight: bolder;
-  }
-  button.material-icons {
-    min-width: 30px;
-    max-height: 29px;
-    padding: 0 2px;
   }
   .file_loader {
     vertical-align: top;
@@ -260,7 +237,7 @@
   <div class="upload_dialog--phase upload_dialog--phase__data_input">
     <div class="block">
       <div class="block"><b>Данные для реестра загрузок</b></div>
-      <div class="block blockish">
+      <div class="block block__ish">
         <div>
           <span class="metadata--inline">Группа <span class="upload_dialog--group_name metadata"></span>,</span>
           <span class="metadata--inline"       ><span class="upload_dialog--category metadata"></span>,</span>
@@ -269,7 +246,7 @@
         <div class="secondary">Дата задается в примечании к заголовку;
           категория — маркером рядом с заголовком.</div>
       </div>
-      <div class="block blockish">
+      <div class="block block__ish">
         <div class="upload_dialog--edit_container block"
          ><div class="upload_dialog--title_edit form-group">
             <label>Название листочка<br/>
@@ -291,7 +268,7 @@
         <b>Выкладываемые файлы</b>
         <div class="secondary">Не загружайте файлы, которые нельзя выкладывать в Интернет.</div>
       </div>
-      <div class="upload_dialog--file_loaders block blockish"
+      <div class="upload_dialog--file_loaders block block__ish"
        ><div id="pdf_loader" class="upload_dialog--pdf_loader file_loader">
           <label
            ><div class="file_loader--load_area load_area">
@@ -932,20 +909,6 @@ UploadDialog.prototype.upload_src = async function(src_meta, src_upload_url, src
       };
       request.send(src_file);
     })} );
-}
-
-function animate_warning($element) {
-  $element
-    .addClass("warning_animation");
-  let cancel_warning = () => {
-    cancel_warning = () => null;
-    $element
-      .removeClass("warning_animation")
-      .off("animationend.warning");
-  }
-  $element
-    .on("animationend.warning", () => cancel_warning());
-  window.setTimeout(() => cancel_warning(), 300);
 }
 
 // Promise

@@ -13,10 +13,18 @@ var HSL = function() { // namespace
 
 function copy(hsl) {
   var {h, s, l} = hsl;
-  if (typeof h != "number" || typeof s != "number" || typeof l != "number") {
+  if (
+    typeof h != "number" || !isFinite(h) ||
+    typeof s != "number" || !isFinite(s) ||
+    typeof l != "number" || !isFinite(l)
+  ) {
     throw new Error("invalid HSL value");
   }
   return {h: h, s: s, l: l};
+}
+
+function equal(hsl1, hsl2) {
+  return hsl1.h == hsl2.h && hsl1.s == hsl2.s && hsl1.l == hsl2.l;
 }
 
 function deepen(hsl, factor=1) {
@@ -63,8 +71,9 @@ function to_css(hsl) {
   return "hsl(" + hsl.h + "," + (100 * hsl.s) + "%," + (100 * hsl.l) + "%)";
 }
 
-return {copy: copy, deepen: deepen, to_rgb: to_rgb, to_hex: to_hex, to_css: to_css};
+return {
+  copy: copy, equal: equal, deepen: deepen,
+  to_rgb: to_rgb, to_hex: to_hex,
+  to_css: to_css,
+};
 }(); // end HSL namespace
-
-// XXX add function that sets hyperlink color to hsl(220, 75%, 40%)
-

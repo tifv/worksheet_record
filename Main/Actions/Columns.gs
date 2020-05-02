@@ -1,10 +1,8 @@
 function action_add_columns() {
-  var section = ActionHelpers.get_active_section();
-  if (section == null)
-    return;
-  var worksheet = section.worksheet;
-  var group = worksheet.group;
   try {
+    var section = ActionHelpers.get_active_section();
+    var worksheet = section.worksheet;
+    var group = worksheet.group;
     var template = HtmlService.createTemplateFromFile(
       "Actions/Columns-Add" );
     template.standalone = true;
@@ -13,9 +11,6 @@ function action_add_columns() {
     template.section_location = section.get_location({check_id: section.offset > 0});
     template.title = worksheet.get_title() +
       (section.dim.offset > 0 ? ". " + section.get_title() : "");
-    console.log(worksheet.get_title());
-    console.log(section.dim.offset);
-    console.log(section.get_title());
     template.labels = group.sheetbuf.slice_values( "label_row",
       section.dim.data_start, section.dim.data_end );
     var output = template.evaluate();
@@ -23,7 +18,6 @@ function action_add_columns() {
     SpreadsheetApp.getUi().showModelessDialog(output, "Добавление колонок");
   } catch (error) {
     report_error(error);
-    return;
   }
 }
 
@@ -42,10 +36,8 @@ function action_add_columns_finish(
 }
 
 function action_add_section() {
-  var worksheet = ActionHelpers.get_active_worksheet();
-  if (worksheet == null)
-    return;
   try {
+    var worksheet = ActionHelpers.get_active_worksheet();
     var template = HtmlService.createTemplateFromFile(
       "Actions/Columns-AddSection" );
     template.standalone = true;
@@ -58,7 +50,6 @@ function action_add_section() {
     SpreadsheetApp.getUi().showModelessDialog(output, "Добавление раздела");
   } catch (error) {
     report_error(error);
-    return;
   }
 }
 
@@ -88,12 +79,10 @@ function action_add_section_finish(
 }
 
 function action_remove_excess_columns() {
-  var section = ActionHelpers.get_active_section();
-  if (section == null)
-    return;
-  var worksheet = section.worksheet;
-  var group = worksheet.group;
   try {
+    var section = ActionHelpers.get_active_section();
+    var worksheet = section.worksheet;
+    var group = worksheet.group;
     var remove_count = section.remove_excess_columns();
     //section.group.sheetbuf.test();
     if (remove_count == 0) {
@@ -105,19 +94,15 @@ function action_remove_excess_columns() {
     }
   } catch (error) {
     report_error(error);
-    return;
   }
 }
 
 function action_alloy_subproblems() {
-  var worksheet = ActionHelpers.get_active_worksheet();
-  if (worksheet == null)
-    return;
   try {
+    var worksheet = ActionHelpers.get_active_worksheet();
     worksheet.alloy_subproblems();
   } catch (error) {
     report_error(error);
-    return;
   }
 }
 
@@ -127,13 +112,10 @@ const finished_colours = {
 };
 
 function action_mark_columns_finished() {
-  var group = ActionHelpers.get_active_group();
-  if (group == null)
-    return;
   try {
+    var group = ActionHelpers.get_active_group();
     var sheet = group.sheet;
     var active_ranges = sheet.getActiveRangeList().getRanges();
-    console.log(active_ranges.map(range => range.getA1Notation()));
     var worksheet = null;
     var worksheet_has_weight_row = null;
     var label_ranges = [];
@@ -147,9 +129,9 @@ function action_mark_columns_finished() {
       ) {
         worksheet = Worksheet.surrounding(group, range);
         worksheet_has_weight_row = worksheet.has_weight_row();
-        // XXX handle possible error?
         if (start < worksheet.dim.data_start || end > worksheet.dim.data_end) {
           throw new Error("XXX range invalid " + range.getA1Notation());
+          // XXX save all invalid ranges and report them at the end instead
         }
       }
       label_ranges.push(sheet.getRange(group.dim.label_row, start, 1, width));
@@ -170,6 +152,5 @@ function action_mark_columns_finished() {
     }
   } catch (error) {
     report_error(error);
-    return;
   }
 }

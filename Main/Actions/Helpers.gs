@@ -34,45 +34,38 @@ function get_active_group(spreadsheet, sheet) {
     group.check();
     return group;
   } catch (error) {
-    report_error(error);
-//    report_error(
-//      "Не удалось определить учебную группу. " +
-//      "Выберите вкладку таблицы, соответствующую группе." );
-    return null;
+    console.error(error);
+    throw new ReportError(
+      "Не удалось определить учебную группу. " +
+      "Выберите вкладку таблицы, соответствующую группе." );
   }
 }
 
 function get_active_worksheet(spreadsheet, sheet, range) {
   [spreadsheet, sheet, range] = get_active_range(spreadsheet, sheet, range);
   var group = get_active_group(spreadsheet, sheet);
-  if (group == null)
-    return null;
   try {
     var worksheet = Worksheet.surrounding(group, range);
     return worksheet;
   } catch (error) {
-    report_error(error);
-//    report_error(
-//      "Не удалось определить листочек. " +
-//      "Выберите диапазон целиком внутри листочка (например, заголовок)." );
-//    return;
+    console.error(error);
+    throw new ReportError(
+      "Не удалось определить листочек. " +
+      "Выберите диапазон целиком внутри листочка (например, заголовок)." );
   }
 }
 
 function get_active_section(spreadsheet, sheet, range) {
   [spreadsheet, sheet, range] = get_active_range(spreadsheet, sheet, range);
   var worksheet = get_active_worksheet(spreadsheet, sheet, range);
-  if (worksheet == null)
-    return null;
   try {
     var section = Worksheet.surrounding_section(worksheet.group, worksheet, range);
     return section;
   } catch (error) {
-    report_error(error);
-//    report_error(
-//      "Не удалось определить раздел листочка. " +
-//      "Выберите диапазон внутри одного раздела (например, заголовок)." );
-//    return;
+    console.error(error);
+    throw new ReportError(
+      "Не удалось определить раздел листочка. " +
+      "Выберите диапазон внутри одного раздела (например, заголовок)." );
   }
 }
 

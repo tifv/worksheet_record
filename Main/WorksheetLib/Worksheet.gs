@@ -584,31 +584,92 @@ Worksheet.prototype.add_column_group = function() {
     this.title_range.shiftColumnGroupDepth(+1);
 } // }}}
 
-// Worksheet().recolor_cf_rules {{{
+// Worksheet.recolor_cf_rules (group, color_scheme, cfrules, start_col) {{{
+Worksheet.recolor_cf_rules = function( group, color_scheme,
+    ext_cfrules = null, start_col = Worksheet.find_start_col(group),
+) {
+    if (start_col == null)
+      return;
+    var cfrules = ext_cfrules || ConditionalFormatting.RuleList.load(group.sheet);
+    var location_width = group.sheetbuf.dim.sheet_width - start_col + 1;
+    var location_data = [ group.dim.data_row, start_col,
+        group.dim.data_height, location_width ];
+    var location_max = [group.dim.max_row, start_col,1, location_width];
+    var location_weight = [group.dim.weight_row, start_col,1, location_width];
+    cfrules.replace({ type: "boolean",
+        condition: this.get_cfcondition_data(),
+        locations: [location_data, location_max],
+    }, this.get_cfeffect_data(color_scheme));
+    var data_limit_filter = ConditionalFormatting.RuleFilter.from_object({
+        type: "boolean",
+        condition: {
+            type: SpreadsheetApp.BooleanCriteria
+                .NUMBER_GREATER_THAN_OR_EQUAL_TO,
+            values: [null] },
+        locations: [location_data, location_max],
+    });
+    var data_limit_formula_regex = new RegExp(
+      "=R" + group.dim.weight_row + "C\d+" );
+    data_limit_filter.condition.match = (cfcondition) => {
+        return (
+            cfcondition instanceof ConditionalFormatting.BooleanCondition &&
+            cfcondition.type ==
+                SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN_OR_EQUAL_TO &&
+            cfcondition.values.length == 1 &&
+            typeof cfcondition.values[0] == "string" &&
+            data_limit_formula_regex.exec(cfcondition.values[0])
+        );
+    }
+    cfrules.replace( data_limit_filter,
+      this.get_cfeffect_data_limit(color_scheme) );
+    cfrules.replace({ type: "gradient",
+      condition: this.get_cfcondition_weight(group),
+      locations: [location_weight],
+    }, this.get_cfeffect_weight(color_scheme));
+    cfrules.replace({ type: "gradient",
+      condition: group.get_cfcondition_rating(),
+      locations: [location_data, location_max],
+    }, group.get_cfeffect_rating(color_scheme));
+    if (ext_cfrules == null)
+        cfrules.save(this.sheet);
+} // }}}
+
+// Worksheet().recolor_cf_rules (color_scheme) {{{
 Worksheet.prototype.recolor_cf_rules = function(color_scheme) {
     var cfrules = ConditionalFormatting.RuleList.load(this.sheet);
     var cfrule_data_obj = this.new_cfrule_data(color_scheme);
     cfrules.remove(Object.assign({}, cfrule_data_obj, {effect: null}));
     cfrules.insert(cfrule_data_obj);
+    var cfrule_data_limit_obj = this.new_cfrule_data_limit(color_scheme);
+    cfrules.replace(
+        Object.assign({}, cfrule_data_limit_obj, {effect: null}),
+        cfrule_data_limit_obj.effect );
     var cfrule_weight_obj = this.new_cfrule_weight(color_scheme);
     cfrules.remove(Object.assign({}, cfrule_weight_obj, {effect: null}));
     cfrules.insert(cfrule_weight_obj);
     var cfrule_rating_obj = this.new_cfrule_rating(color_scheme);
     cfrules.remove(Object.assign({}, cfrule_rating_obj, {effect: null}));
     cfrules.insert(cfrule_rating_obj);
-    var cfrule_data_limit_obj = this.new_cfrule_data_limit(color_scheme);
-    cfrules.replace(
-        Object.assign({}, cfrule_data_limit_obj, {effect: null}),
-        cfrule_data_limit_obj.effect );
     cfrules.save(this.sheet);
 } // }}}
 
-// Worksheet().new_cfrule_data {{{
+// Worksheet.get_cfcondition_data {{{
+Worksheet.get_cfcondition_data = function() {
+    return new ConditionalFormatting.BooleanCondition({
+        type: SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN,
+        values: [0] });
+} // }}}
+
+// Worksheet.get_cfeffect_data (color_scheme) {{{
+Worksheet.get_cfeffect_data = function(color_scheme) {
+    return new ConditionalFormatting.BooleanEffect(
+      {background: HSL.to_hex(color_scheme.mark)} );
+} // }}}
+
+// Worksheet().new_cfrule_data (color_scheme) {{{
 Worksheet.prototype.new_cfrule_data = function(color_scheme) {
     return { type: "boolean",
-        condition: {
-            type: SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN,
-            values: [0] },
+        condition: this.constructor.get_cfcondition_data(this.group),
         ranges: [
             [
                 this.group.dim.data_row, this.dim.data_start - 1,
@@ -617,16 +678,22 @@ Worksheet.prototype.new_cfrule_data = function(color_scheme) {
                 this.group.dim.max_row, this.dim.data_start - 1,
                 1, this.dim.data_width + 2 ]
         ],
-        effect: {background: HSL.to_hex(color_scheme.mark)},
+        effect: this.constructor.get_cfeffect_data(color_scheme),
     };
+} // }}}
+
+// Worksheet.get_cfeffect_data_limit (color_scheme) {{{
+Worksheet.get_cfeffect_data_limit = function(color_scheme) {
+    return new ConditionalFormatting.BooleanEffect(
+        {background: HSL.to_hex(HSL.deepen(color_scheme.mark, 2))} );
 } // }}}
 
 // Worksheet().new_cfrule_data_limit {{{
 Worksheet.prototype.new_cfrule_data_limit = function(color_scheme) {
     return { type: "boolean",
         condition: {
-            type:
-                SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN_OR_EQUAL_TO,
+            type: SpreadsheetApp.BooleanCriteria
+                .NUMBER_GREATER_THAN_OR_EQUAL_TO ,
             values: ["=R" + this.group.dim.weight_row + "C" + this.dim.sum] },
         ranges: [
             [
@@ -636,32 +703,42 @@ Worksheet.prototype.new_cfrule_data_limit = function(color_scheme) {
                 this.group.dim.max_row, this.dim.data_start - 1,
                 1, this.dim.data_width + 2 ]
         ],
-        effect: {background: HSL.to_hex(HSL.deepen(color_scheme.mark, 2))},
+        effect: this.constructor.get_cfeffect_data_limit(color_scheme),
     };
+} // }}}
+
+// Worksheet.get_cfcondition_weight (group) {{{
+Worksheet.get_cfcondition_weight = function(group) {
+    var weight_R1C1 = "R" + group.dim.weight_row + "C[0]";
+    var max_R1C1 = "R" + group.dim.max_row + "C[0]";
+    var formula_base = ( "=R[0]C[0]" +
+        " - 1/power(" + weight_R1C1 + "*max(" + max_R1C1 + ",1),2)" );
+    return new ConditionalFormatting.GradientCondition({
+        min_type: SpreadsheetApp.InterpolationType.NUMBER,
+        min_value: formula_base + " + 1",
+        max_type: SpreadsheetApp.InterpolationType.NUMBER,
+        max_value: formula_base + " + 21",
+    });
+} // }}}
+
+// Worksheet.get_cfeffect_weight {{{
+Worksheet.get_cfeffect_weight = function(color_scheme) {
+    return new ConditionalFormatting.GradientEffect({
+        min_color: HSL.to_hex(HSL.deepen(color_scheme.mark, 0.35)),
+        max_color: HSL.to_hex(HSL.deepen(color_scheme.mark, 7.00)),
+    });
 } // }}}
 
 // Worksheet().new_cfrule_weight {{{
 Worksheet.prototype.new_cfrule_weight = function(color_scheme) {
-    var weight_R1C1 = "R" + this.group.dim.weight_row + "C[0]";
-    var max_R1C1 = "R" + this.group.dim.max_row + "C[0]";
-    var formula_base = ( "=R[0]C[0]" +
-        " - 1/power(" + weight_R1C1 + "*max(" + max_R1C1 + ",1),2)" );
     return { type: "gradient",
-        condition: {
-            min_type: SpreadsheetApp.InterpolationType.NUMBER,
-            min_value: formula_base + " + 1",
-            max_type: SpreadsheetApp.InterpolationType.NUMBER,
-            max_value: formula_base + " + 21",
-        },
+        condition: this.constructor.get_cfcondition_weight(this.group),
         ranges: [
             [
                 this.group.dim.weight_row, this.dim.data_start - 1,
                 1, this.dim.data_width + 2 ]
         ],
-        effect: {
-            min_color: HSL.to_hex(HSL.deepen(color_scheme.mark, 0.35)),
-            max_color: HSL.to_hex(HSL.deepen(color_scheme.mark, 7.00))
-        },
+        effect: this.constructor.get_cfeffect_weight(color_scheme),
     };
 } // }}}
 
@@ -852,6 +929,18 @@ Worksheet.find_title_column_by_id = function(group, title_id) {
     if (metadata.length < 1)
         return null;
     return metadata[0].getLocation().getColumn().getColumn();
+} // }}}
+
+// Worksheet.find_start (group) {{{
+Worksheet.find_start_col = function(group) {
+    if (!(group instanceof StudyGroup)) {
+        throw new Error("Worksheet.find_start: type error (group)");
+    }
+    var marker_start = group.sheetbuf.find_value( "label_row",
+        marker.start, 1 );
+    if (marker_start == null)
+        return null
+    return marker_start - data_offset.start;
 } // }}}
 
 // Worksheet.list (group, start?, end?) {{{

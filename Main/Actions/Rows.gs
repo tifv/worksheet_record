@@ -1,8 +1,6 @@
 function action_add_rows() {
-  var group = ActionHelpers.get_active_group();
-  if (group == null)
-    return;
   try {
+    var group = ActionHelpers.get_active_group();
     var template = HtmlService.createTemplateFromFile(
       "Actions/Rows-Add" );
     var sample_is_hidden = group.sheet.isRowHiddenByUser(group.dim.data_row);
@@ -22,12 +20,11 @@ function action_add_rows() {
     SpreadsheetApp.getUi().showModelessDialog(output, "Добавление строк");
   } catch (error) {
     report_error(error);
-    return;
   }
 }
 
 function action_add_rows_finish(group_name, row_index, row_count) {
-  // XXX fix participants counter
+  // XXX fix participants counter (maybe just load the formula and then reset it)
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var group = StudyGroup.find_by_name(spreadsheet, group_name);
   var sheet = group.sheet;
@@ -66,10 +63,8 @@ function action_add_rows_finish(group_name, row_index, row_count) {
 }
 
 function action_remove_excess_rows() {
-  var group = ActionHelpers.get_active_group();
-  if (group == null)
-    return;
   try {
+    var group = ActionHelpers.get_active_group();
     const ui = SpreadsheetApp.getUi();
     var sample_is_hidden = group.sheet.isRowHiddenByUser(group.dim.data_row);
     if (!sample_is_hidden) {
@@ -152,7 +147,7 @@ function action_remove_excess_rows() {
     }
   } catch (error) {
     report_error(error);
-    return;
   }
 }
 
+// XXX add sort_by_name action

@@ -3,293 +3,181 @@
 <head>
   <base target="_blank">
 </head>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
-</script>
-<link rel="stylesheet" href="//ssl.gstatic.com/docs/script/css/add-ons1.css">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<?!= include_html_("UI/Common") ?>
+<?!= include_html_("UI/ColorScheme") ?>
 <script>
   var color_scheme_default = <?!= JSON.stringify(color_scheme_default) ?>;
+  var color_schemes_init = <?!= JSON.stringify(color_schemes) ?>;
 </script>
+<style>
+  table.color_schemes {
+    border-collapse: collapse
+  }
+    .color_schemes--col + col.color_schemes--col {
+      border-left: solid 6px white;
+    }
+    col.color_schemes--col__name {
+    }
+    col.color_schemes--col__colors {
+    }
+    col.color_schemes--col__control {
+      width: 10%;
+    }
+    td.color_schemes--cell {
+      padding: 0;
+    }
+    td.color_schemes--cell {
+      border-bottom: none;
+    }
+    .color_schemes--row + .color_schemes--row > td.color_schemes--cell {
+      border-top: solid 6px white;
+    }
+    .color_schemes--cell__control {
+      text-align: center;
+    }
+  .color_schemes--scheme_name {
+    width: 100px;
+  }
+  .color_scheme--delete_button {
+    cursor: pointer;
+    font-family: 'Material Icons';
+    font-size: 16px;
+  }
+  .color_scheme--delete_button:hover {
+    background: lightgray;
+  }
+  .color_scheme--delete_button::after {
+    content: "delete";
+  }
+  .color_schemes--scheme_name:not(:hover):not(:focus):not(.color_schemes--new_name) {
+    border-color: transparent;
+  }
+</style>
 <body>
-<div class="block">
-  <h3>Цветовые схемы</h3>
-  <table id="color_schemes" class="color_schemes">
-    <!--<colgroup>
-      <col class="color_schemes--col color_schemes--col__name">
-      <col class="color_schemes--col color_schemes--col__color">
-      <col class="color_schemes--col color_schemes--col__color">
-      <col class="color_schemes--col color_schemes--col__color">
-      <col class="color_schemes--col color_schemes--col__button">
-    </colgroup>-->
-    <tbody>
-    </tbody>
-    <tfoot>
-      <tr class="color_schemes--row color_schemes--row__new">
-        <td><input type="text" id="color_schemes--new_name"/></td>
-        <td colspan="1"><button id="color_schemes--new_button action" onclick="color_schemes_new()">Add</button></td>
-      </tr>
-    </tfoot>
-  </table>
-  <div
-   ><button id="color_schemes--save_button" class="action">Сохранить</button
+  <h3>Список цветовых схем</h3>
+  <div class="block">
+    Этот список не влияет на таблицу непосредственно,
+    а лишь появляется в настройках цветовых схем групп и листочков.
+  </div>
+  <div class="block">
+    <table id="color_schemes" class="color_schemes">
+      <colgroup>
+        <col class="color_schemes--col color_schemes--col__name">
+        <col class="color_schemes--col color_schemes--col__colors">
+        <col class="color_schemes--col color_schemes--col__control">
+      </colgroup>
+      <tbody id="color_schemes--list">
+      </tbody>
+      <tfoot>
+        <tr class="color_schemes--row color_schemes--row__new">
+          <td><input type="text" id="color_schemes--new_name" class="color_schemes--scheme_name color_schemes--new_name"/></td>
+          <td><button id="color_schemes--new_button" class="color_schemes--new_button action" onclick="color_schemes_new()">Добавить</button></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <div id="color_schemes--control" class="block block__flex"
+   ><button id="color_schemes--save_button" class="action" onclick="color_schemes_save()" disabled>Сохранить список</button
  ></div>
-</div>
 </body>
 <script>
 $(function() {
-  var color_schemes = <?!= JSON.stringify(color_schemes) ?>;
-  var $color_schemes = $("#color_schemes > tbody");
-  for (let name in color_schemes) {
-    let color_scheme = color_schemes[name];
-    let $editor_container;
-    $color_schemes.append($("<tr/>")
-      .append($("<td/>").text(name))
-      .append($editor_container = $("<td/>"))
-    );
-    let editor = new ColorSchemeEditor(color_scheme, $editor_container);
+  for (let name of Object.keys(color_schemes_init).sort()) {
+    add_color_scheme_row(name, scheme_copy(color_schemes_init[name]));
   }
 });
 
-</script>
-<!-- ColorSchemeEditor -->
-<style>
-  button.material-icons {
-    min-width: 30px;
-    max-height: 29px;
-    padding: 0 2px;
-  }
-  .color_scheme_edit {
-    height: 40px;
-    width: 300px;
-  }
-  .color_scheme_edit--label {
-    font-size: 15px;
-    font-weight: bold;
-    opacity: 0.5;
-    dominant-baseline: central;
-    text-anchor: middle;
-    pointer-events: none;
-  }
-  .color_scheme_edit--color {
-    stroke: white;
-    stroke-width: 2;
-  }
-  .color_scheme_edit--color_outline {
-    opacity: 0;
-    fill: transparent;
-    stroke: gray;
-    stroke-width: 2;
-    cursor: pointer;
-  }
-  .color_scheme_edit--color_outline:hover {
-    opacity: 1;
-  }
-  .color_scheme_edit__viewer .color_scheme_edit--color_outline {
-    cursor: initial;
-  }
-  .color_scheme_edit--hsl_editor {
-    height: 40px;
-    width: 300px;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-  }
-  .color_scheme_edit--hsl_editor > * {
-    margin: 6px;
-  }
-  .color_scheme_edit--hsl_editor > label {
-    min-width: 40px;
-    flex: 1;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-  }
-  .color_scheme_edit--hsl_editor > label > input {
-    margin: 6px;
-    min-width: 20px;
-    background: hsla(0, 0%, 100%, 50%);
-  }
-  .color_scheme_edit--hsl_editor input {
-  }
-</style>
-<script>
-function $svg(tag) {
-  return $(document.createElementNS('http://www.w3.org/2000/svg', tag));
+function add_color_scheme_row(name, color_scheme) {
+  let $row, $cell_name, $cell_colors, $cell_control;
+  $("#color_schemes--list").append( $row = $("<tr/>")
+    .addClass("color_schemes--row")
+    .append( $cell_name = $("<td/>")
+      .addClass("color_schemes--cell color_schemes--cell__name")
+      .append( $("<input/>")
+        .attr('type', "text")
+        .addClass("color_schemes--scheme_name")
+        .val(name)
+        .on('input', color_schemes_on_change)
+      )
+    )
+    .append( $cell_colors = $("<td/>")
+      .addClass("color_schemes--cell color_schemes--cell__colors")
+    )
+    .append( $cell_control = $("<td/>")
+      .addClass("color_schemes--cell color_schemes--cell__control")
+      .addClass("color_scheme--delete_button")
+      .click(function() {
+        $row.remove();
+        color_schemes_on_change();
+      })
+    )
+  );
+  let editor = new ColorSchemeEditor(color_scheme, $cell_colors);
+  editor.on_change(color_schemes_on_change);
+  $row.data("scheme_editor", editor);
 }
 
-class ColorSchemeEditor {
-  constructor(color_scheme, $container) {
-    const w = 150, h = 38, delta = 1;
-    this.$element = $("<div/>");
-    this.$svg = $svg('svg')
-      .addClass("color_scheme_edit")
-      .attr('viewBox', (-delta) + " " + (-delta) + " " + (2*w+2*delta) + " " + (h+2*delta))
-      .appendTo(this.$element);
-    var gradient_id = 'color_scheme_edit--mark_gradient__' +
-      (++ColorSchemeEditor.gradient_id_gen);
-    this.$svg.append($svg('defs').append(
-      $svg('linearGradient')
-        .attr('id', gradient_id)
-        .append( this.$color_mark_common = $svg('stop')
-          .attr('offset', "0%")
-         )
-        .append( this.$color_mark_deep = $svg('stop')
-          .attr('offset', "100%")
-         )
-    ));
-    this.$color_mark = $svg('polygon')
-      .addClass("color_scheme_edit--color")
-      .attr('points', "0,0 0," + h + " " + w + "," + h + " " + w + ",0")
-      .css('fill', "url(#" + gradient_id + ")")
-      .appendTo(this.$svg);
-    this.$color_mid = $svg('polygon')
-      .addClass("color_scheme_edit--color")
-      .attr('points', w + ",0 " + w + "," + h + " " + 2*w + "," + h + "")
-      .appendTo(this.$svg);
-    this.$color_top = $svg('polygon')
-      .addClass("color_scheme_edit--color")
-      .attr('points', w + ",0 " + 2*w + "," + h + " " + 2*w + ",0")
-      .appendTo(this.$svg);
-    this.$color_mark_outline = $svg('polygon')
-      .addClass("color_scheme_edit--color_outline")
-      .attr('points', this.$color_mark.attr('points'))
-      .append($svg("title").text("сданные задачи"))
-      .on('click', async () => {
-        this.load_scheme(Object.assign( this.scheme,
-          {mark: await this.edit(this.scheme.mark)} ))
-      })
-      .appendTo(this.$svg);
-    this.$color_mid_outline = $svg('polygon')
-      .addClass("color_scheme_edit--color_outline")
-      .attr('points', this.$color_mid.attr('points'))
-      .append($svg("title").text("рейтинг — средний"))
-      .on('click', async () => {
-        this.load_scheme(Object.assign( this.scheme,
-          {rating_mid: await this.edit(this.scheme.rating_mid)} ))
-      })
-      .appendTo(this.$svg);
-    this.$color_top_outline = $svg('polygon')
-      .addClass("color_scheme_edit--color_outline")
-      .attr('points', this.$color_top.attr('points'))
-      .append($svg("title").text("рейтинг — большой"))
-      .on('click', async () => {
-        this.load_scheme(Object.assign( this.scheme,
-          {rating_top: await this.edit(this.scheme.rating_top)} ))
-      })
-      .appendTo(this.$svg);
-    $svg('text')
-      .addClass("color_scheme_edit--label")
-      .text("1")
-      .attr({x: w/2, y: h/2})
-      .appendTo(this.$svg);
-    $svg('text')
-      .addClass("color_scheme_edit--label")
-      .text("S, Σ")
-      .attr({x: w + w/2, y: h/2})
-      .appendTo(this.$svg);
-    this.load_scheme(color_scheme);
-    this.$element.appendTo($container);
-  }
-  load_scheme(color_scheme) {
-    this.scheme = color_scheme;
-    this.$color_mark_common
-      .attr('stop-color', hsl_to_css(color_scheme.mark));
-    this.$color_mark_deep
-      .attr('stop-color', hsl_to_css(hsl_deepen(color_scheme.mark, 2)));
-    this.$color_mid
-      .css('fill', hsl_to_css(color_scheme.rating_mid));
-    this.$color_top
-      .css('fill', hsl_to_css(color_scheme.rating_top));
-  }
-  async edit(hsl) {
-    // XXX add an option to recommend certain values (e.g. for lightness)
-    var
-      $editor,
-      $input_h, $input_s, $input_l,
-      $confirm_button;
-    var $editor = $('<div/>')
-      .addClass("color_scheme_edit--hsl_editor")
-      .append($('<label/>')
-        .text("H:")
-        .attr('title', "hue")
-        .append( $input_h = $('<input/>')
-          .attr({type: "number", step: "1", min: "-180", max: "360",})
-          .val(hsl.h)
-        )
-      )
-      .append($('<label/>')
-        .text("S:")
-        .attr('title', "saturation")
-        .append( $input_s = $('<input/>')
-          .attr({type: "number", step: "0.01", min: "0", max: "1",})
-          .val(hsl.s)
-        )
-      )
-      .append($('<label/>')
-        .text("L:")
-        .attr('title', "lightness")
-        .append( $input_l = $('<input/>')
-          .attr({type: "number", step: "0.01", min: "0", max: "1",})
-          .val(hsl.l)
-        )
-      )
-      .append($confirm_button = $('<button/>')
-        .addClass("material-icons")
-        .text("done")
-      )
-      .appendTo(this.$element);
-    this.$svg.css('display', "none")
-    try {
-      function update() {
-        Object.assign(hsl, {
-          h: $input_h.val(),
-          s: $input_s.val(),
-          l: $input_l.val(),
-        })
-        $editor.css('background', hsl_to_css(hsl));
-      }
-      update();
-      $($input_h).add($input_s).add($input_l)
-        .on('input', update);
-      await(new Promise((resolve, reject) => {
-        $confirm_button.on('click', resolve);
-      }));
-      update();
-      return hsl;
-    } finally {
-      $editor.remove();
-      this.$svg.css('display', "");
+function color_schemes_on_change() {
+  $("#color_schemes--save_button")
+    .prop('disabled', false);
+}
+
+function color_schemes_new() {
+  var name = $("#color_schemes--new_name").val();
+  add_color_scheme_row(name, scheme_copy(color_scheme_default));
+  $("#color_schemes--new_name").val("");
+  color_schemes_on_change();
+}
+
+async function color_schemes_save() {
+  var color_schemes = {};
+  var name_error = false;
+  var $name_by_name = {};
+  var $color_schemes = $("#color_schemes--list");
+  $color_schemes.children("tr").each(function() {
+    var $row = $(this);
+    var $name = $row.find(".color_schemes--scheme_name");
+    var name = $name.val();
+    if (name == "") {
+      animate_warning($name);
+      name_error = true;
+      return;
     }
+    if ($name_by_name[name] != null) {
+      if ($name_by_name[name] != true)
+        animate_warning($name_by_name[name]);
+      animate_warning($name);
+      $name_by_name[name] = true;
+      name_error = true;
+      return;
+    }
+    $name_by_name[name] = $name;
+    color_schemes[name] = $row.data("scheme_editor").scheme;
+  })
+  if (name_error)
+    return;
+  $("#color_schemes--save_button")
+    .prop('disabled', true);
+  var $status = $("<span/>")
+    .addClass("loading_message loading_animation")
+    .text("сохранение…")
+    .appendTo($("#color_schemes--control"));
+  try {
+    await new Promise((resolve, reject) =>
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(function(error) {
+          $("#color_schemes--control").append( $("<span/>")
+            .addClass("error")
+            .text(error.toString())
+          );
+          reject(error);
+        })
+        .metadata_editor_set_color_schemes(color_schemes)
+      );
+  } finally {
+    $status.remove();
   }
-}
-ColorSchemeEditor.gradient_id_gen = 0;
-
-class ColorSchemeViewer extends ColorSchemeEditor {
-  constructor(color_scheme, $container) {
-    super(color_scheme, $container);
-    this.$svg
-      .addClass("color_scheme_edit__viewer");
-  }
-  async edit(hsl) { return hsl; }
-}
-
-// XXX change deepen so that it changes ratio L/(1-L), not L
-function hsl_deepen(hsl, factor=1) {
-  if (!(factor > 0)) {
-    throw new Error("factor must be a positive number");
-  }
-  var {h, s, l} = hsl;
-  var lratio = l / (1 - l);
-  if (isFinite(lratio) && lratio > 0) {
-    lratio /= factor;
-  } else {
-    return {h: h, s: s, l: l}
-  }
-  return {h: h, s: s, l: lratio / (lratio + 1)};
-}
-
-function hsl_to_css(hsl) {
-  return "hsl(" + hsl.h + "," + (100 * hsl.s) + "%," + (100 * hsl.l) + "%)";
 }
 
 </script>

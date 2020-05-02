@@ -258,7 +258,7 @@ function Initializer(sheet, name, options) { // {{{
         this.group.set_filename(this.options.filename);
     }
     if (this.options.color_scheme != null) {
-        this.color_scheme = ColorSchemes.copy(this.options.color_scheme);
+        this.color_scheme = ColorSchemes.copy(this.options.color_scheme, ["name"]);
         this.group.set_color_scheme(this.options.color_scheme);
     } else {
         this.color_scheme = ColorSchemes.get_default();
@@ -740,14 +740,14 @@ Initializer.prototype.add_attendance = function() {
                 .setBackground(HSL.to_hex(
                     HSL.deepen(initial.attendance.colors.mark, 0.75) ));
             let subrange = ( (row, height) =>
-                sheet.getRange(row, substart, height, date_list.length) );
+                this.sheet.getRange(row, substart, height, date_list.length) );
             this.format_attendance_data(subrange(
                 this.dim.data_row, this.dim.data_height ));
             subrange(this.dim.label_row, 1)
                 .setNumberFormat("dd")
                 .setValues([date_list])
                 .shiftColumnGroupDepth(1);
-            let title_subrange = subrange(this.di.title_row, 1);
+            let title_subrange = subrange(this.dim.title_row, 1);
             title_subrange
                 .setNumberFormat('yyyy"-"mm');
             this.monthize_attendance(title_subrange, date_list);
@@ -1179,26 +1179,36 @@ Initializer.prototype.push_rating_cfrules = function() {
     ));
 } // }}}
 
-// StudyGroup().new_cfrule_rating (ranges, color_mid, color_top) {{{
+// StudyGroup().get_cfcondition_rating () {{{
+StudyGroup.prototype.get_cfcondition_rating = function() {
+    var max_R1C1 = "R" + this.dim.max_row + "C[0]";
+    return new ConditionalFormatting.GradientCondition({
+        min_type: SpreadsheetApp.InterpolationType.NUMBER,
+        min_value: "=0.1*max(0.01," + max_R1C1 + ")",
+        mid_type: SpreadsheetApp.InterpolationType.NUMBER,
+        mid_value: "=0.5*max(0.01," + max_R1C1 + ")",
+        max_type: SpreadsheetApp.InterpolationType.NUMBER,
+        max_value: "=0.9*max(0.01," + max_R1C1 + ")",
+    });
+} // }}}
+
+// StudyGroup().get_cfeffect_rating (color_scheme) {{{
+StudyGroup.prototype.get_cfeffect_rating = function(color_scheme) {
+    return new ConditionalFormatting.GradientEffect({
+        min_color: "#ffffff",
+        mid_color: HSL.to_hex(color_scheme.rating_mid),
+        max_color: HSL.to_hex(color_scheme.rating_top),
+    });
+} // }}}
+
+// StudyGroup().new_cfrule_rating (ranges, color_scheme) {{{
 StudyGroup.prototype.new_cfrule_rating = function(
     cfranges, color_scheme
 ) {
-    var max_R1C1 = "R" + this.dim.max_row + "C[0]";
     return { type: "gradient",
-        condition: {
-            min_type: SpreadsheetApp.InterpolationType.NUMBER,
-            min_value: "=0.1*max(0.01," + max_R1C1 + ")",
-            mid_type: SpreadsheetApp.InterpolationType.NUMBER,
-            mid_value: "=0.5*max(0.01," + max_R1C1 + ")",
-            max_type: SpreadsheetApp.InterpolationType.NUMBER,
-            max_value: "=0.9*max(0.01," + max_R1C1 + ")",
-        },
+        condition: this.get_cfcondition_rating(),
         ranges: cfranges,
-        effect: {
-            min_color: "#ffffff",
-            mid_color: HSL.to_hex(color_scheme.rating_mid),
-            max_color: HSL.to_hex(color_scheme.rating_top),
-        },
+        effect: this.get_cfeffect_rating(color_scheme),
     };
 } // }}}
 
@@ -1313,10 +1323,7 @@ StudyGroup.prototype.get_color_scheme = function() {
         metadata_keys.color_scheme );
     if (color_scheme == null)
         return ColorSchemes.get_default();
-    var name = color_scheme.name;
-    color_scheme = ColorSchemes.copy(color_scheme);
-    if (name != null)
-        color_scheme.name = name;
+    color_scheme = ColorSchemes.copy(color_scheme, ["name"]);
     return color_scheme;
 } // }}}
 
@@ -1326,10 +1333,7 @@ StudyGroup.prototype.set_color_scheme = function(color_scheme) {
     if (color_scheme == null) {
         SheetMetadata.unset(this.sheet, metadata_keys.color_scheme);
     } else {
-        var name = color_scheme.name;
-        color_scheme = ColorSchemes.copy(color_scheme);
-        if (name != null)
-            color_scheme.name = name;
+        color_scheme = ColorSchemes.copy(color_scheme, ["name"]);
         SheetMetadata.set_object( this.sheet,
             metadata_keys.color_scheme, color_scheme );
     }

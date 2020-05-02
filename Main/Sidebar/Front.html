@@ -3,10 +3,7 @@
 <head>
     <base target="_blank">
 </head>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
-</script>
-<link rel="stylesheet" href="//ssl.gstatic.com/docs/script/css/add-ons1.css">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<?!= include_html_("UI/Common") ?>
 <?!= category_css ?>
 <style> /* based on Google CSS Package for Add-ons */
   body {    
@@ -21,17 +18,6 @@
       font-size: 18px;
       margin-bottom: 0;
     }
-  .block.block__flex {
-    display: flex;
-  }
-    .block__flex > :not(:first-child) {
-      margin-left: 12px;
-    }
-  button.material-icons {
-    min-width: 30px;
-    max-height: 29px;
-    padding: 0 2px;
-  }
   .contents {
     display: flex;
     flex-direction: column;
@@ -81,39 +67,6 @@
     }
     .select_group--option__active {
       font-style: italic;
-    }
-  /*
-  .multibutton {
-    display: inline-flex;
-    flex-direction: column;
-    max-height: 29px;
-    overflow-y: visible;
-  }
-  .multibutton:hover {
-    z-index: 1;
-  }
-    .multibutton > * {
-      min-height: 29px;
-    }
-    .multibutton > .multibutton--surface {
-    }
-    .multibutton > .multibutton--hidden {
-      margin-left: 0;
-    }
-    .multibutton:not(:hover) > .multibutton--hidden {
-      display: none;
-    }
-  */
-  .loading_animation {
-    animation-duration: 0.7s;
-    animation-name: loading;
-    animation-timing-function: ease;
-    animation-iteration-count: infinite;
-  }
-    @keyframes loading {
-        0% { color:     black; }
-       50% { color: lightgray; }
-      100% { color:     black; }
     }
   .contents_item {
     border-width: 1px;
@@ -720,7 +673,7 @@ $(function() {
     .val(active_loading_val);
   $select_group.children(".select_group--option__active_error").first()
     .val(active_error_val);
-  $select_group.on("change", function() {
+  $select_group.on('change', function() {
     var group_name = val_to_group_name($select_group.val());
     if (group_name == null) {
       $select_group
