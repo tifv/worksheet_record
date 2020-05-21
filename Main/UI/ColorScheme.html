@@ -127,6 +127,9 @@ class ColorSchemeEditor {
     this.$element.appendTo($container);
   }
   add_click_handlers() {
+    // XXX animate editing
+    // (expand polygon to fill the area first, shift gradient in process)
+    // XXX also, in color editor, maybe split background into H, S and L areas.
     this.$color_mark_outline
       .on('click', async () => {
         this.load_scheme(Object.assign( this.scheme,

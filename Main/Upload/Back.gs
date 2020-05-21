@@ -67,6 +67,7 @@ function upload_worksheet_init() {
   }
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   const categories = Categories.get(spreadsheet);
+  var lock = ActionHelpers.acquire_lock();
   var section = Worksheet.surrounding_section(null, null, spreadsheet.getActiveRange());
   var worksheet = section.worksheet;
   var group = worksheet.group;
@@ -79,6 +80,7 @@ function upload_worksheet_init() {
     (section.dim.offset > 0 ? ". " + section.get_title() : "");
   var title_id = section.get_title_metadata_id();
   var date = Worksheet.parse_title_note(section.get_title_note()).date;
+  lock.releaseLock();
   var author = UploadAuthor.get();
   var filename_base; {
     let filename_pieces = [];
@@ -178,6 +180,7 @@ function upload_worksheet_finish({
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   const group = StudyGroup.find_by_name(spreadsheet, group_name);
   const sheet = group.sheet;
+  var lock = ActionHelpers.acquire_lock();
   var metadata = sheet.createDeveloperMetadataFinder()
     .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.COLUMN)
     .withId(title_id)
@@ -198,6 +201,7 @@ function upload_worksheet_finish({
       "\"" + cell.getValue() + "\"" +
     ")")
     .setShowHyperlink(true);
+  lock.releaseLock();
 }
 
 function decode_hyperlink_formula_(formula) {

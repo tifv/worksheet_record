@@ -26,6 +26,8 @@ Actions/Rows
 Actions/Rows-Add
 Actions/Worksheets
 Actions/Worksheets-Recolor
+Actions/StudyGroups
+Actions/StudyGroups-Add
 S3Lib/Signer
 Upload/Back
 Upload/Dialog
@@ -33,3 +35,5 @@ Sidebar/Back
 Sidebar/Front
 MetadataEditor/Back
 MetadataEditor/Spreadsheet
+TODO
+test

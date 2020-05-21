@@ -948,6 +948,8 @@ Initializer.prototype.set_attendance_sum_formulas = function() {
 
 // Initializer().set_rating_direct_formulas {{{
 Initializer.prototype.set_rating_direct_formulas = function() {
+    // XXX create intermediate column
+    // so that rating will be in percent
     var rating_formula_R1C1 = ''.concat('=sum(iferror(filter( ',
         'arrayformula(',
             this.get_worksheet_row_R1C1('R[0]'), '*',

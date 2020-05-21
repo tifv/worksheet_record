@@ -1,5 +1,6 @@
 function action_add_columns() {
   try {
+    var lock = ActionHelpers.acquire_lock();
     var section = ActionHelpers.get_active_section();
     var worksheet = section.worksheet;
     var group = worksheet.group;
@@ -13,6 +14,7 @@ function action_add_columns() {
       (section.dim.offset > 0 ? ". " + section.get_title() : "");
     template.labels = group.sheetbuf.slice_values( "label_row",
       section.dim.data_start, section.dim.data_end );
+    lock.releaseLock();
     var output = template.evaluate();
     output.setWidth(500).setHeight(225);
     SpreadsheetApp.getUi().showModelessDialog(output, "Добавление колонок");
@@ -28,6 +30,7 @@ function action_add_columns_finish(
   data_index, data_width
 ) {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var lock = ActionHelpers.acquire_lock();
   var group = StudyGroup.find_by_name(spreadsheet, group_name);
   var worksheet = Worksheet.find_by_location(group, worksheet_location);
   var section = worksheet.find_section_by_location(section_location);
@@ -37,6 +40,7 @@ function action_add_columns_finish(
 
 function action_add_section() {
   try {
+    var lock = ActionHelpers.acquire_lock();
     var worksheet = ActionHelpers.get_active_worksheet();
     var template = HtmlService.createTemplateFromFile(
       "Actions/Columns-AddSection" );
@@ -45,6 +49,7 @@ function action_add_section() {
     template.worksheet_location = worksheet.get_location();
     template.date = WorksheetDate.today().to_object();
     // XXX detect date period
+    lock.releaseLock();
     var output = template.evaluate();
     output.setWidth(250).setHeight(225);
     SpreadsheetApp.getUi().showModelessDialog(output, "Добавление раздела");
@@ -61,6 +66,7 @@ function action_add_section_finish(
   }
 ) {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var lock = ActionHelpers.acquire_lock();
   var group = StudyGroup.find_by_name(spreadsheet, group_name);
   var worksheet = Worksheet.find_by_location(group, worksheet_location);
   var last_section = Worksheet.surrounding_section( group, worksheet,
@@ -75,15 +81,18 @@ function action_add_section_finish(
   var weight = weightcell.getValue() + weight;
   worksheet.add_section_after(last_section, {data_width: data_width, title: title, date: date});
   group.sheetbuf.set_value("weight_row", worksheet.dim.rating, weight);
+  lock.releaseLock();
   //group.sheetbuf.test();
 }
 
 function action_remove_excess_columns() {
   try {
+    var lock = ActionHelpers.acquire_lock();
     var section = ActionHelpers.get_active_section();
     var worksheet = section.worksheet;
     var group = worksheet.group;
     var remove_count = section.remove_excess_columns();
+    lock.releaseLock();
     //section.group.sheetbuf.test();
     if (remove_count == 0) {
       throw "Колонки не удалены. " +
@@ -99,8 +108,10 @@ function action_remove_excess_columns() {
 
 function action_alloy_subproblems() {
   try {
+    var lock = ActionHelpers.acquire_lock();
     var worksheet = ActionHelpers.get_active_worksheet();
     worksheet.alloy_subproblems();
+    lock.releaseLock();
   } catch (error) {
     report_error(error);
   }
@@ -113,6 +124,7 @@ const finished_colours = {
 
 function action_mark_columns_finished() {
   try {
+    var lock = ActionHelpers.acquire_lock();
     var group = ActionHelpers.get_active_group();
     var sheet = group.sheet;
     var active_ranges = sheet.getActiveRangeList().getRanges();
@@ -150,6 +162,7 @@ function action_mark_columns_finished() {
     for (let range of data_ranges) {
       range.setBackground(data_colour);
     }
+    lock.releaseLock();
   } catch (error) {
     report_error(error);
   }

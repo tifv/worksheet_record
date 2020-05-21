@@ -1,5 +1,6 @@
 function action_worksheet_insert() {
   try {
+    var lock = ActionHelpers.acquire_lock();
     var worksheet = ActionHelpers.get_active_worksheet();
     var note_info = Worksheet.parse_title_note(worksheet.get_title_note());
     // XXX check that the next column exists and is empty
@@ -7,6 +8,7 @@ function action_worksheet_insert() {
       worksheet.group,
       worksheet.sheet.getRange(1, worksheet.dim.end + 1),
       {date: note_info.date} );
+    lock.releaseLock();
     worksheet.sheet.getParent().toast(
       "Исправьте дату в примечании к заголовку таблички, если требуется." );
   } catch (error) {
@@ -16,6 +18,7 @@ function action_worksheet_insert() {
 
 function action_worksheet_add() {
   try {
+    var lock = ActionHelpers.acquire_lock();
     var group = ActionHelpers.get_active_group();
     var sheet = group.sheet;
     var last_column = sheet.getLastColumn();
@@ -23,6 +26,7 @@ function action_worksheet_add() {
       throw ReportError("Последний столбец вкладки должен быть пустым.");
     }
     Worksheet.add(group, sheet.getRange(1, last_column + 1));
+    lock.releaseLock();
     group.sheet.getParent().toast(
       "Исправьте дату в примечании к заголовку таблички, если требуется." );
   } catch (error) {
@@ -49,6 +53,7 @@ function action_worksheet_recolor() {
 }
 
 function action_worksheet_recolor_finish(group_name, color_scheme, {scope, group: group_options}) {
+  var lock = ActionHelpers.acquire_lock();
   if (scope == "worksheet") {
     var worksheet = ActionHelpers.get_active_worksheet();
     worksheet.recolor_cf_rules(color_scheme);
@@ -74,6 +79,7 @@ function action_worksheet_recolor_finish(group_name, color_scheme, {scope, group
     if (group_options.group) {
       if (color_scheme.origin == "group") {
         // no-op, this should equal to the current scheme
+        // XXX no, this is incorrect assumption
       } else if (color_scheme.origin == "default") {
         group.set_color_scheme(null);
       } else {
@@ -82,5 +88,6 @@ function action_worksheet_recolor_finish(group_name, color_scheme, {scope, group
     }
     cfrules.save(group.sheet);
   }
+  lock.releaseLock();
 }
 

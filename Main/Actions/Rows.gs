@@ -26,6 +26,7 @@ function action_add_rows() {
 function action_add_rows_finish(group_name, row_index, row_count) {
   // XXX fix participants counter (maybe just load the formula and then reset it)
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var lock = ActionHelpers.acquire_lock();
   var group = StudyGroup.find_by_name(spreadsheet, group_name);
   var sheet = group.sheet;
   function get_row_range(row, height) {
@@ -60,6 +61,7 @@ function action_add_rows_finish(group_name, row_index, row_count) {
       .setBorder(
         null, null, true, null, null, null );
   }
+  lock.releaseLock();
 }
 
 function action_remove_excess_rows() {

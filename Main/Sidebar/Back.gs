@@ -78,6 +78,7 @@ function sidebar_load_contents_validate(contents_item) {
      entity.get_title_metadata_id({check: true});
    }
   }
+  var lock = ActionHelpers.acquire_lock();
   var section_by_note = null, section_by_id = null, sections = [];
   group.sheetbuf.ensure_loaded(column, column + width - 1);
   var column_by_note = group.sheetbuf.find_closest("notes", "title_row", title_note, column);
@@ -111,6 +112,7 @@ function sidebar_load_contents_validate(contents_item) {
     check_id(section.worksheet);
     contents.push(sidebar_load_contents_section_(section, true));
   }
+  lock.releaseLock();
   return contents;
 }
 

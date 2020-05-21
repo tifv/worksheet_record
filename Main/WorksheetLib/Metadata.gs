@@ -71,11 +71,51 @@ function get_default() {
   };
 }
 
+function restore_hardcoded(spreadsheet) {
+  ColorSchemes.set(spreadsheet, {
+    "default": get_default(),
+    flowerbed: {
+      mark:       {h: -12, s: 0.30, l: 0.90},
+      rating_mid: {h:  48, s: 0.50, l: 0.80},
+      rating_top: {h: 108, s: 0.60, l: 0.70},
+    },
+    seawater: {
+      mark:       {h: 144, s: 0.30, l: 0.90},
+      rating_mid: {h: 204, s: 0.50, l: 0.80},
+      rating_top: {h: 264, s: 0.60, l: 0.75},
+    },
+    brick: {
+      mark:       {h:  60, s: 0.40, l: 0.85},
+      rating_mid: {h: -60, s: 0.50, l: 0.85},
+      rating_top: {h:   0, s: 0.60, l: 0.75},
+    },
+    steel: {
+      mark:       {h:-132, s: 0.35, l: 0.90},
+      rating_mid: {h: -12, s: 0.50, l: 0.85},
+      rating_top: {h: -72, s: 0.60, l: 0.75},
+    },
+    lotus: {
+      mark:       {h: 186, s: 0.30, l: 0.90},
+      rating_mid: {h: 126, s: 0.50, l: 0.80},
+      rating_top: {h:  66, s: 0.65, l: 0.65},
+    },
+    pixie: {
+      mark:       {h: 294, s: 0.35, l: 0.90},
+      rating_mid: {h: 234, s: 0.50, l: 0.80},
+      rating_top: {h: 174, s: 0.60, l: 0.70},
+    },
+  });
+}
+
 return {
   get: get, set: set,
-  get_default: get_default, copy: copy };
+  get_default: get_default, copy: copy,
+  restore_hardcoded: restore_hardcoded };
 }(); // end ColorSchemes namespace
 
+function color_schemes_restore_hardcoded() {
+  ColorSchemes.restore_hardcoded(SpreadsheetApp.getActiveSpreadsheet());
+}
 
 var Categories = function() { // namespace
 

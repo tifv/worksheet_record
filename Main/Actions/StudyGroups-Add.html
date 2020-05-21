@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_blank">
+</head>
+<?!= include_html_("UI/Common") ?>
+<script>
+  var color_scheme_default = <?!= JSON.stringify(color_scheme_default) ?>;
+  var color_schemes = <?!= JSON.stringify(color_schemes) ?>;
+  var categories = <?!= JSON.stringify(categories) ?>;
+</script>
+<body>
+<div class="block form-group">
+  <label for="edit_name--input">Название вкладки</label>
+  <input type="text" id="edit_name--input" style="width: 100%"
+    value="group" />
+</div>
+<!-- 1 XXX group on existing sheet: make a checkbox near group name, like «Вкладка уже имеется». It will hide most of the options below. -->
+<!-- 1 XXX rating structure: rating and sum -->
+<!-- 1 XXX category structure (which categories are included at all; included in rating; included in sum; integrated in rating; integrated in sum) -->
+<!-- 1 XXX category_musthave -->
+<!-- 2 XXX attendance; attendance sum -->
+<!-- 2 XXX attendance columns: list of dates, date range, or multiple date ranges -->
+<!-- 3 XXX number of data rows -->
+<!-- 3 XXX filename -->
+<!-- 4 XXX color scheme -->
+<!-- 6 XXX timetable -->
+<!-- 5 XXX control row order -->
+<div class="block"
+ ><button id="add_group_button" type="button" class="action" onclick="add_group()"
+    >Добавить учебную группу</button
+ ><button type="button" class="abort" onclick="google.script.host.close()"
+    >Отмена</button
+></div>
+<script>
+function add_group() {
+  $("#add_group_button").prop('disabled', true);
+  var group_name = $("#edit_name--input").val();
+  google.script.run
+    .withSuccessHandler(function() {
+      google.script.host.close();
+    })
+    .withFailureHandler(function(error) {
+      display_error(error);
+    })
+    .action_add_group_new(group_name, {});
+}
+</script>
+</body>

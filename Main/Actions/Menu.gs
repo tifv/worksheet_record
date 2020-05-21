@@ -33,9 +33,9 @@ function menu_create() {
         .addSeparator();
     { let columns_menu = ui.createMenu("Колонки-задачи");
         columns_menu
-            .addItem( emoji.plus    + " Добавить колонки",
+            .addItem( emoji.plus    + " Добавить колонки…",
                 "action_add_columns" )
-            .addItem( emoji.plus    + " Добавить раздел (добавку)",
+            .addItem( emoji.plus    + " Добавить раздел-добавку…",
                 "action_add_section" )
             .addItem( emoji.minus   + " Удалить лишние колонки",
                 "action_remove_excess_columns" )
@@ -49,9 +49,9 @@ function menu_create() {
     }
     { let rows_menu = ui.createMenu("Строки-участники");
         rows_menu
-            .addItem( emoji.plus  + " Добавить строки",
+            .addItem( emoji.plus  + " Добавить строки…",
                 "action_add_rows" )
-            .addItem( emoji.minus + " Удалить лишние строки",
+            .addItem( emoji.minus + " Удалить лишние строки…",
                 "action_remove_excess_rows" )
             ;
         menu.addSubMenu(rows_menu);
@@ -62,7 +62,7 @@ function menu_create() {
                 "action_worksheet_insert" )
             .addItem( emoji.plus + " Добавить бланк в конец",
                 "action_worksheet_add" )
-            .addItem( "Перекрасить листочек…",
+            .addItem( "Перекрасить листочки…",
                 "action_worksheet_recolor" )
             ;
         menu.addSubMenu(worksheets_menu);
@@ -82,6 +82,7 @@ function menu_create() {
 function menu_add_admin_(menu) {
     menu
         .addItem("Метаданные ведомости…", "metadata_editor")
+        .addItem("Добавить группу…", "action_add_group")
         .addItem("Обновить меню", "menu_create")
         .addSeparator()
         .addItem( emoji.devil + " Скрыть функции адм-ра",

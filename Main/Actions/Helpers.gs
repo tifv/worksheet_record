@@ -69,10 +69,34 @@ function get_active_section(spreadsheet, sheet, range) {
   }
 }
 
+// Lock policy:
+// Action that add or remove columns should definetly acquire lock.
+// Actions that can modify spreadsheet in other ways should acquire lock.
+// (this does include all worksheet.get_location() calls with metadata check).
+// In those cases, lock should be acquired before calls to sheetbuf.
+// Sidebar contents initial scan does not acquire lock, even though
+// it can, in some cases, modify spreadsheet (it runs too often to acquire lock).
+function acquire_lock() {
+  var lock = LockService.getDocumentLock();
+  var success = lock.tryLock(300);
+  if (success)
+    return lock;
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    "Ожидание завершения других операций." );
+  var success = lock.tryLock(5000);
+  if (success)
+    return lock;
+  throw new ReportError(
+    "Не удалось получить доступ к таблице. " +
+    "Другие операции (возможно, запущенные другими редакторами) " +
+    "создают опасность одновременного редактирования." );
+}
+
 return {
   get_active_group: get_active_group,
   get_active_worksheet: get_active_worksheet,
   get_active_section: get_active_section,
+  acquire_lock: acquire_lock,
 };
 }(); // end ActionHelpers namespace
 

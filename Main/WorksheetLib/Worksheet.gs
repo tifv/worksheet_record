@@ -645,6 +645,8 @@ Worksheet.prototype.recolor_cf_rules = function(color_scheme) {
         Object.assign({}, cfrule_data_limit_obj, {effect: null}),
         cfrule_data_limit_obj.effect );
     var cfrule_weight_obj = this.new_cfrule_weight(color_scheme);
+    // XXX weight coloring may be missing
+    // (e.g. when weights are reset by hand)
     cfrules.remove(Object.assign({}, cfrule_weight_obj, {effect: null}));
     cfrules.insert(cfrule_weight_obj);
     var cfrule_rating_obj = this.new_cfrule_rating(color_scheme);
