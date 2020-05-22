@@ -4,8 +4,7 @@ function sidebar_show() {
   var template = HtmlService.createTemplateFromFile("Sidebar/Front");
   template.categories = categories;
   template.category_css = format_category_css_(categories);
-  template.upload_enabled = ( UploadConfig.is_configured() &&
-    UploadRecord.exists() );
+  template.upload_enabled = upload_enabled_();
   var output = template.evaluate().setTitle("Ведомость");
   SpreadsheetApp.getUi().showSidebar(output);
 }
@@ -15,6 +14,10 @@ function sidebar_load_group_list() {
 }
 
 function sidebar_load_contents(group_name, {continuation = null, cached = []} = {}) {
+  // XXX avoid modifying the spreadsheet at all (when getting location)
+  // if it is unaviodable, return whatever contents is already scanned,
+  // and set special parameter to the continuation token that will trigger
+  // lock acquisition on the next iteration.
   var start_time = (new Date()).getTime();
   function execution_time() {
     return (new Date()).getTime() - start_time;
@@ -137,8 +140,7 @@ function sidebar_load_contents_section_(section, validated = false) {
       // XXX hide such worksheets in the sidebar
     is_subsection: section.dim.offset > 0,
     title: section.get_title(),
-    full_title: worksheet.get_title() +
-      (section.dim.offset > 0 ? ". " + section.get_title() : ""),
+    qualified_title: section_get_qualified_title(),
     title_note: title_note,
     category: worksheet.get_category(),
     labels: group.sheetbuf.slice_values( "label_row",

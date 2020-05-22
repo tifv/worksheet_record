@@ -147,7 +147,20 @@ function multicopy(categories) {
   );
 }
 
-return {get: get, set: set};
+function restore_hardcoded(spreadsheet) {
+  Categories.set(spreadsheet, {
+    a: {name: "алгебра",       filename: "algebra",       color: {h: -30, s: 0.40, l: 0.80}},
+    g: {name: "геометрия",     filename: "geometry",      color: {h: 210, s: 0.40, l: 0.80}},
+    c: {name: "комбинаторика", filename: "combinatorics", color: {h:  90, s: 0.40, l: 0.80}},
+    n: {name: "теория чисел",  filename: "number-theory", color: {h:  30, s: 0.40, l: 0.80}},
+    o: {name: "олимпиада",     filename: "olympiad",      color: {h:  30, s: 1.00, l: 0.80}},
+    mixture: {name: "разнобой", filename: "mixture"}
+  });
+}
+
+return {
+  get: get, set: set,
+  restore_hardcoded: restore_hardcoded };
 }(); // end Categories namespace
 
 function format_category_css_(categories) {

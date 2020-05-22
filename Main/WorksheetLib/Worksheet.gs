@@ -941,7 +941,7 @@ Worksheet.find_start_col = function(group) {
     var marker_start = group.sheetbuf.find_value( "label_row",
         marker.start, 1 );
     if (marker_start == null)
-        return null
+        return null;
     return marker_start - data_offset.start;
 } // }}}
 
@@ -1210,6 +1210,12 @@ WorksheetSection.prototype.has_weight_row =
     Worksheet.prototype.has_weight_row ;
 // }}}
 
+// WorksheetSection().get_qualified_title {{{
+WorksheetSection.prototype.get_qualified_title = function() {
+    return this.worksheet.get_title() +
+        (this.dim.offset > 0 ? ". " + this.get_title() : "");
+} // }}}
+
 // list_titles* (group, start, end) {{{
 function* list_titles(group, start, end) {
     var title_start = start;
@@ -1374,6 +1380,57 @@ Worksheet.prototype.find_section_by_location = function(location) {
     return section;
 } // }}}
 
+// WorksheetSection().is_solutions {{{
+WorksheetSection.prototype.is_solutions = function() {
+    var title_note_info = Worksheet.parse_title_note(this.get_title_note());
+    return title_note_info.lines.includes("solutions");
+}
+
+// WorksheetSection().get_solutions (solutions_title) {{{
+WorksheetSection.prototype.get_solutions = function(
+  solutions_title = "solutions"
+) {
+    var group = this.group;
+    find_existing: {
+        if (this.is_solutions())
+            return this;
+        if (this.dim.end == this.worksheet.dim.end)
+            break find_existing;
+        var next_section = Worksheet.surrounding_section(
+            group, this.worksheet, this.full_range.offset(0, this.dim.width, 1, 1) );
+        if (next_section.is_solutions())
+            return next_section;
+    }
+    var sheet = this.sheet;
+    var solutions_range = this.full_range.offset(0, this.dim.width, 1, 1);
+    this.worksheet.add_section_after(this, {
+      title: solutions_title, data_width: 1 });
+    var section = Worksheet.surrounding_section(group, null, solutions_range);
+    var title_note_info = Worksheet.parse_title_note(section.get_title_note());
+    title_note_info.lines.push("solutions");
+    section.set_title_note(Worksheet.format_title_note(title_note_info));
+    group.sheetbuf.set_value("label_row", section.dim.data_start, "◦");
+    sheet.getRange(group.dim.label_row, section.dim.data_start)
+      .setFontWeight("normal");
+    sheet.getRange(
+      group.dim.data_row, section.dim.data_start,
+      group.dim.data_height, 1
+    ).setValue("◦");
+    sheet.setColumnWidth(section.dim.data_start, 80);
+    return section;
+}
+
+// WorksheetSection().get_unsolutions () {{{
+WorksheetSection.prototype.get_unsolutions = function() {
+    var group = this.group;
+    if (this.dim.data_offset == 0)
+        throw new WorksheetSectionError(
+            "Section with solutions cannot be the first in its worksheet" );
+    var section = Worksheet.surrounding_section(
+        group, this.worksheet, this.full_range.offset(0, -1, 1, 1) );
+    return section;
+}
+
 // Worksheet().add_section_after (section, options) {{{
 Worksheet.prototype.add_section_after = function(section, options = {}) {
     // after this function is applied, all worksheet structures
@@ -1442,14 +1499,17 @@ Worksheet.prototype.add_section_after = function(section, options = {}) {
         title_id = Worksheet.prototype.get_title_metadata.call(quasi_section)
             .getId();
     }
-    var title_note = Worksheet.format_title_note({ lines: [],
-        date: options.date, title_id: title_id });
+    var title_note = Worksheet.format_title_note({
+        date: options.date, title_id: title_id,
+        lines: [] });
     this.group.sheetbuf.set_value("title_row", dim.start, options.title);
     this.group.sheetbuf.set_note ("title_row", dim.start, title_note);
 } // }}}
 
 // WorksheetSection().add_columns (data_index, data_width) {{{
 WorksheetSection.prototype.add_columns = function(data_index, data_width) {
+    // after this function is applied, all worksheet structures
+    // (worksheets, sections) should be discarded
     if (data_index < 0 || data_index > this.dim.data_width) {
         throw new Error( "WorksheetSection().add_columns: " +
             "data_index is invalid" );
@@ -1509,6 +1569,8 @@ WorksheetSection.prototype.add_columns = function(data_index, data_width) {
 
 // WorksheetSection().remove_excess_columns {{{
 WorksheetSection.prototype.remove_excess_columns = function() {
+    // after this function is applied, all worksheet structures
+    // (worksheets, sections) should be discarded
     var label_values = this.group.sheetbuf.slice_values( "label_row",
         this.dim.data_start, this.dim.data_end );
     var data_values = this.data_range.getValues();

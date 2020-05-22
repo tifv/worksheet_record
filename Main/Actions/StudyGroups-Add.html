@@ -4,16 +4,66 @@
   <base target="_blank">
 </head>
 <?!= include_html_("UI/Common") ?>
+<?!= include_html_("UI/ColorScheme") ?>
 <script>
   var color_scheme_default = <?!= JSON.stringify(color_scheme_default) ?>;
   var color_schemes = <?!= JSON.stringify(color_schemes) ?>;
   var categories = <?!= JSON.stringify(categories) ?>;
 </script>
+<style>
+.category--check_cell {
+  box-sizing: border-box;
+  min-width: 30px;
+  padding-left: 6px;
+  padding-right: 6px;
+  text-align: center;
+}
+  .category--check_cell > .category--check {
+    margin-right: 0;
+  }
+  .category--check__disabled {
+    display: none;
+  }
+.category--name_cell {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+</style>
 <body>
+<!--
 <div class="block form-group">
   <label for="edit_name--input">Название вкладки</label>
   <input type="text" id="edit_name--input" style="width: 100%"
     value="group" />
+</div>
+-->
+<label class="block form-group"
+ >Название вкладки<br/>
+  <input type="text" id="edit_name--input" style="width: 50%"
+    value="group" />
+</label>
+<div class="block form-group">
+  <label><input type="checkbox" id="rating--rating" checked
+   >Итоговый рейтинг</label>
+  <label><input type="checkbox" id="rating--sum" checked
+   >Итоговая сумма задач</label>
+</div>
+<div class="block">
+  <strong>Категории (темы)</strong>
+  <table class="block">
+    <thead>
+      <tr>
+        <th class="category--check_cell"/>
+        <th class="category--name_cell">название</th>
+        <th class="category--check_cell">Σ</th>
+        <th class="category--check_cell">ΣΣ</th>
+        <th class="category--check_cell">S</th>
+        <th class="category--check_cell">SS</th>
+      </tr>
+    </thead>
+    <tbody id="category--list">
+    </tbody>
+  </table>
 </div>
 <!-- 1 XXX group on existing sheet: make a checkbox near group name, like «Вкладка уже имеется». It will hide most of the options below. -->
 <!-- 1 XXX rating structure: rating and sum -->
@@ -33,9 +83,140 @@
     >Отмена</button
 ></div>
 <script>
+$(function() {
+  var $category_list = $("#category--list");
+  for (let [category_code, category] of Object.entries(categories)) {
+    if (category_code == "mixture")
+      continue;
+    let $category_item;
+    let $category_check = {};
+    $category_item = $("<tr/>")
+      .addClass("category--item")
+      .data("category", category_code)
+      .append($("<td/>")
+        .addClass("category--check_cell")
+        .append($category_check.include = $("<input/>")
+          .attr('type', "checkbox")
+          .addClass("category--check category--check__include")
+          .prop('checked', true)
+        )
+      )
+      .append($("<td/>")
+        .addClass("category--name_cell category--name")
+        .text(category.name)
+      )
+      .append($("<td/>")
+        .addClass("category--check_cell")
+        .append($category_check.rating = $("<input/>")
+          .attr('type', "checkbox")
+          .addClass("category--check category--check__rating")
+          .prop('checked', true)
+        )
+      )
+      .append($("<td/>")
+        .addClass("category--check_cell")
+        .append($category_check.rating_integrate = $("<input/>")
+          .attr('type', "checkbox")
+          .addClass("category--check category--check__rating_integrate")
+          .prop('checked', true)
+        )
+      )
+      .append($("<td/>")
+        .addClass("category--check_cell")
+        .append($category_check.sum = $("<input/>")
+          .attr('type', "checkbox")
+          .addClass("category--check category--check__sum")
+          .prop('checked', true)
+        )
+      )
+      .append($("<td/>")
+        .addClass("category--check_cell")
+        .append($category_check.sum_integrate = $("<input/>")
+          .attr('type', "checkbox")
+          .addClass("category--check category--check__sum_integrate")
+          .prop('checked', false)
+        )
+      );
+    if (category.color != null) {
+      $category_item
+        .css('background', hsl_to_css(category.color));
+    }
+    $category_check.variable = $($.map([
+      $category_check.rating,
+      $category_check.rating_integrate,
+      $category_check.sum,
+      $category_check.sum_integrate,
+    ], (a) => [...a]));
+    $category_check.include.on('change', () => {
+      if ($category_check.include.prop('checked')) {
+        $category_check.variable
+          .removeClass("category--check__disabled");
+        $category_check.rating
+          .prop('checked', true);
+        $category_check.rating_integrate
+          .prop('checked', true);
+        $category_check.sum
+          .prop('checked', true);
+        $category_check.sum_integrate
+          .prop('checked', false);
+      } else {
+        $category_check.variable
+          .addClass("category--check__disabled");
+      }
+    });
+    $category_check.rating.on('change', () => {
+      if ($category_check.rating.prop('checked')) {
+        $category_check.rating_integrate
+          .removeClass("category--check__disabled")
+          .prop('checked', true);
+      } else {
+        $category_check.rating_integrate
+          .addClass("category--check__disabled");
+      }
+    });
+    $category_check.sum.on('change', () => {
+      if ($category_check.sum.prop('checked')) {
+        $category_check.sum_integrate
+          .removeClass("category--check__disabled")
+          .prop('checked', false);
+      } else {
+        $category_check.sum_integrate
+          .addClass("category--check__disabled");
+      }
+    });
+    $category_list.append($category_item);
+  }
+});
+
 function add_group() {
   $("#add_group_button").prop('disabled', true);
   var group_name = $("#edit_name--input").val();
+  var options = {
+    rating: $("#rating--rating").prop('checked'),
+    sum: $("#rating--sum").prop('checked'),
+    categories:
+      $("#category--list > tr").map((i, row) => {
+        var $row = $(row);
+        function checked(name) {
+          var $check = $row.find(".category--check__" + name);
+          if ($check.length == 0) {
+            console.log($row);
+            throw new Error("internal error: no check “" + name + "”");
+          }
+          return $check.prop('checked');
+        }
+        if (!checked("include"))
+          return [];
+        return {
+          code: $row.data("category"),
+          rating: checked("rating") ?
+            {integrate: checked("rating_integrate")} : false,
+          sum: checked("sum") ?
+            {integrate: checked("sum_integrate")} : false,
+        };
+      }).get()
+  };
+  console.log(JSON.stringify(options));
   google.script.run
     .withSuccessHandler(function() {
       google.script.host.close();
@@ -43,7 +224,18 @@ function add_group() {
     .withFailureHandler(function(error) {
       display_error(error);
     })
-    .action_add_group_new(group_name, {});
+    .action_add_group_new(group_name, options);
 }
+
+// Promise
+function display_error(error) {
+  return new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .display_error(error.toString());
+  });
+}
+
 </script>
 </body>

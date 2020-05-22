@@ -48,7 +48,7 @@
 //   • title date
 //   • author name
 
-// Phase 5 (server)
+// Phase server-finish
 // • add a line to the upload record
 // • locate the title range and get its value
 // • replace title value with hyperlink
@@ -57,18 +57,13 @@
 
 
 
+function upload_enabled_() {
+  return UploadConfig.is_configured() && UploadRecord.exists();
+}
 
-function upload_worksheet_init() {
-  if (!UploadConfig.is_configured()) {
-    throw "upload_worksheet: No upload configuration";
-  }
-  if (!UploadRecord.exists()) {
-    throw "upload_worksheet: No upload record";
-  }
+function upload_start_dialog_(section, options = {}) {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   const categories = Categories.get(spreadsheet);
-  var lock = ActionHelpers.acquire_lock();
-  var section = Worksheet.surrounding_section(null, null, spreadsheet.getActiveRange());
   var worksheet = section.worksheet;
   var group = worksheet.group;
   var group_name = group.name;
@@ -76,11 +71,9 @@ function upload_worksheet_init() {
   var category_info = categories[category || "mixture"] || {};
   var category_name = category_info.name ||
     (category != null ? "категория " + category : "mixture");
-  var title = worksheet.get_title() +
-    (section.dim.offset > 0 ? ". " + section.get_title() : "");
+  var title = options.title || section.get_qualified_title();
   var title_id = section.get_title_metadata_id();
   var date = Worksheet.parse_title_note(section.get_title_note()).date;
-  lock.releaseLock();
   var author = UploadAuthor.get();
   var filename_base; {
     let filename_pieces = [];
@@ -123,7 +116,7 @@ const known_file_extensions = {
   ".odt"  : "application/vnd.oasis.opendocument.text",
 };
 
-function upload_worksheet_authorize(files_meta) {
+function upload_authorize(files_meta) {
   const signer = UploadConfig.get_signer();
   var result = [];
   for (let {filename, size, hash} of files_meta) {
@@ -154,7 +147,7 @@ function split_filename_(filename) {
     filename.substring(ext_index) ];
 }
 
-function upload_worksheet_finish({
+function upload_finish({
     pdf_url, src_url, filename_base,
     group_name, category, title_id, title, date, author,
 }) {
@@ -227,26 +220,52 @@ var UploadConfig = function() { // begin namespace
 
 const document_key = "upload_config";
 
+var config = null;
+
+function load() {
+  if (config == null) {
+    let config_json = PropertiesService.getDocumentProperties().getProperty(document_key);
+    if (config_json != null)
+      config = JSON.parse(config_json);
+    else
+      config = {configured: false};
+  }
+  return config;
+}
+
+function save(new_config) {
+  config = new_config;
+  PropertiesService.getDocumentProperties().setProperty( document_key,
+    JSON.stringify(config) );
+}
+
 function is_configured() {
-  const upload_config = PropertiesService.getDocumentProperties().getProperty(document_key);
-  return upload_config != null;
+  return load().configured;
+}
+
+function solutions_enabled() {
+  return load().configured;
 }
 
 function get_signer() {
-  const upload_config = PropertiesService.getDocumentProperties().getProperty(document_key);
-  return new S3Signer(JSON.parse(upload_config));
+  return new S3Signer(load());
 }
 
-function set({region, bucket_url, access_key, secret_key}) {
-  PropertiesService.getDocumentProperties().setProperty( document_key,
-    JSON.stringify({
-      region: region, bucket_url: bucket_url,
-      access_key: access_key, secret_key: secret_key
-    }) );
+function set({
+  region, bucket_url, access_key, secret_key,
+  enable_solutions = false
+}) {
+  save({
+    configured: true,
+    region: region, bucket_url: bucket_url,
+    access_key: access_key, secret_key: secret_key,
+    enable_solutions: enable_solutions,
+  });
 }
 
 return {
-  is_configured: is_configured, get_signer: get_signer,
+  is_configured: is_configured, solutions_enabled: solutions_enabled,
+  get_signer: get_signer,
   set: set,
 };
 }(); // end UploadConfig namespace

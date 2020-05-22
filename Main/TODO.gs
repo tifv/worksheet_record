@@ -1,15 +1,20 @@
 /*
 
-# TODO
-• Upload solutions:
-  • create a special subsection, like “Решения”
-  • start an upload immediately
-  • maybe add an attribute to its title note, like “solution”
-• StudyGroup creator
-• StudyGroup metadata editor
+# Priority TODO
 • Timetable
   • generate worksheets from today's timetable
   • estimate section period from timetable
+  • auto-expand worksheet column groups after a period
+• Add links instead of upload
+• Add google drive links instead of upload
+• Make sidebar safe against concurrent runs
+• Upload solutions:
+  • add it to the sidebar
+  • make default upload algorithm switch to solution upload if applied to a solution section.
+
+# TODO
+• StudyGroup creator
+• StudyGroup metadata editor
 • Spreadsheet metadata editor
 • Upload configuration editor
 • Convert worksheet to olympiad
@@ -21,6 +26,7 @@
 • Admin mode and introduction
 • Timetable
 • Multiadd worksheets: add several worksheets or add a worksheet to several groups at once
+• All formulas in WorksheetLig/Worksheet and WorksheetLib/StudyGroup should use SpreadsheetLib/Formula to guarantee locale compatibility.
 
 # Metadata
 (either JSON or string)

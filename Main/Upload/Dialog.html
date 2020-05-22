@@ -632,7 +632,7 @@ UploadDialog.prototype.upload = async function(title, author, pdf_file, src_file
           .withFailureHandler(function(error) {
             reject(error);
           })
-          .upload_worksheet_authorize(request);
+          .upload_authorize(request);
       });
       if (src_meta != null)
         src_meta.get_url = src_get_url;
@@ -649,7 +649,7 @@ UploadDialog.prototype.upload = async function(title, author, pdf_file, src_file
       google.script.run
         .withSuccessHandler(resolve)
         .withFailureHandler(reject)
-        .upload_worksheet_finish({
+        .upload_finish({
           pdf_url: pdf_meta.get_url,
           src_url: src_meta != null ? src_meta.get_url : null,
           filename_base: this.upload_info.filename_base,

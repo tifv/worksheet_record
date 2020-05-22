@@ -177,36 +177,5 @@ DataTable.init = function(sheet, keys, frozen_rows = 1) {
   sheet.setFrozenRows(frozen_rows);
 }
 
-/*
-function decode_data(values, offset=0) { // applied to DataTable
-  var data = [];
-  for (let i = 0; i < this.row_count; ++i) {
-    let values_row = values[offset + i];
-    let datum = {};
-    for (let [key, column] of this.key_columns) {
-      datum[key] = values_row[column-1];
-    }
-    data.push(datum);
-  }
-  return data;
-}
-*/
-
-/*
-DataTable.prototype.get_length = function(index) {
-  return this._data.length;
-}
-
-DataTable.prototype.get_datum = function(index) {
-  return this._data[index];
-}
-
-DataTable.prototype.reload = function() {
-  this.row_count = this.sheet.getLastRow() - this.first_row + 1;
-  var values = this.get_range().getValues();
-  this._data = decode_data.call(this, values);
-}
-*/
-
 return DataTable;
 }(); // end DataTable namespace

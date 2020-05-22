@@ -9,24 +9,24 @@
   var worksheet_location = <?!= JSON.stringify(worksheet_location) ?>;
 </script>
 <body>
-<div class="block form-group">
-  <label for="edit_title--input">Название раздела</label>
+<label class="block form-group"
+ >Название раздела<br/>
   <input type="text" id="edit_title--input" style="width: 100%"
     value="Добавка" />
-</div>
-<div id="edit_date" class="block form-group">
-  <label for="edit_date--input">Дата или пара</label>
+</label>
+<label id="edit_date" class="block form-group"
+ >Дата или пара<br/>
   <input type="text" id="edit_date--input" style="width: 100%"/>
-</div>
+</label>
 <div class="block" style="display: flex; flex-directon: row; align-items: start;"
- ><div class="inline form-group" style="vertical-align: top; flex: 2;">
-    <label for="edit_data_width--input">кол-во задач</label>
+ ><label class="inline form-group" style="vertical-align: top; flex: 2;"
+   >кол-во задач<br/>
     <input type="number" id="edit_data_width--input" min="1" value="3" style="width: 120px">
-  </div
- ><div class="inline form-group" style="vertical-align: top; flex: 2;">
-    <label for="edit_weight--input">+ к весу в рейтинге</label>
+  </label
+ ><label class="inline form-group" style="vertical-align: top; flex: 2;"
+   >+ к весу в рейтинге<br/>
     <input type="number" id="edit_weight--input" step="0.1" min="0.0" max="1.0" value="0.5" style="width: 60px"/>
-  </div
+  </label
 ></div>
 <div class="block"
  ><button id="add_section_button" type="button" class="action" onclick="add_section()"

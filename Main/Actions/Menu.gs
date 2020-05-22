@@ -5,6 +5,7 @@ const emoji = {
     bat:     "\uD83E\uDD87",
     chicken: "\uD83D\uDC24",
     sun:     "\uD83C\uDF1E",
+    moon:    "\uD83C\uDF1D",
     devil:   "\uD83D\uDC7F",
 }
 
@@ -68,7 +69,9 @@ function menu_create() {
         menu.addSubMenu(worksheets_menu);
     }
     menu.addItem( emoji.sun + " Выложить листочек…",
-        "upload_worksheet_init" );
+        "action_worksheet_upload" );
+    menu.addItem( emoji.moon + " Выложить решения…",
+        "action_worksheet_upload_solutions" );
     menu.addSeparator();
     if (User.admin_is_acquired()) {
         menu_add_admin_(menu);
@@ -82,7 +85,8 @@ function menu_create() {
 function menu_add_admin_(menu) {
     menu
         .addItem("Метаданные ведомости…", "metadata_editor")
-        .addItem("Добавить группу…", "action_add_group")
+        .addItem("(wip) Добавить группу…", "action_add_group")
+        .addItem("Воссоздать оглавление", "action_regenerate_toc")
         .addItem("Обновить меню", "menu_create")
         .addSeparator()
         .addItem( emoji.devil + " Скрыть функции адм-ра",

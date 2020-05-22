@@ -156,7 +156,13 @@ function generate_group_dim(initial_rows) {
 
 // StudyGroup.add (spreadsheet, name, options) {{{
 StudyGroup.add = function(spreadsheet, name, options) {
-    var sheet = spreadsheet.insertSheet(name);
+    try {
+        var sheet = spreadsheet.insertSheet(name);
+    } catch (error) {
+        throw new StudyGroupInitError(
+          "Unable to create a new sheet with the name “" + name + "” " +
+          "(probably because it already exists)." );
+    }
     var initializer = new Initializer(sheet, name, options);
     var group = initializer.group;
     return group;
@@ -1176,6 +1182,8 @@ Initializer.prototype.push_rating_cfrules = function() {
                 1, range.getWidth() ],
         );
     }
+    if (cfranges.length < 1)
+      return;
     this.cfrule_objs.push(this.group.new_cfrule_rating(
         cfranges, this.color_scheme,
     ));

@@ -91,3 +91,34 @@ function action_worksheet_recolor_finish(group_name, color_scheme, {scope, group
   lock.releaseLock();
 }
 
+function action_worksheet_upload() {
+  try {
+    if (!upload_enabled_()) {
+      throw new ReportError("Загрузка файлов не настроена");
+    }
+    var lock = ActionHelpers.acquire_lock();
+    var section = ActionHelpers.get_active_section();
+    upload_start_dialog_(section);
+    lock.releaseLock();
+  } catch (error) {
+    report_error(error);
+  }
+}
+
+function action_worksheet_upload_solutions() {
+  try {
+    if (!upload_enabled_()) {
+      throw new ReportError("Загрузка файлов не настроена");
+    }
+    var lock = ActionHelpers.acquire_lock();
+    var section = ActionHelpers.get_active_section();
+    var solutions_section = section.get_solutions("решения");
+    var problems_section = solutions_section.get_unsolutions();
+    upload_start_dialog_( solutions_section,
+      {title: problems_section.get_qualified_title() + ". Решения"} );
+    lock.releaseLock();
+  } catch (error) {
+    report_error(error);
+  }
+}
+
