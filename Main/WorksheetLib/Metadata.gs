@@ -163,6 +163,10 @@ return {
   restore_hardcoded: restore_hardcoded };
 }(); // end Categories namespace
 
+function categories_restore_hardcoded() {
+  Categories.restore_hardcoded(SpreadsheetApp.getActiveSpreadsheet());
+}
+
 function format_category_css_(categories) {
   const category_list = Object.keys(categories).sort();
   var css_pieces = ["<style>"];

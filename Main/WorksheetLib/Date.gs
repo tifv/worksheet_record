@@ -10,10 +10,11 @@ WorksheetDate.from_object = function(date_obj) {
   return new WorksheetDate(date_obj.year, date_obj.month, date_obj.day, date_obj.period);
 };
 
-const date_regex = /^(\d{4,})-(\d{2,})-(\d{2,})(?:[ -]p(\d{1,}))?$/;
-const date_regex_m = new RegExp(date_regex.source, 'm');
+const date_regex = /^(\d{4,})-(\d{2,})-(\d{2,})$/;
+const period_regex = /^(\d{4,})-(\d{2,})-(\d{2,})(?:[ -]p(\d{1,}))?$/;
+const period_regex_m = new RegExp(period_regex.source, 'm');
 
-WorksheetDate.parse = function(string, regex = date_regex) {
+WorksheetDate.parse = function(string, regex = period_regex) {
   var match = regex.exec(string);
   if (match == null)
     return null;
@@ -26,7 +27,11 @@ WorksheetDate.parse = function(string, regex = date_regex) {
 };
 
 WorksheetDate.find = function(string) {
-  return WorksheetDate.parse(string, date_regex_m);
+  return WorksheetDate.parse(string, period_regex_m);
+};
+
+WorksheetDate.parse_date = function(string) {
+  return WorksheetDate.parse(string, date_regex);
 };
 
 WorksheetDate.prototype.format = function({filename = false} = {}) {
@@ -48,18 +53,12 @@ WorksheetDate.prototype.to_object = function() {
   return {year: this.year, month: this.month, day: this.day, period: this.period};
 };
 
-//const timetable = [[11, 45], [16, 30]]; // XXX move to metadata
-
-WorksheetDate.today = function(delta, period) {
+WorksheetDate.today = function(delta) {
   var today = new Date();
   if (delta != null)
     today.setDate(today.getDate() + delta);
   var year = today.getFullYear(), month = (today.getMonth()+1), day = today.getDate();
-  if (period == null) {
-    return new WorksheetDate(year, month, day);
-  } else {
-    return new WorksheetDate(year, month, day, period);
-  }
+  return new WorksheetDate(year, month, day);
 };
 
 WorksheetDate.prototype.compare = function(other) {

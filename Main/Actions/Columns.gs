@@ -47,7 +47,7 @@ function action_add_section() {
     template.group_name = worksheet.group.name;
     template.worksheet_location = worksheet.get_location();
     template.date = WorksheetDate.today().to_object();
-    // XXX detect date period
+    template.date.period = worksheet.group.get_current_period(7);
     lock.releaseLock();
     var output = template.evaluate();
     output.setWidth(250).setHeight(225);

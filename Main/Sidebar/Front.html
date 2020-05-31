@@ -253,15 +253,7 @@
     </div>
   </div>
 </div>
-
-
-
-
-
-
-
 <script>
-
 
 ////////////////////
 
@@ -407,6 +399,8 @@ GroupContents.prototype.load_contents = async function() {
       }
       this.validate_item(item);
       continue;
+    } else {
+      unvalidated_contents.set(id, item);
     }
     this._add_contents_item(item);
   }
@@ -954,6 +948,7 @@ WorksheetSectionDisplay.prototype.show_details = function() {
   if (!this.contents.validated)
     this.contents.validate();
   // XXX also validate next item in the same category
+  // or, rather, do it when upload dialog is started
 }
 
 WorksheetSectionDisplay.prototype.run_upload_dialog = async function() {
@@ -1179,27 +1174,27 @@ var ContentsUploads = function() { // begin namespace
 var
   data,
   data_promise,
-  data_by_initial_pdf,
+  data_by_id,
   failed_searches;
 
 function reset() {
   data = null;
   data_promise = null;
-  data_by_initial_pdf = null;
+  data_by_id = null;
   failed_searches = null;
 }
 reset();
 
 var active_search_count = 0;
 
-async function get_urls(initial_pdf) {
-  if (typeof initial_pdf != "string")
+async function get_urls(id) {
+  if (typeof id != "string")
     throw new Error("internal error");
   if (data == null)
     await load_uploads();
-  var datum = data_by_initial_pdf.get(initial_pdf);
+  var datum = data_by_id.get(id);
   if (datum == null) {
-    if (failed_searches.has(initial_pdf))
+    if (failed_searches.has(id))
       return null;
     if (active_search_count >= 2) {
       // too many simultaneouos searches, probably error of some sort
@@ -1207,7 +1202,7 @@ async function get_urls(initial_pdf) {
     }
     ++active_search_count;
     try {
-      var search_result = await fetch_uploads_search(initial_pdf);
+      var search_result = await fetch_uploads_search(id);
     } finally {
       -- active_search_count;
     }
@@ -1216,10 +1211,10 @@ async function get_urls(initial_pdf) {
       missing_data.push(add_datum(index, entries));
     }
     if (missing_data.length < 1) {
-      failed_searches.add(initial_pdf);
+      failed_searches.add(id);
       return null;
     } else if (missing_data.length > 1) {
-      console.error(initial_pdf);
+      console.error(id);
       console.error(JSON.stringify(missing_data.map(
         datum => ({entries: Array.from(datum.entries()), index: datum.index})
       )));
@@ -1249,6 +1244,7 @@ async function load_uploads() {
 }
 
 // XXX we really should review all async load logic of the sidebar
+// maybe factor something out
 
 var load_uploads_promise_token = null;
 
@@ -1258,7 +1254,7 @@ async function load_uploads_promise() {
   if (token !== load_uploads_promise_token)
     return; // we were superseded by another call
   data = new Array();
-  data_by_initial_pdf = new Map();
+  data_by_id = new Map();
   failed_searches = new Set();
   for (let {index, entries} of uploads) {
     add_datum(index, entries);
@@ -1278,7 +1274,7 @@ function fetch_uploads() {
   );
 }
 
-function fetch_uploads_search(initial_pdf) {
+function fetch_uploads_search(id) {
   return new Promise((resolve, reject) =>
     google.script.run
       .withSuccessHandler(resolve)
@@ -1286,7 +1282,7 @@ function fetch_uploads_search(initial_pdf) {
         display_error(error);
         reject(error);
       })
-      .sidebar_load_uploads_search(initial_pdf)
+      .sidebar_load_uploads_search(id)
   );
 }
 
@@ -1299,11 +1295,11 @@ function add_datum(index, entries) {
     remove_datum(index, data[index]);
   data[index] = datum;
   {
-    let initial_pdf = datum.get("initial_pdf");
-    if (initial_pdf == null)
+    let id = datum.get("id");
+    if (id == null)
       throw Error("internal error");
-    if (initial_pdf != "")
-      data_by_initial_pdf.set(initial_pdf, datum);
+    if (id != "")
+      data_by_id.set(id, datum);
   }
   return datum;
 }
@@ -1311,9 +1307,9 @@ function add_datum(index, entries) {
 function remove_datum(index, datum) {
   delete data[index];
   {
-    let initial_pdf = datum.get("initial_pdf");
-    if (initial_pdf != "")
-      data_by_initial_pdf.delete(initial_pdf);
+    let id = datum.get("id");
+    if (id != "")
+      data_by_id.delete(id);
   }
 }
 
@@ -1341,8 +1337,9 @@ async function upload($title, upload_info) {
   try {
     if (upload_dialog_html == null)
       var load_upload_dialog_promise = load_upload_dialog();
-    // refactor filename promise so that dialog will certainly receive a resolved value
-    // promise will have time to be executed wwhile animations move
+    // XXX refactor filename promise so that dialog will certainly receive a resolved value
+    // promise will have time to be executed while animations move
+    // (this is not a good idea, but some refactoring/speedup may be done)
     upload_info.filename_base = get_group_filename(upload_info.group_name)
       .then( group_filename =>
         group_filename + "-" + upload_info.filename_base_nogroup );

@@ -5,6 +5,7 @@
 </head>
 <?!= include_html_("UI/Common") ?>
 <?!= include_html_("UI/ColorScheme") ?>
+<?!= category_css ?>
 <script>
   var color_scheme_default = <?!= JSON.stringify(color_scheme_default) ?>;
   var color_schemes = <?!= JSON.stringify(color_schemes) ?>;
@@ -50,24 +51,73 @@
 </div>
 <div class="block">
   <strong>Категории (темы)</strong>
-  <table class="block">
+  <table class="block" style="width: 100%">
+    <colgroup>
+      <col style="width: 10%">
+      <col>
+      <col style="width: 10%">
+      <col style="width: 10%">
+      <col style="width: 10%">
+      <col style="width: 10%">
+    </colgroup>
     <thead>
       <tr>
-        <th class="category--check_cell"/>
+        <th class="category--check_cell" title="включать категорию в группу">c</th>
         <th class="category--name_cell">название</th>
-        <th class="category--check_cell">Σ</th>
-        <th class="category--check_cell">ΣΣ</th>
-        <th class="category--check_cell">S</th>
-        <th class="category--check_cell">SS</th>
+        <th class="category--check_cell" title="рейтинг категории">Σ</th>
+        <th class="category--check_cell" title="рейтинг категории как слагаемое в общем рейтинге">ΣΣ</th>
+        <th class="category--check_cell" title="сумма задач категории">S</th>
+        <th class="category--check_cell" title="сумма задач категории как слагаемое в общей сумме">SS</th>
       </tr>
     </thead>
     <tbody id="category--list">
     </tbody>
   </table>
 </div>
+<div class="block">
+  <strong class="block">Расписание</strong>
+  <textarea id="timetable--json_edit" class="block block__ish" style="width: 100%"
+    >null</textarea>
+  <div class="secondary"><code>{`date` : {`period`: {"time": `time`, "duration": `duration`}, …}, …}</code><br/>
+  where
+  <code>date</code> is "YYYY-MM-DD"-formatted date,
+  <code>period</code> is a (stringified) integer from 1…9,
+  <code>time</code> is minutes since 00:00 of the day, and
+  <code>duration</code> is period length in minutes.
+  </div>
+  <!--
+  <label class="block block__ish form-group"
+   ><input type="checkbox" id="timetable--include"
+   >Добавлять расписание</label>
+  <table id="timetable--table" class="block block__ish">
+    <thead>
+      <tr>
+        <th>Дата</th>
+        <th class="timetable--period_head">пара 1</th>
+        <th class="timetable--period_head">пара 2</th>
+        <th class="material-icons">add</th>
+      </tr>
+    </thead>
+    <tbody id="timetable--list">
+    </tbody>
+    <tfoot>
+      <tr><td><button class="material-icons" onclick="add_timetable_day()">add</button></td></tr>
+    </tfoot>
+  </table>
+  -->
+</div>
+<div class="block">
+  <strong class="block">План листочков (бланков)</strong>
+  <textarea id="worksheet_plan--json_edit" class="block block__ish" style="width: 100%"
+    >null</textarea>
+  <div class="secondary"><code>{`date` : [{"period": `period`, "category": `category`}, …], …}</code><br/>
+  where
+  <code>date</code> is "YYYY-MM-DD" string,
+  <code>period</code> is an integer from 1…9, and
+  <code>category</code> is category code.
+  </div>
+</div>
 <!-- 1 XXX group on existing sheet: make a checkbox near group name, like «Вкладка уже имеется». It will hide most of the options below. -->
-<!-- 1 XXX rating structure: rating and sum -->
-<!-- 1 XXX category structure (which categories are included at all; included in rating; included in sum; integrated in rating; integrated in sum) -->
 <!-- 1 XXX category_musthave -->
 <!-- 2 XXX attendance; attendance sum -->
 <!-- 2 XXX attendance columns: list of dates, date range, or multiple date ranges -->
@@ -93,17 +143,23 @@ $(function() {
     $category_item = $("<tr/>")
       .addClass("category--item")
       .data("category", category_code)
+      .addClass("category-" + (category_code || ""))
       .append($("<td/>")
         .addClass("category--check_cell")
         .append($category_check.include = $("<input/>")
           .attr('type', "checkbox")
+          .attr('id', "category--check-" + category_code)
           .addClass("category--check category--check__include")
           .prop('checked', true)
         )
       )
       .append($("<td/>")
         .addClass("category--name_cell category--name")
-        .text(category.name)
+        .append(
+          $("<label/>")
+            .attr('for', "category--check-" + category_code)
+            .text(category.name)
+        )
       )
       .append($("<td/>")
         .addClass("category--check_cell")
@@ -139,7 +195,7 @@ $(function() {
       );
     if (category.color != null) {
       $category_item
-        .css('background', hsl_to_css(category.color));
+        .addClass("coloured");
     }
     $category_check.variable = $($.map([
       $category_check.rating,
@@ -189,7 +245,6 @@ $(function() {
 });
 
 function add_group() {
-  $("#add_group_button").prop('disabled', true);
   var group_name = $("#edit_name--input").val();
   var options = {
     rating: $("#rating--rating").prop('checked'),
@@ -214,9 +269,12 @@ function add_group() {
           sum: checked("sum") ?
             {integrate: checked("sum_integrate")} : false,
         };
-      }).get()
+      }).get(),
+    timetable: JSON.parse($("#timetable--json_edit").val()),
+    worksheet_plan: JSON.parse($("#worksheet_plan--json_edit").val()),
   };
-  console.log(JSON.stringify(options));
+  //console.log(JSON.stringify(options));
+  $("#add_group_button").prop('disabled', true);
   google.script.run
     .withSuccessHandler(function() {
       google.script.host.close();

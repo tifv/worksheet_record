@@ -72,7 +72,7 @@ function upload_start_dialog_(section, options = {}) {
   var category_name = category_info.name ||
     (category != null ? "категория " + category : "mixture");
   var title = options.title || section.get_qualified_title();
-  var title_id = section.get_title_metadata_id();
+  var title_id = section.get_title_metadata_id({check: true});
   var date = Worksheet.parse_title_note(section.get_title_note()).date;
   var author = UploadAuthor.get();
   var filename_base; {
@@ -80,9 +80,13 @@ function upload_start_dialog_(section, options = {}) {
     filename_pieces.push(group.get_filename());
     filename_pieces.push( category_info.filename ||
       (category == null ? "mixture" : "whatever") );
-    if (date != null) {
+    if (options.filename_date != null) {
+      filename_pieces.push(options.filename_date.format({filename: true}));
+    } else if (date != null) {
       filename_pieces.push(date.format({filename: true}));
     }
+    if (options.filename_suffix != null)
+      filename_pieces.push(options.filename_suffix);
     filename_base = filename_pieces.join('-');
   }
   var upload_info = {
@@ -102,7 +106,7 @@ function upload_start_dialog_(section, options = {}) {
   template.upload_info = upload_info;
   template.category_css = format_category_css_(categories);
   var output = template.evaluate();
-  output.setWidth(500).setHeight(425);
+  output.setWidth(500).setHeight(475);
   SpreadsheetApp.getUi().showModelessDialog(output, "Публикация листочка");
 }
 
@@ -119,7 +123,7 @@ const known_file_extensions = {
 function upload_authorize(files_meta) {
   const signer = UploadConfig.get_signer();
   var result = [];
-  for (let {filename, size, hash} of files_meta) {
+  for (let {filename, size, hash_hex} of files_meta) {
     let [, file_ext] = split_filename_(filename);
     let file_type = known_file_extensions[file_ext];
     if (file_type == null)
@@ -128,7 +132,7 @@ function upload_authorize(files_meta) {
       filename, "", [
         ["Content-Length", size.toString()],
         ["Content-Type", file_type],
-        ["x-amz-content-sha256", hash],
+        ["x-amz-content-sha256", hash_hex],
       ] );
     result.push({
       get_url: upload_url,
@@ -153,6 +157,7 @@ function upload_finish({
 }) {
   UploadAuthor.set(author);
   const uploads = UploadRecord.get("minimal");
+  var id = Utilities.getUuid();
   uploads.append(new Map([
     ["group", "'" + group_name],
     ["category", (category != null) ?
@@ -163,6 +168,7 @@ function upload_finish({
       null ],
     ["uploader", Session.getActiveUser().getEmail()],
     ["author", author],
+    ["id", id],
     ["pdf", pdf_url],
     ["src", src_url],
     ["initial_pdf", pdf_url],
@@ -189,7 +195,8 @@ function upload_finish({
     .setFormulaR1C1("=hyperlink(" +
       "filter(" +
         "'" + uploads.name + "'!" + col_R1C1("pdf") + ";" +
-        "'" + uploads.name + "'!" + col_R1C1("initial_pdf") + "=\"" + pdf_url + "\"" +
+        //"'" + uploads.name + "'!" + col_R1C1("initial_pdf") + "=\"" + pdf_url + "\"" + ";" +
+        "'" + uploads.name + "'!" + col_R1C1("id") + "=\"" + id + "\"" +
       ");" +
       "\"" + cell.getValue() + "\"" +
     ")")
@@ -244,7 +251,7 @@ function is_configured() {
 }
 
 function solutions_enabled() {
-  return load().configured;
+  return load().enable_solutions;
 }
 
 function get_signer() {
@@ -280,10 +287,11 @@ const sheet_name = "uploads";
 
 const required_keys = [
   "group", "category", "title", "date", "uploader", "author",
+  "id",
   "pdf", "src", "initial_pdf", "initial_src",
   "stable_pdf", "stable_src", "filename",
   "archive_pdf", "archive_src", "archive_target", "archive_mtime",
-  "status", "request", "argument" ];
+  "request", "argument", "status" ];
 const key_format = {
   "group"    : {width:  50, name: "группа", frozen: true},
   "category" : {width:  50, name: "катег.", frozen: true},
@@ -291,6 +299,7 @@ const key_format = {
   "date"     : {width: 100, name: "дата", frozen: true},
   "uploader" : {width: 150, hidden: true},
   "author"   : {width: 150, name: "автор", frozen: true},
+  "id"             : {width: 175, hidden: true},
   "pdf"            : {width: 175},
   "src"            : {width: 175, hidden: true},
   "initial_pdf"    : {width: 175},
@@ -302,9 +311,9 @@ const key_format = {
   "archive_src"    : {width: 175, hidden: true},
   "archive_target" : {width: 175},
   "archive_mtime"  : {width: 175},
-  "status"   : {width: 100},
   "request"  : {width: 100},
   "argument" : {width: 100},
+  "status"   : {width: 100},
 }
 
 function exists() {

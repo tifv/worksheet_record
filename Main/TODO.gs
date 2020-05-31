@@ -1,28 +1,37 @@
 /*
 
 # Priority TODO
-• Timetable
-  • generate worksheets from today's timetable
-  • estimate section period from timetable
-  • auto-expand worksheet column groups after a period
-• Add links instead of upload
-• Add google drive links instead of upload
-• Make sidebar safe against concurrent runs
 • Upload solutions:
   • add it to the sidebar
-  • make default upload algorithm switch to solution upload if applied to a solution section.
+
+# Second-priority TODO
+• Make sidebar safe against concurrent runs
+• Timetable
+  • auto-expand worksheet column groups after a period
+• Worksheet plan
+  • actually use period option to generate worksheets with specific period
 
 # TODO
+• Sidebar refactoring:
+  • factor out contents item as a class of its own.
+• Sidebar upload optimization: open upload dialog immediately, filling necessary fields and enabling ui as data is validated
+• Worksheet plan
+  • optimize worksheet generation to only load and save cfrules once
+• Add action: sort rows in name order
 • StudyGroup creator
+  • proper interface for editing timetable
 • StudyGroup metadata editor
 • Spreadsheet metadata editor
 • Upload configuration editor
 • Convert worksheet to olympiad
 • Convert worksheet to theory
 • Resolve Actions/Worksheets XXX
+• Resolve any other XXX
 • indent files with 4 spaces
 • make StudyGroup resistant to the deletion of the last column
   • maybe hide it
+  • maybe just output a message that would suggest copying a separator column
+    and moving it in correct place
 • Admin mode and introduction
 • Timetable
 • Multiadd worksheets: add several worksheets or add a worksheet to several groups at once

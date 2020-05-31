@@ -90,9 +90,7 @@ function sidebar_load_contents_validate(contents_item) {
       group.sheet.getRange(1, column_by_note) );
     sections.push(section_by_note);
   }
-  if ( section_by_note != null &&
-    title_id == get_checked_id(section_by_note)
-  ) {
+  if (title_id == get_checked_id(section_by_note)) {
     section_by_id = section_by_note;
     section_by_note = null;
   } else {
@@ -101,12 +99,11 @@ function sidebar_load_contents_validate(contents_item) {
       var section_by_id = Worksheet.surrounding_section( group, null,
         group.sheet.getRange(1, column_by_id) );
       if (title_id != get_checked_id(section_by_id)) {
-        // better just to remove this id then
+        // metadatum seems to be misplaced, we better remove it
         group.sheet.createDeveloperMetadataFinder()
           .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.COLUMN)
           .withId(title_id)
-          .find().forEach(function(metadatum) {
-            metadatum.remove(); });
+          .find().forEach(metadatum => { metadatum.remove(); });
       }
     }
   }
@@ -128,6 +125,7 @@ function sidebar_load_contents_section_(section, validated = false) {
   var title_note = section.get_title_note();
   var title_note_info = Worksheet.parse_title_note(title_note);
   var date = title_note_info.date;
+  var is_solutions = section.is_solutions();
   var contents_item = {
     id: title_id,
     validated: validated,
@@ -139,8 +137,9 @@ function sidebar_load_contents_section_(section, validated = false) {
     is_unused: worksheet.get_title().startsWith("{"),
       // XXX hide such worksheets in the sidebar
     is_subsection: section.dim.offset > 0,
+    is_solutions: is_solutions,
     title: section.get_title(),
-    qualified_title: section_get_qualified_title(),
+    qualified_title: section.get_qualified_title(),
     title_note: title_note,
     category: worksheet.get_category(),
     labels: group.sheetbuf.slice_values( "label_row",
@@ -184,7 +183,7 @@ function sidebar_load_uploads() {
 function sidebar_load_uploads_search(search_text) {
   console.log(search_text);
   var response = [];
-  for (let datum of UploadRecord.get("full").find("initial_pdf", search_text)) {
+  for (let datum of UploadRecord.get("full").find("id", search_text)) {
     response.push(sidebar_load_uploads_encode_datum_(datum));
   }
   console.log(JSON.stringify(response));

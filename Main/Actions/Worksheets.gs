@@ -98,7 +98,15 @@ function action_worksheet_upload() {
     }
     var lock = ActionHelpers.acquire_lock();
     var section = ActionHelpers.get_active_section();
-    upload_start_dialog_(section);
+    if (!section.is_solutions()) {
+      upload_start_dialog_(section);
+    } else {
+      let problems_section = section.get_unsolutions();
+      upload_start_dialog_( section,
+        action_worksheet_upload_solutions.get_dialog_options(
+          problems_section, section )
+      );
+    }
     lock.releaseLock();
   } catch (error) {
     report_error(error);
@@ -112,10 +120,67 @@ function action_worksheet_upload_solutions() {
     }
     var lock = ActionHelpers.acquire_lock();
     var section = ActionHelpers.get_active_section();
-    var solutions_section = section.get_solutions("решения");
+    var solutions_section;
+    if (section.is_solutions()) {
+      solutions_section = section;
+    } else {
+      solutions_section = section.get_solutions({title: "решения"});
+    }
     var problems_section = solutions_section.get_unsolutions();
     upload_start_dialog_( solutions_section,
-      {title: problems_section.get_qualified_title() + ". Решения"} );
+      action_worksheet_upload_solutions.get_dialog_options(
+        problems_section, solutions_section )
+    );
+    lock.releaseLock();
+  } catch (error) {
+    report_error(error);
+  }
+}
+
+action_worksheet_upload_solutions.get_dialog_options =
+function(problems_section, solutions_section) {
+  return {
+    filename_suffix: "solutions",
+    filename_date: Worksheet.parse_title_note(problems_section.get_title_note()).date,
+  };
+}
+
+function action_worksheet_planned() {
+  var template = HtmlService.createTemplateFromFile(
+    "Actions/Worksheets-Timetable" );
+  var output = template.evaluate();
+  output.setWidth(400).setHeight(400);
+  SpreadsheetApp.getUi().showModelessDialog(output, "Добавить листочки по плану");
+}
+
+
+function action_worksheet_planned_load() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var worksheet_plans = {};
+  for (let group of StudyGroup.list(spreadsheet)) {
+    let plan = group.get_today_worksheet_plan();
+    worksheet_plans[group.name] = plan != null ? plan.length : null;
+  }
+  return worksheet_plans;
+}
+
+function action_worksheet_planned_add(group_name) {
+  try {
+    var lock = ActionHelpers.acquire_lock();
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var group = StudyGroup.find_by_name(spreadsheet, group_name);
+    var plan = group.get_today_worksheet_plan();
+    if (plan == null)
+      return;
+    var sheet = group.sheet;
+    var last_column = sheet.getLastColumn();
+    if (last_column == group.dim.sheet_width) {
+      throw ReportError("Последний столбец вкладки должен быть пустым.");
+    }
+    for (let plan_item of plan) {
+      Worksheet.add(group, sheet.getRange(1, last_column + 1), plan_item);
+      last_column = sheet.getLastColumn();
+    }
     lock.releaseLock();
   } catch (error) {
     report_error(error);

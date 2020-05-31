@@ -871,7 +871,7 @@ Worksheet.format_title_note = function(note_info) {
 Worksheet.prototype.get_title_metadata_id = function(options = {}) {
     // also applies to WorksheetSection
     ({
-        check: options.check = false,
+        check: options.check = true,
             // check value from the title note agains actual metadata
     } = options);
     var note_info = Worksheet.parse_title_note(this.get_title_note());
@@ -1212,8 +1212,15 @@ WorksheetSection.prototype.has_weight_row =
 
 // WorksheetSection().get_qualified_title {{{
 WorksheetSection.prototype.get_qualified_title = function() {
-    return this.worksheet.get_title() +
-        (this.dim.offset > 0 ? ". " + this.get_title() : "");
+    function capitalize(s) {
+      return s[0].toUpperCase() + s.substring(1); }
+    if (!this.is_solutions()) {
+        return this.worksheet.get_title() +
+            (this.dim.offset > 0 ? ". " + this.get_title() : "");
+    } else {
+        return this.get_unsolutions().get_qualified_title() + ". " +
+            capitalize(this.get_title());
+    }
 } // }}}
 
 // list_titles* (group, start, end) {{{
@@ -1388,12 +1395,13 @@ WorksheetSection.prototype.is_solutions = function() {
 
 // WorksheetSection().get_solutions (solutions_title) {{{
 WorksheetSection.prototype.get_solutions = function(
-  solutions_title = "solutions"
+  {title: solutions_title = "solutions"}
 ) {
     var group = this.group;
     find_existing: {
         if (this.is_solutions())
-            return this;
+            throw new WorksheetSectionDetectError(
+              "Cannot have a solution section for a solution section." );
         if (this.dim.end == this.worksheet.dim.end)
             break find_existing;
         var next_section = Worksheet.surrounding_section(
@@ -1405,11 +1413,13 @@ WorksheetSection.prototype.get_solutions = function(
     var solutions_range = this.full_range.offset(0, this.dim.width, 1, 1);
     this.worksheet.add_section_after(this, {
       title: solutions_title, data_width: 1 });
+    // XXX refactor (return relevant section from add_section_after method)
     var section = Worksheet.surrounding_section(group, null, solutions_range);
     var title_note_info = Worksheet.parse_title_note(section.get_title_note());
     title_note_info.lines.push("solutions");
     section.set_title_note(Worksheet.format_title_note(title_note_info));
-    group.sheetbuf.set_value("label_row", section.dim.data_start, "◦");
+    group.sheetbuf.set_value( "label_row", section.dim.data_start,
+      (emoji != null ? emoji.pizza : null) || "◦" );
     sheet.getRange(group.dim.label_row, section.dim.data_start)
       .setFontWeight("normal");
     sheet.getRange(
@@ -1479,7 +1489,7 @@ Worksheet.prototype.add_section_after = function(section, options = {}) {
     if (category != null)
         this.group.sheetbuf.set_value("category_row", dim.start, category);
 
-    this.sheet.setColumnWidths(this.dim.data_start, this.dim.data_width, 21);
+    this.sheet.setColumnWidths(dim.data_start, dim.data_width, 21);
 
     this.reset_data_borders(
         dim.data_start, dim.data_end,
@@ -1556,7 +1566,7 @@ WorksheetSection.prototype.add_columns = function(data_index, data_width) {
         this.group.sheetbuf.set_formulas( "weight_row",
             dim.data_start, dim.data_end, weight_formula_R1C1 );
 
-    this.sheet.setColumnWidths(this.dim.data_start, this.dim.data_width, 21);
+    this.sheet.setColumnWidths(dim.data_start, dim.data_width, 21);
 
     this.worksheet.reset_data_borders(
         dim.data_start, dim.data_end,

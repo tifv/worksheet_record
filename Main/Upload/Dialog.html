@@ -36,15 +36,37 @@
   .metadata__warning {
     font-weight: bolder;
   }
-  .file_loader {
-    vertical-align: top;
+  .resource_loader {
+    display: inline-block;
+    position: relative;
   }
-  .file_loader--load_area {
+  .resource_loader > .resource_loader--load_area {
+    transition: height 0.25s;
+  }
+  .resource_loader__disable_url {
+  }
+  .resource_loader__disable_all {
+    max-height: 172px;
+    overflow-y: false;
+  }
+    .resource_loader__disable_all > .resource_loader--load_area {
+      height: 52px;
+      outline: 0;
+      cursor: auto;
+    }
+    .resource_loader__disable_url > .resource_loader--load_area > .load_area--url_adder_label,
+    .resource_loader__disable_url > .resource_loader--url_adder,
+    .resource_loader__disable_all > .resource_loader--load_area > .secondary,
+    .resource_loader__disable_all > .resource_loader--text_adder,
+    .resource_loader__disable_all > .resource_loader--url_adder {
+      display: none;
+    }
+  .resource_loader--load_area {
     display: block;
     width: 100%;
   }
   .load_area {
-    height: 120px;
+    height: 172px;
     outline: gray 2px dashed;
     outline-offset: -2px;
     padding: 8px;
@@ -59,52 +81,68 @@
       position: relative;
       z-index: -1;
     }
-  .file_item {
+    .load_area > .load_area--url_adder_label {
+      position: absolute;
+      top: 121px;
+    }
+  .resource_item {
     display: flex;
     flex-direction: row;
     align-items: center;
     border-bottom: 1px solid lightgray;
   }
-    .file_item--filename {
+    .resource_item--name {
       flex: 1;
       min-width: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .file_item--delete_button {
+    .resource_item--delete_button {
       flex: 0;
       cursor: pointer;
       font-family: 'Material Icons';
       font-size: 16px;
     }
-    .file_item--delete_button:hover {
+    .resource_item--delete_button:hover {
       background: lightgray;
     }
-    .file_item--delete_button::after {
+    .resource_item--delete_button::after {
       content: "delete";
     }
-  .file_loader {
-    display: inline-block;
-    position: relative;
-  }
-  .load_area__dragover ~ .file_loader--text_adder {
+    .resource_item--url_label {
+      font-family: 'Material Icons';
+      font-size: 16px;
+      margin-right: 3px;
+      vertical-align: bottom;
+    }
+    .resource_item--url_label::after {
+      content: "link";
+    }
+  .load_area__dragover ~ .resource_loader--text_adder {
     display: none;
   }
-  .file_loader--text_adder {
-    position: absolute;
-    top: 92px;
-    left: 8px;
-    width: calc(100% - 16px);
-    bottom: calc(100% - 112px);
-    transition: top 0.35s, bottom 0.15s, left 0.15s, width 0.15s, background 0.2s;
+  .load_area__dragover ~ .resource_loader--url_adder {
+    display: none;
   }
-  .file_loader--text_adder.text_adder__active {
-    top: 0px;
-    left: 0px;
-    width: 100%;
-    bottom: calc(100% - 120px);
+  .resource_loader--overlay {
+    z-index: 1;
+  }
+  .resource_loader--text_adder {
     background: white;
+    position: absolute;
+    top: 95px;
+    left: 8px;
+    right: 8px;
+    bottom: calc(100% - 119px);
+    transition: top 0.25s, bottom 0.25s, left 0.15s, right 0.15s;
+    transition-timing-function: ease-in-out;
+  }
+  .resource_loader--text_adder.resource_loader--text_adder__active {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: calc(100% - 172px);
   }
   .text_adder {
     overflow-y: hidden;
@@ -113,25 +151,34 @@
   }
     .text_adder > .text_adder--input {
       width: 100%;
-      flex: 1 0 20px;
+      min-height: 24px;
+      flex: 1 0 24px;
     }
-    .text_adder:not(.text_adder__active) > .text_adder--input {
-      font-size: 9px;
-      /* XXX fix in firefox and make it larger */
-    }
-    .text_adder--input {
+    textarea.text_adder--input {
       font-size: 12px;
       font-family: monospace;
       resize: none;
-      transition: font-size 0.3s, padding 0.3s;
+    }
+    .text_adder:not(.text_adder__active) > .text_adder--input {
     }
     .text_adder > .text_adder--controls {
       margin-top: 12px;
       width: 100%;
-      flex: 0;
+      flex-grow: 0;
+      flex-basis: 29px;
+      flex-shrink: 1;
+      min-height: 0;
+      overflow-y: hidden;
+      opacity: 1;
+      transition-property: margin-top, flex-basis, opacity;
+      transition-duration: 0.25s;
+      transition-timing-function: ease-in;
     }
     .text_adder:not(.text_adder__active) > .text_adder--controls {
-      display: none;
+      margin-top: 0;
+      flex-basis: 0;
+      opacity: 0;
+      transition-timing-function: ease-out;
     }
     .text_adder--controls {
       margin-top: 6px;
@@ -147,6 +194,74 @@
       flex: 1;
     }
     .text_adder--controls > * + * {
+      margin-left: 12px;
+    }
+  .resource_loader--url_adder {
+    background: white;
+    position: absolute;
+    top: 140px;
+    left: 8px;
+    right: 8px;
+    bottom: calc(100% - 164px);
+    transition: top 0.25s, bottom 0.25s, left 0.15s, right 0.15s;
+    transition-timing-function: ease-in-out;
+  }
+  .resource_loader--url_adder.resource_loader--url_adder__active {
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: calc(100% - 172px);
+  }
+  .url_adder {
+    overflow-y: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+    .url_adder > .url_adder--input {
+      width: 100%;
+      min-height: 24px;
+      flex: 0 0 24px;
+    }
+    input[type="url"].url_adder--input {
+      font-size: 12px;
+    }
+    .url_adder:not(.url_adder__active) > .url_adder--input {
+    }
+    .url_adder > .url_adder--controls {
+      margin-top: 12px;
+      width: 100%;
+      flex-grow: 0;
+      flex-basis: 29px;
+      flex-shrink: 1;
+      min-height: 0;
+      overflow-y: hidden;
+      opacity: 1;
+      transition-property: margin-top, flex-basis, opacity;
+      transition-duration: 0.25s;
+      transition-timing-function: ease-in;
+    }
+    .url_adder:not(.url_adder__active) > .url_adder--controls {
+      margin-top: 0;
+      flex-basis: 0;
+      opacity: 0;
+      transition-timing-function: ease-out;
+    }
+    .url_adder--controls {
+      margin-top: 6px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .url_adder--controls > .url_adder--control_button {
+      flex: 0;
+    }
+    .url_adder--controls > .url_adder--name_input {
+      min-width: 100px;
+      flex: 1;
+    }
+    .url_adder--controls > * + * {
       margin-left: 12px;
     }
   .status_line {
@@ -171,6 +286,8 @@
     }
     .status_line--text {
       flex: 1;
+      overflow-x: hidden;
+      text-overflow: ellipsis;
     }
     .status_line--error_message {
       color: #dd4b39;
@@ -191,19 +308,19 @@
     display: inline-block;
     margin-left: 12px;
   }
-  .upload_dialog--file_loaders {
+  .upload_dialog--resource_loaders {
     display: flex;
     flex-direction: row;
   }
-  .upload_dialog--file_loaders > .file_loader {
+  .upload_dialog--resource_loaders > .resource_loader {
     flex: 0.50;
     min-width: 0;
   }
-  .upload_dialog--file_loaders > .file_loader + .file_loader {
+  .upload_dialog--resource_loaders > .resource_loader + .resource_loader {
     margin-left: 12px;
   }
-  .file_list {
-    max-height: 75px;
+  .resource_list {
+    max-height: 76px;
     overflow-y: auto;
   }
 </style>
@@ -219,15 +336,15 @@
     display: block;
     margin-top: 12px;
   }
-  .upload_dialog--file_loaders {
+  .upload_dialog--resource_loaders {
   }
-  .upload_dialog--file_loaders > .file_loader {
+  .upload_dialog--resource_loaders > .resource_loader {
     width: 100%;
   }
-  .upload_dialog--file_loaders > .file_loader + .file_loader {
+  .upload_dialog--resource_loaders > .resource_loader + .resource_loader {
     margin-top: 12px;
   }
-  .file_list {
+  .resource_list {
   }
 </style>
 <? } /* end if sidebar */ ?>
@@ -268,37 +385,59 @@
         <b>Выкладываемые файлы</b>
         <div class="secondary">Не загружайте файлы, которые нельзя выкладывать в Интернет.</div>
       </div>
-      <div class="upload_dialog--file_loaders block block__ish"
-       ><div id="pdf_loader" class="upload_dialog--pdf_loader file_loader">
-          <label
-           ><div class="file_loader--load_area load_area">
-              <div>Листочек (PDF)</div>
-              <div class="secondary">Нажмите, чтобы выбрать файл,<br/>или перетащите его сюда.</div>
-            </div
-           ><input type="file" class="file_loader--input" hidden
-        /></label>
-          <div class="file_loader--file_list file_list"></div>
-        </div
-       ><div class="upload_dialog--src_loader file_loader">
-         <label class="file_loader--load_area load_area">
-           <div>Исходники (LaTeX или Word, картинки и&nbsp;пр.)</div>
-           <div class="secondary">Нажмите, чтобы выбрать файлы,<br/>или перетащите их сюда,<br/>или вставьте код TeX:</div>
-           <input type="file" class="file_loader--input" multiple="true" hidden/>
-         </label>
-         <div class="file_loader--file_list file_list"></div>
-         <div class="file_loader--text_adder text_adder">
-           <textarea class="text_adder--input" placeholder="\item …"></textarea>
-           <div class="text_adder--controls"
-            ><input type="text" class="text_adder--name_input" value="source.tex" placeholder="filename.txt"
-           /><button class="text_adder--add_button text_adder--control_button material-icons"
+      <div class="upload_dialog--resource_loaders block block__ish"
+       ><div id="pdf_loader" class="upload_dialog--pdf_loader resource_loader">
+          <label class="resource_loader--load_area load_area">
+            <div>Листочек (PDF)</div>
+            <div class="secondary">Нажмите, чтобы выбрать файл,<br/>или перетащите его сюда,</div>
+            <div class="secondary load_area--url_adder_label">или вставьте ссылку:</div>
+            <input type="file" class="resource_loader--input" hidden/>
+          </label>
+          <div class="resource_loader--resource_list resource_list"></div>
+          <div class="resource_loader--url_adder url_adder">
+            <input type="url" class="url_adder--input" placeholder="https://"/>
+            <div class="url_adder--controls"
+             ><button class="url_adder--add_button url_adder--control_button"
                 title="добавить файл"
-              >add</button
-            ><button class="text_adder--cancel_button text_adder--control_button material-icons"
+               >Добавить</button
+             ><button class="url_adder--cancel_button url_adder--control_button material-icons"
                 title="отменить ввод файла"
-              >delete</button
-          ></div>
+               >delete</button
+           ></div>
          </div>
         </div
+       ><div class="upload_dialog--src_loader resource_loader">
+          <label class="resource_loader--load_area load_area">
+            <div>Исходники (LaTeX или Word, картинки и&nbsp;пр.)</div>
+            <div class="secondary">Нажмите, чтобы выбрать файлы,<br/>или перетащите их сюда,<br/>или вставьте код TeX:</div>
+            <div class="secondary load_area--url_adder_label">или вставьте ссылку:</div>
+            <input type="file" class="resource_loader--input" multiple="true" hidden/>
+          </label>
+          <div class="resource_loader--resource_list resource_list"></div>
+          <div class="resource_loader--text_adder text_adder">
+            <textarea class="text_adder--input" placeholder="\item …"></textarea>
+            <div class="text_adder--controls"
+             ><input type="text" class="text_adder--name_input" value="source.tex" placeholder="filename.txt"
+            /><button class="text_adder--add_button text_adder--control_button material-icons"
+                title="добавить файл"
+               >add</button
+             ><button class="text_adder--cancel_button text_adder--control_button material-icons"
+                title="отменить ввод файла"
+               >delete</button
+           ></div>
+          </div>
+          <div class="resource_loader--url_adder url_adder">
+            <input type="url" class="url_adder--input" placeholder="https://"/>
+            <div class="url_adder--controls"
+             ><button class="url_adder--add_button url_adder--control_button"
+                title="добавить файл"
+               >Добавить</button
+             ><button class="url_adder--cancel_button url_adder--control_button material-icons"
+                title="отменить ввод файла"
+               >delete</button
+           ></div>
+         </div>
+       </div
      ></div>
     </div>
     <div class="block">
@@ -337,6 +476,17 @@ const known_src_extensions = {
   ".odt"  : "application/vnd.oasis.opendocument.text",
 };
 
+const letters62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+function find_an_$element($parent, selector) {
+  var $element = $parent.find(selector);
+  if ($element.length < 1)
+    throw Error("No elements found: " + selector);
+  if ($element.length > 1)
+    throw Error("Many elements found: " + selector);
+  return $element;
+}
+
 class UploadDialog {
   constructor($dialog, upload_info) {
     this.$dialog = $dialog;
@@ -362,9 +512,11 @@ class UploadDialog {
       .val(upload_info.title);
     this.find_an_$element(".upload_dialog--author_input")
       .val(upload_info.author);
-    var $file_loaders = this.$dialog.find(".file_loader--load_area");
-    $file_loaders
-      .on("drag dragstart dragend dragover dragenter dragleave drop", function(e) {
+    var
+      $pdf_loader = this.find_an_$element(".upload_dialog--pdf_loader"),
+      $src_loader = this.find_an_$element(".upload_dialog--src_loader");
+    $pdf_loader.add($src_loader).children(".resource_loader--load_area")
+      .on('drag dragstart dragend dragover dragenter dragleave drop', function(e) {
         e.preventDefault();
         e.stopPropagation();
       })
@@ -378,18 +530,56 @@ class UploadDialog {
           return;
         $(this).removeClass('load_area__dragover');
       });
+    this.pdf_url_adder = new UploadURLAdder(
+      this.find_an_$element(".upload_dialog--pdf_loader .resource_loader--url_adder"),
+      {
+        add_callback: url =>
+          { this.add_pdf_url(url); },
+        activate_callback: $adder => {
+          $src_loader.children(".resource_loader--overlay")
+            .removeClass("resource_loader--overlay");
+          $adder.addClass("resource_loader--url_adder__active resource_loader--overlay");
+        },
+        deactivate_callback: $adder => {
+          $adder.removeClass("resource_loader--url_adder__active");
+        },
+      } );
     this.src_text_adder = new UploadTextAdder(
-      this.find_an_$element(".upload_dialog--src_loader .file_loader--text_adder"),
-      file => this.add_src_files([file]),
-    );
+      this.find_an_$element(".upload_dialog--src_loader .resource_loader--text_adder"),
+      {
+        add_callback: file =>
+          { this.add_src_files([file]); },
+        activate_callback: $adder => {
+          $src_loader.children(".resource_loader--overlay")
+            .removeClass("resource_loader--overlay");
+          $adder.addClass("resource_loader--text_adder__active resource_loader--overlay");
+        },
+        deactivate_callback: $adder => {
+          $adder.removeClass("resource_loader--text_adder__active");
+        },
+      } );
+    this.src_url_adder = new UploadURLAdder(
+      this.find_an_$element(".upload_dialog--src_loader .resource_loader--url_adder"),
+      {
+        add_callback: url =>
+          { this.add_src_url(url); },
+        activate_callback: $adder => {
+          $src_loader.children(".resource_loader--overlay")
+            .removeClass("resource_loader--overlay");
+          $adder.addClass("resource_loader--url_adder__active resource_loader--overlay");
+        },
+        deactivate_callback: $adder => {
+          $adder.removeClass("resource_loader--url_adder__active");
+        },
+      } );
     // XXX allow links to be dragged as well
-    this.find_an_$element(".upload_dialog--pdf_loader .file_loader--load_area")
+    this.find_an_$element(".upload_dialog--pdf_loader .resource_loader--load_area")
       .on('drop', (e) => this.add_pdf_files(e.originalEvent.dataTransfer.files));
-    this.find_an_$element(".upload_dialog--src_loader .file_loader--load_area")
+    this.find_an_$element(".upload_dialog--src_loader .resource_loader--load_area")
       .on('drop', (e) => this.add_src_files(e.originalEvent.dataTransfer.files));
-    this.find_an_$element(".upload_dialog--pdf_loader .file_loader--input")
+    this.find_an_$element(".upload_dialog--pdf_loader .resource_loader--input")
       .on('change', (e) => this.add_pdf_files(e.originalEvent.target.files));
-    this.find_an_$element(".upload_dialog--src_loader .file_loader--input")
+    this.find_an_$element(".upload_dialog--src_loader .resource_loader--input")
       .on('change', (e) => this.add_src_files(e.originalEvent.target.files));
     this.find_an_$element(".upload_dialog--upload_button")
       .on('click', () => this.upload_start());
@@ -398,12 +588,7 @@ class UploadDialog {
   }
 
   find_an_$element(selector) {
-    var $element = this.$dialog.find(selector);
-    if ($element.length < 1)
-      throw Error("No elements found: " + selector);
-    if ($element.length > 1)
-      throw Error("Many elements found: " + selector);
-    return $element;
+    return find_an_$element(this.$dialog, selector);
   }
 
   add_pdf_files(files) {
@@ -411,7 +596,7 @@ class UploadDialog {
       return;
     }
     if (files.length > 1) {
-      window.alert("Нельзя выбрать несколько файлов PDF одновременно");
+      window.alert("Нельзя добавить несколько файлов PDF одновременно");
       return;
     }
     var [pdf_file] = files;
@@ -420,10 +605,24 @@ class UploadDialog {
       window.alert("Выбранный файл (PDF) имеет неверный тип: " + pdf_file.type);
       return;
     }
-    var $file_list = this.find_an_$element(".upload_dialog--pdf_loader .file_loader--file_list");
-    $file_list
+    var $resource_list = this.find_an_$element(
+      ".upload_dialog--pdf_loader .resource_loader--resource_list" );
+    $resource_list
       .empty()
-      .append(this.get_file_item(pdf_file));
+      .append(this.get_$resource_blob(pdf_file, () => {
+        this.update_upload_button();
+      }));
+    this.update_upload_button();
+  }
+
+  add_pdf_url(url) {
+    var $resource_list = this.find_an_$element(
+      ".upload_dialog--pdf_loader .resource_loader--resource_list" );
+    $resource_list
+      .empty()
+      .append(this.get_$resource_url(url, () => {
+        this.update_upload_button();
+      }));
     this.update_upload_button();
   }
 
@@ -431,34 +630,89 @@ class UploadDialog {
     if (files.length < 1) {
       return;
     }
-    var $file_list = this.find_an_$element(".upload_dialog--src_loader .file_loader--file_list");
-    for (let file of files) {
-      $file_list.append(this.get_file_item(file));
+    var $resource_list = this.find_an_$element(
+      ".upload_dialog--src_loader .resource_loader--resource_list" );
+    if ($resource_list.find(".resource_list--item[data-resource-type=\"url\"]").length > 0) {
+      // XXX also remove file adding UI since it is effectively disabled
+      window.alert("Нельзя добавить файлы, если уже добавлена ссылка");
+      return;
     }
+    for (let file of files) {
+      $resource_list.append(this.get_$resource_blob(file, () => {
+      this.update_src_loader();
+      this.update_upload_button();
+    }));
+    }
+    this.update_src_loader();
     this.update_upload_button();
   }
 
-  // XXX maybe also allow Drive files and other links
+  add_src_url(url) {
+    var $resource_list = this.find_an_$element(
+      ".upload_dialog--src_loader .resource_loader--resource_list" );
+    if ($resource_list.find(".resource_list--item[data-resource-type=\"blob\"]").length > 0) {
+      window.alert("Нельзя добавить ссылку, если уже добавлены файлы");
+      return;
+    }
+    if ($resource_list.find(".resource_list--item[data-resource-type=\"url\"]").length > 0) {
+      window.alert("Нельзя добавить ссылку, если уже добавлена ссылка");
+      return;
+    }
+    $resource_list.append(this.get_$resource_url(url, () => {
+      this.update_src_loader();
+      this.update_upload_button();
+    }));
+    this.update_src_loader();
+    this.update_upload_button();
+  }
+
+  // XXX maybe mark Drive files separately
   // https://www.gstatic.com/images/icons/material/system/1x/attach_drive_black_20dp.png
-  // like maybe add a small icon around upload form that would allow insert link directly.
   
-  get_file_item(file) {
+  get_$resource_blob(blob, remove_callback) {
     var $item = $("<div/>")
-      .addClass("file_list--item file_item")
+      .addClass("resource_list--item resource_item resource_item__blob")
       .append( $("<span/>")
-        .addClass("file_item--filename")
-        .text(file.name)
-        .attr("title", file.name)
+        .addClass("resource_item--name")
+        .text(blob.name)
+        .attr('title', blob.name)
       )
       .append( $("<span/>")
-        .addClass("file_item--delete_button")
-        .attr("title", "убрать файл")
-        .on("click", () => {
+        .addClass("resource_item--delete_button")
+        .attr('title', "убрать файл")
+        .on('click', () => {
           $item.remove();
-          this.update_upload_button();
+          if (remove_callback != null)
+            remove_callback();
         })
       )
-      .data("file", file);
+      .attr("data-resource-type", "blob")
+      .data("blob", blob);
+    return $item;
+  }
+
+  get_$resource_url(url, remove_callback) {
+    var $item = $("<div/>")
+      .addClass("resource_list--item resource_item resource_item__url")
+      .append( $("<span/>")
+        .addClass("resource_item--name")
+        .text(url)
+        .attr('title', url)
+        .prepend( $("<span/>")
+          .addClass("resource_item--url_label")
+        )
+      )
+      .append( $("<span/>")
+        .addClass("resource_item--delete_button")
+        .attr('title', "убрать ссылку")
+        .on('click', () => {
+          $item.remove();
+          if (remove_callback != null)
+            remove_callback();
+        })
+      )
+      .attr("data-resource-type", "url")
+      .data("url", url);
     return $item;
   }
 
@@ -470,6 +724,26 @@ class UploadDialog {
     }
   }
 
+  update_src_loader() {
+    var $src_loader = this.find_an_$element(".upload_dialog--src_loader");
+    var $resource_list = this.find_an_$element(
+      ".upload_dialog--src_loader .resource_loader--resource_list" );
+    var $src_input = this.find_an_$element(
+      ".upload_dialog--src_loader .resource_loader--input" );
+    if ($resource_list.find(".resource_list--item[data-resource-type=\"blob\"]").length > 0) {
+      $src_loader.addClass("resource_loader__disable_url");
+    } else {
+      $src_loader.removeClass("resource_loader__disable_url");
+    }
+    if ($resource_list.find(".resource_list--item[data-resource-type=\"url\"]").length > 0) {
+      $src_loader.addClass("resource_loader__disable_all");
+      $src_input.prop('disabled', true);
+    } else {
+      $src_loader.removeClass("resource_loader__disable_all");
+      $src_input.prop('disabled', false);
+    }
+  }
+
   on_click_close(handler) {
     this.find_an_$element(".upload_dialog--close_button")
       .on('click', handler);
@@ -478,48 +752,95 @@ class UploadDialog {
 }
 
 class UploadTextAdder {
-  constructor($adder, add_file_callback) {
+  constructor($adder, {add_callback, activate_callback, deactivate_callback}) {
     this.$adder = $adder;
+    this.add_callback = add_callback;
+    this.activate_callback = activate_callback;
+    this.deactivate_callback = deactivate_callback;
     if (!this.$adder.hasClass("text_adder")) {
       throw new Error("internal error");
     }
     this.$filename = this.find_an_$element(".text_adder--name_input");
     this.$content = this.find_an_$element(".text_adder--input");
-    this.$content.on('focus', () => this.activate());
-    this.find_an_$element(".text_adder--add_button").on('click', async () => {
-      var filename = this.$filename.val();
-      if (filename == "") {
-        animate_warning(this.$filename);
-        return;
-      }
-      var content = this.$content.val();
-      var [, filename_ext] = split_filename(filename);
-      var content_blob = new Blob([content], {
-        type: filename_ext == ".tex" ? "text/x-tex" : "text/plain",
-      });
-      content_blob.name = filename;
-      add_file_callback(content_blob);
-      this.$content.val("");
-      this.deactivate();
-    });
+    this.$content.on('focus', () => { this.activate(); });
+    this.find_an_$element(".text_adder--add_button")
+      .on('click', () => { this.add(); });
     this.find_an_$element(".text_adder--cancel_button")
-      .on('click', () => this.deactivate());
+      .on('click', () => { this.deactivate(); });
   }
   find_an_$element(selector) {
-    var $element = this.$adder.find(selector);
-    if ($element.length < 1)
-      throw Error("No elements found: " + selector);
-    if ($element.length > 1)
-      throw Error("Many elements found: " + selector);
-    return $element;
+    return find_an_$element(this.$adder, selector);
+  }
+  add() {
+    var filename = this.$filename.val();
+    if (filename == "") {
+      animate_warning(this.$filename);
+      return;
+    }
+    var content = this.$content.val();
+    var [, filename_ext] = split_filename(filename);
+    var content_blob = new Blob([content], {
+      type: filename_ext == ".tex" ? "text/x-tex" : "text/plain",
+    });
+    content_blob.name = filename;
+    this.add_callback(content_blob);
+    this.$content.val("");
+    this.deactivate();
   }
   activate() {
     this.$adder.addClass("text_adder__active");
+    if (this.activate_callback != null)
+      this.activate_callback(this.$adder);
   }
   deactivate() {
     this.$content.val("");
     this.$filename.val("source.tex");
     this.$adder.removeClass("text_adder__active");
+    if (this.deactivate_callback != null)
+      this.deactivate_callback(this.$adder);
+  }
+}
+
+class UploadURLAdder {
+  constructor($adder, {add_callback, activate_callback, deactivate_callback}) {
+    this.$adder = $adder;
+    this.add_callback = add_callback;
+    this.activate_callback = activate_callback;
+    this.deactivate_callback = deactivate_callback;
+    if (!this.$adder.hasClass("url_adder")) {
+      throw new Error("internal error");
+    }
+    this.$content = this.find_an_$element(".url_adder--input");
+    this.$content.on('focus', () => { this.activate(); });
+    // XXX enter on input field should add the value, too
+    this.find_an_$element(".url_adder--add_button")
+      .on('click', () => { this.add(); });
+    this.find_an_$element(".url_adder--cancel_button")
+      .on('click', () => { this.deactivate(); });
+  }
+  find_an_$element(selector) {
+    return find_an_$element(this.$adder, selector);
+  }
+  add() {
+    var url = this.$content.val();
+    if (url == "") {
+      animate_warning(this.$content);
+      return;
+    }
+    this.add_callback(url);
+    this.$content.val("");
+    this.deactivate();
+  }
+  activate() {
+    this.$adder.addClass("url_adder__active");
+    if (this.activate_callback != null)
+      this.activate_callback(this.$adder);
+  }
+  deactivate() {
+    this.$content.val("");
+    this.$adder.removeClass("url_adder__active");
+    if (this.deactivate_callback != null)
+      this.deactivate_callback(this.$adder);
   }
 }
 
@@ -537,10 +858,10 @@ UploadDialog.prototype.upload_start = async function() {
     title: false, author: false,
     pdf: false, src: false,
   };
-  var title = this.upload_prepare_title(() => { incomplete_input.title = true; });
+  var title  = this.upload_prepare_title (() => { incomplete_input.title  = true; });
   var author = this.upload_prepare_author(() => { incomplete_input.author = true; });
-  var pdf_file = this.upload_prepare_pdf(() => { incomplete_input.pdf = true; });
-  var src_files = this.upload_prepare_src(() => { incomplete_input.src = true; });
+  var pdf_resource = this.upload_prepare_pdf(() => { incomplete_input.pdf = true; });
+  var src_resource = this.upload_prepare_src(() => { incomplete_input.src = true; });
   if (incomplete_input.title || incomplete_input.author || incomplete_input.pdf)
     return;
   if (incomplete_input.src) {
@@ -557,7 +878,7 @@ UploadDialog.prototype.upload_start = async function() {
   this.upload_started = true;
 
   try {
-    await this.upload(title, author, pdf_file, src_files);
+    await this.upload(title, author, pdf_resource, src_resource);
   } finally {
     this.find_an_$element(".upload_dialog--phase__upload").append( $("<div/>")
       .addClass("block")
@@ -569,106 +890,12 @@ UploadDialog.prototype.upload_start = async function() {
   }
 }
 
-UploadDialog.prototype.upload = async function(title, author, pdf_file, src_files) {
-  var src_file = await this.upload_get_src_file(src_files);
-
-  var pdf_hash, src_hash, common_hash;
-  await this.upload_status_task(
-    "Вычисление хешей загружаемых файлов",
-    async ($status) => {
-      pdf_hash = await this.upload_get_file_hash(pdf_file);
-      src_hash = src_file != null ?
-        await this.upload_get_file_hash(src_file) : null;
-      if (src_hash != null) {
-        let hash_union = new Uint8Array(pdf_hash.length + src_hash.length);
-        hash_union.set(pdf_hash, 0);
-        hash_union.set(src_hash, pdf_hash.length);
-        common_hash = new Uint8Array(await window.crypto.subtle.digest("SHA-256", hash_union));
-      } else {
-        common_hash = pdf_hash;
-      }
-    });
-  var filename = await this.upload_get_filename(common_hash);
-
-  var pdf_meta = {
-    filename: filename + ".pdf",
-    size: pdf_file.size,
-    hash: bytes_to_hex(pdf_hash),
-  };
-
-  var src_meta;
-  if (src_file != null) {
-    if (src_file.ext == null)
-      throw new Error("internal error");
-    src_meta = {
-      filename: filename + src_file.ext,
-      size: src_file.size,
-      hash: bytes_to_hex(src_hash),
-    };
-  } else {
-    src_meta = null;
-  }
-
-  var
-    pdf_upload_url, pdf_upload_headers,
-    src_upload_url, src_upload_headers;
-  await this.upload_status_task(
-    "Получение доступа к хранилищу",
-    async function() {
-      let request = src_meta != null ? [pdf_meta, src_meta] : [pdf_meta];
-      let src_get_url;
-      [
-        {
-          get_url: pdf_meta.get_url,
-          upload_url: pdf_upload_url,
-          upload_headers: pdf_upload_headers },
-        {
-          get_url: src_get_url,
-          upload_url: src_upload_url,
-          upload_headers: src_upload_headers } = {},
-      ] = await new Promise(function(resolve, reject) {
-        google.script.run
-          .withSuccessHandler(resolve)
-          .withFailureHandler(function(error) {
-            reject(error);
-          })
-          .upload_authorize(request);
-      });
-      if (src_meta != null)
-        src_meta.get_url = src_get_url;
-    } );
-
-  await Promise.all([
-    this.upload_pdf(pdf_meta, pdf_upload_url, pdf_upload_headers, pdf_file),
-    this.upload_src(src_meta, src_upload_url, src_upload_headers, src_file),
-  ]);
-
-  await this.upload_status_task(
-    "Добавление записи в реестр загрузок и вставка ссылки",
-    () => new Promise( (resolve, reject) =>
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)
-        .upload_finish({
-          pdf_url: pdf_meta.get_url,
-          src_url: src_meta != null ? src_meta.get_url : null,
-          filename_base: this.upload_info.filename_base,
-          group_name: this.upload_info.group_name,
-          category: this.upload_info.category,
-          title_id: this.upload_info.title_id,
-          title: title,
-          date: this.upload_info.date,
-          author: author,
-        })
-      ) );
-
-}
-
 UploadDialog.prototype.upload_prepare_title = function(flag_incomplete) {
   var title = this.find_an_$element(".upload_dialog--title_input").val();
   if (title === "") {
     flag_incomplete();
     animate_warning(this.find_an_$element(".upload_dialog--title_edit"));
+    return null;
   }
   return title;
 }
@@ -678,42 +905,353 @@ UploadDialog.prototype.upload_prepare_author = function(flag_incomplete) {
   if (author === "") {
     flag_incomplete();
     animate_warning(this.find_an_$element(".upload_dialog--author_edit"));
+    return null;
   }
   return author;
 }
 
 UploadDialog.prototype.upload_prepare_pdf = function(flag_incomplete) {
   let $pdf_loader = this.find_an_$element(".upload_dialog--pdf_loader");
-  let $pdf_files = $pdf_loader.find(".file_loader--file_list > .file_item");
+  let $pdf_files = $pdf_loader.find(".resource_loader--resource_list > .resource_item");
   if ($pdf_files.length > 1) {
     throw Error("internal error");
   }
   if ($pdf_files.length < 1) {
     flag_incomplete();
     animate_warning($pdf_loader);
-    return;
+    return null;
   }
-  return $pdf_files.data("file");
+  if ($pdf_files.filter("[data-resource-type=\"url\"]").length > 0) {
+    return new ResourceUrl($pdf_files.data("url"));
+  }
+  return new ResourceBlob($pdf_files.data("blob"), ".pdf");
 }
 
 UploadDialog.prototype.upload_prepare_src = function(flag_incomplete) {
   let $src_loader = this.find_an_$element(".upload_dialog--src_loader")
-  let $src_files = $src_loader.find(".file_loader--file_list > .file_item");
-  if ($src_files.length < 1 && !this.upload_without_src) {
-    flag_incomplete();
-    animate_warning($src_loader);
-    return;
+  let $src_files = $src_loader.find(".resource_loader--resource_list > .resource_item");
+  if ($src_files.length == 0) {
+    if (!this.upload_without_src) {
+      flag_incomplete();
+      animate_warning($src_loader);
+    }
+    return null;
   }
-  return $src_files.map(function() {
-    return $(this).data("file");
-  }).get();
+  if ($src_files.filter("[data-resource-type=\"url\"]").length > 0) {
+    return new ResourceUrl($src_files.data("url"));
+  }
+  return new SourceList($src_files.map(function() {
+    return $(this).data("blob");
+  }).get());
+}
+
+class Resource {
+  get_url() {
+    throw new Error("internal error");
+  }
+}
+
+class ResourceUrl extends Resource {
+  constructor(url) {
+    super();
+    this.url = url;
+  }
+  get_url() {
+    return this.url;
+  }
+}
+
+class ResourceBlob extends Resource {
+  constructor(blob, filename_ext = null) {
+    super();
+    this.blob = blob;
+    if (filename_ext == null) {
+      [, this.filename_ext] = split_filename(this.blob.name);
+    } else {
+      this.filename_ext = filename_ext;
+    }
+  }
+  get_url() {
+    if (this.url == null)
+      throw new Error("internal error: URL was not set yet");
+    return this.url;
+  }
+}
+
+ResourceBlob.prototype.get_hash = async function() {
+  return this.hash || ( this.hash =
+    new Uint8Array(await window.crypto.subtle.digest( "SHA-256",
+      await read_blob_as_array_buffer(this.blob) ))
+  );
+}
+
+ResourceBlob.prototype.set_filename = async function(basename) {
+  if (typeof basename != "string")
+    throw new Error("internal error");
+  const n = 4;
+  var hash = await this.get_hash();
+  var varletters = [];
+  var v = 0;
+  for (let i = 0; i < hash.length; ++i) {
+    v *= 256;
+    v += hash[i];
+    v %= (62**n);
+  }
+  for (let i = 0; i < n; ++i) {
+    varletters.push(letters62[v % 62]);
+    v = Math.floor(v / 62);
+  }
+  this.filename = basename + "-" + varletters.join("") + this.filename_ext;
+}
+
+ResourceBlob.prototype.get_file_info = async function() {
+  return {
+    filename: this.filename,
+    size: this.blob.size,
+    hash_hex: bytes_to_hex(await this.get_hash()),
+  }
+}
+
+ResourceBlob.prototype.set_storage_info = function(
+  {get_url, upload_url, upload_headers}
+) {
+  this.url = get_url;
+  this.upload_url = upload_url;
+  this.upload_headers = upload_headers;
+}
+
+ResourceBlob.authorize_uploads = async function(resource_blobs) {
+  if (resource_blobs.length == 0)
+    return;
+  var request = [];
+  for (let resource_blob of resource_blobs) {
+    request.push(await resource_blob.get_file_info());
+  }
+  var response = await new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .upload_authorize(request);
+  });
+  for (let index = 0; index < response.length; ++index) {
+    resource_blobs[index].set_storage_info(response[index]);
+  }
+}
+
+ResourceBlob.prototype.upload = function(progress_callback = null) {
+  var request = new XMLHttpRequest();
+  request.open("PUT", this.upload_url);
+  for (let [header, value] of this.upload_headers) {
+    let header_lower = header.toLowerCase();
+    if (header_lower == "host" || header_lower == "content-length") {
+      continue;
+    }
+    request.setRequestHeader(header, value);
+  }
+  var promise = new Promise((resolve, reject) => {
+    request.onload = () => {
+      if (request.status >= 400)
+        reject(new Error("Upload failed with response status " + request.status));
+      else
+        resolve();
+    };
+    request.onabort = request.onerror = () => {
+      reject(new Error("Upload failed"));
+    };
+  })
+  if (progress_callback != null) {
+    request.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        progress_callback(e.loaded / e.total);
+      }
+    }
+  }
+  request.send(this.blob);
+  return promise;
+}
+
+class SourceList {
+  constructor(blobs) {
+    this.blobs = blobs;
+  }
+}
+
+SourceList.prototype.to_single_resource = function() {
+  if (this.blobs.length != 1)
+    return null;
+  let [src_blob] = this.blobs;
+  let src_type = src_blob.type;
+  let src_ext = known_src_types[src_type];
+  if (src_ext == null) {
+    [, src_ext] = split_filename(src_blob.name);
+    if (src_ext === "" || known_src_extensions[src_ext] == null) {
+      return null;
+    }
+  }
+  return new ResourceBlob(src_blob, src_ext);
+}
+
+SourceList.prototype.to_zip_resource = async function(progress_callback = null) {
+  let zip = new JSZip();
+  let filenames = new Set();
+  for (let blob of this.blobs) {
+    let [filename_base, filename_ext] = split_filename(blob.name);
+    let index = 0;
+    let filename = filename_base + filename_ext;
+    while (filenames.has(filename)) {
+      filename = filename_base + "-" + (++filename_index) + filename_ext;
+    }
+    filenames.add(filename);
+    zip.file(filename, blob);
+  }
+  return new ResourceBlob(
+    await zip.generateAsync(
+      {
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: {level: 9}
+      },
+      (progress_callback != null) ?
+        (metadata) => {
+          progress_callback(metadata.percent / 100);
+        } : null
+    ),
+    ".zip" );
+}
+
+UploadDialog.prototype.upload = async function(title, author, pdf_resource, src_resource) {
+  if (src_resource == null) {
+    // no-op
+  } else if (src_resource instanceof ResourceUrl) {
+    // no-op
+  } else if (src_resource instanceof SourceList)
+  src_blob: {
+    if (src_resource.blobs.length < 1)
+      throw new Error("internal error");
+    let src_resource_single = src_resource.to_single_resource();
+    if (src_resource_single != null) {
+      src_resource = src_resource_single;
+      break src_blob;
+    }
+    if (!JSZipLoader.is_loaded()) {
+      await this.upload_status_task(
+        "Загрузка архиватора",
+        async ($status) => { await JSZipLoader.load(); }
+      );
+    }
+    src_resource = await this.upload_status_task(
+      "Создание ZIP архива исходников",
+      async ($status) => {
+        return await src_resource.to_zip_resource((progress) => {
+          this.upload_status_progress($status, progress); });
+      } );
+  } else {
+    console.error(src_resource);
+    throw new Error("internal error");
+  }
+
+  var resource_blobs = [];
+  if (pdf_resource instanceof ResourceBlob) {
+    await resource_blobs.push(pdf_resource);
+  } else if (pdf_resource instanceof ResourceUrl) {
+    let $status = $("<div/>")
+      .addClass("block status_line");
+    let $progress = $("<span/>")
+      .addClass("status_line--progress status_line--progress__material_icon")
+      .text("link");
+    $status.append($progress);
+    $status.append( $("<span/>")
+      .addClass("status_line--text")
+      .append( $("<a/>")
+        .attr('href', pdf_resource.get_url())
+        .text(pdf_resource.get_url())
+      )
+    );
+    this.find_an_$element(".upload_dialog--phase__upload").append($status);
+  } else {
+    console.error(pdf_resource);
+    throw new Error("internal error");
+  }
+  if (src_resource == null) {
+    // no-op
+  } else if (src_resource instanceof ResourceBlob) {
+    await resource_blobs.push(src_resource);
+  } else if (src_resource instanceof ResourceUrl) {
+    let $status = $("<div/>")
+      .addClass("block status_line");
+    let $progress = $("<span/>")
+      .addClass("status_line--progress status_line--progress__material_icon")
+      .text("link");
+    $status.append($progress);
+    $status.append( $("<span/>")
+      .addClass("status_line--text")
+      .append( $("<a/>")
+        .attr('href', src_resource.get_url())
+        .text(src_resource.get_url())
+      )
+    );
+    this.find_an_$element(".upload_dialog--phase__upload").append($status);
+  } else {
+    console.error(src_resource);
+    throw new Error("internal error");
+  }
+  if (resource_blobs.length > 0) {
+    await this.upload_status_task(
+      "Вычислиение хешей и определение названий файлов",
+      async ($status) => {
+        let filename_pieces = [
+          await this.upload_info.filename_base,
+          (await this.upload_info.title_id).toString() ];
+        let varletters = [];
+        const n = 4;
+        let v = Math.floor(Math.random() * (62**n));
+        for (let i = 0; i < n; ++i) {
+          varletters.push(letters62[v % 62]);
+          v = Math.floor(v / 62);
+        }
+        filename_pieces.push(varletters.join(""));
+        let filename_base = filename_pieces.join("-");
+        for (let resource_blob of resource_blobs) {
+          await resource_blob.set_filename(filename_base);
+        }
+      } );
+    await this.upload_status_task(
+      "Получение доступа к хранилищу",
+      async ($status) => {
+        await ResourceBlob.authorize_uploads(resource_blobs);
+      } );
+    await Promise.all(
+      resource_blobs.map( resource_blob =>
+        this.upload_resource_blob(resource_blob) )
+    );
+  }
+
+  await this.upload_status_task(
+    "Добавление записи в реестр загрузок и вставка ссылки",
+    () => new Promise( async (resolve, reject) =>
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .upload_finish({
+          pdf_url: pdf_resource.get_url(),
+          src_url: src_resource != null ? src_resource.get_url() : null,
+          filename_base: await this.upload_info.filename_base,
+          group_name: this.upload_info.group_name,
+          category: this.upload_info.category,
+          title_id: this.upload_info.title_id,
+          title: title,
+          date: this.upload_info.date,
+          author: author,
+        })
+    )
+  );
 }
 
 UploadDialog.prototype.upload_status_task = async function(text, task) {
   var $status = $("<div/>")
     .addClass("block status_line");
   var $progress = $("<span/>")
-    .addClass("status_line--progress")      
+    .addClass("status_line--progress");
   $status.append($progress);
   $status.$progress = $progress;
   $status.append( $("<span/>")
@@ -751,176 +1289,32 @@ UploadDialog.prototype.upload_status_error = function($status, error_message) {
     .text(error_message) );
 }
 
-UploadDialog.prototype.upload_get_src_file = async function(src_files) {
-  if (src_files.length < 1) {
-    return null;
-  }
-  single_file:
-  if (src_files.length == 1) {
-    let src_file = src_files[0];
-    let src_type = src_file.type;
-    let src_ext = known_src_types[src_type];
-    if (src_ext == null) {
-      [, src_ext] = split_filename(src_file.name);
-      if (src_ext === "" || known_src_extensions[src_ext] == null) {
-        break single_file;
-      }
-    }
-    src_file.ext = src_ext;
-    return src_file;
-  }
-  if (!JSZipLoader.is_loaded()) {
-    await this.upload_status_task(
-      "Загрузка библиотеки JSZip",
-      async ($status) => { await JSZipLoader.load(); }
-    );
-  }
-  return await this.upload_status_task(
-    "Создание ZIP архива исходников",
+UploadDialog.prototype.upload_resource_blob = async function(resource_blob) {
+  await this.upload_status_task(
+    "Загрузка " + resource_blob.filename,
     async ($status) => {
-      let zip = new JSZip();
-      let src_filenames = new Set();
-      for (let src_file of src_files) {
-        let [filename_base, filename_ext] = split_filename(src_file.name);
-        let filename_index = 0;
-        let filename = filename_base + filename_ext;
-        while (src_filenames.has(filename)) {
-          filename = filename_base + "-" + (++filename_index) + filename_ext;
-        }
-        src_filenames.add(filename);
-        zip.file(filename, src_file);
-      }
-      src_file = await zip.generateAsync(
-        {
-          type: "blob",
-          compression: "DEFLATE",
-          compressionOptions: {level: 9} },
-        (metadata) => {
-          this.upload_status_progress($status, metadata.percent / 100);
-        } );
-      src_file.ext = ".zip";
-      return src_file;
-    } );
-}
-
-UploadDialog.prototype.upload_get_file_hash = async function(pdf_file) {
-  return new Uint8Array(await window.crypto.subtle.digest( "SHA-256",
-    await read_blob_as_array_buffer(pdf_file) ));
-}
-
-UploadDialog.prototype.upload_get_filename = async function(common_hash) {
-  let filename_pieces = [
-    this.upload_info.filename_base instanceof Promise ?
-      ( this.upload_info.filename_base = await this.upload_status_task(
-          "Определение имени файла",
-          async ($status) => await this.upload_info.filename_base
-        ) ) :
-      this.upload_info.filename_base,
-    this.upload_info.title_id.toString() ];
-  const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  let filename_var = [];
-  let v1 = Math.floor(Math.random() * (62**4));
-  for (let i = 0; i < 4; ++i) {
-    filename_var.push(letters[v1 % 62]);
-    v1 = Math.floor(v1 / 62);
-  }
-  let v2 = 0;
-  for (let i = 0; i < common_hash.length; ++i) {
-    v2 *= 256;
-    v2 += common_hash[i];
-    v2 %= (62**4);
-  }
-  for (let i = 0; i < 4; ++i) {
-    filename_var.push(letters[v2 % 62]);
-    v2 = Math.floor(v2 / 62);
-  }
-  filename_pieces.push(filename_var.join(""));
-  return filename_pieces.join("-");
-}
-
-UploadDialog.prototype.upload_pdf = async function(pdf_meta, pdf_upload_url, pdf_upload_headers, pdf_file) {
-  await this.upload_status_task(
-    "Загрузка " + pdf_meta.filename,
-    ($status) => new Promise((resolve, reject) => {
-      var request = new XMLHttpRequest();
-      request.open("PUT", pdf_upload_url);
-      for (let [header, value] of pdf_upload_headers) {
-        let header_lower = header.toLowerCase();
-        if (header_lower == "host" || header_lower == "content-length") {
-          continue;
-        }
-        request.setRequestHeader(header, value);
-      }
-      request.onload = function() {
-        $status.children(".status_line--text")
-          .empty()
-          .append( $("<a/>")
-            .attr("href", pdf_meta.get_url)
-            .attr("target", "_blank")
-            .text(pdf_meta.filename)
-          );
-        return resolve();
-      };
-      request.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          this.upload_status_progress($status, e.loaded / e.total);
-        }
-      }
-      request.onabort = request.onerror = (e) => {
-        return reject("Не удалось загрузить файл");
-      };
-      request.send(pdf_file);
-    })
+      await resource_blob.upload((progress) => {
+        this.upload_status_progress($status, progress);
+      });
+      $status.children(".status_line--text")
+        .empty()
+        .append( $("<a/>")
+          .attr("href", resource_blob.get_url())
+          .attr("target", "_blank")
+          .text(resource_blob.filename)
+        );
+    }
   );
-}
-
-UploadDialog.prototype.upload_src = async function(src_meta, src_upload_url, src_upload_headers, src_file) {
-  if (src_meta == null)
-    return;
-  await this.upload_status_task(
-    "Загрузка " + src_meta.filename,
-    function($status) { return new Promise((resolve, reject) => {
-      var request = new XMLHttpRequest();
-      request.open("PUT", src_upload_url);
-      for (let [header, value] of src_upload_headers) {
-        let header_lower = header.toLowerCase();
-        if (header_lower == "host" || header_lower == "content-length") {
-          continue;
-        }
-        request.setRequestHeader(header, value);
-      }
-      request.onload = function() {
-        $status.children(".status_line--text")
-          .empty()
-          .append( $("<a/>")
-            .attr("href", src_meta.get_url)
-            .attr("target", "_blank")
-            .text(src_meta.filename)
-          );
-        return resolve();
-      };
-      request.onprogress = function(e) {
-        if (e.lengthComputable) {
-          this.upload_status_progress($status, e.loaded / e.total);
-        }
-      }
-      request.onabort = request.onerror = function(e) {
-        return reject("Не удалось загрузить файл");
-      };
-      request.send(src_file);
-    })} );
 }
 
 // Promise
 function read_blob_as_array_buffer(blob) {
   var reader = new FileReader();
   return new Promise(function(resolve, reject) {
-    reader.onload = function() {
-      resolve(reader.result);
-    };
-    reader.onabort = reader.onerror = function() {
-      reject();
-    };
+    reader.onload = () => {
+      resolve(reader.result); };
+    reader.onabort = reader.onerror = () => {
+      reject(); };
     reader.readAsArrayBuffer(blob);
   });
 }
@@ -954,6 +1348,8 @@ function load() {
     script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.2.2/jszip.min.js";
     document.body.appendChild(script);
     script.addEventListener('load', resolve);
+    script.addEventListener('abort', reject);
+    script.addEventListener('error', reject);
   });
   our_loading_promise.then(
     () => loaded = true,

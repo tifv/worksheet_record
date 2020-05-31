@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_blank">
+</head>
+<?!= include_html_("UI/Common") ?>
+<body>
+<div class="block secondary">Отредактировать план листочков можно в настройках группы.</div>
+<table class="block">
+  <thead>
+    <tr><td>название</td><td>кол-во листочков</td><td></td></tr>
+  </thead>
+  <tbody id="groups--list">
+    <tr id="initial_loading_message"><td colspan="3" class="loading_animation">загрузка</td></tr>
+  </tbody>
+</table>
+<script>
+
+class Sequencer {
+  constructor() {
+    this.current = null;
+  }
+  sequence(promise_gen) {
+    if (this.current == null) {
+      this.current = promise_gen();
+    } else {
+      this.current = this.current.then(promise_gen);
+    }
+    return this.current;
+  }
+}
+
+$(async function() {
+  var $groups_list = $("#groups--list");
+  var timetables = await new Promise((resolve, reject) =>
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(function(error) {
+        $groups_list.empty().append( $("<tr/>")
+          .append( $("<td/>")
+            .attr('colspan', 3)
+            .addClass("error")
+            .text(error.toString())
+          )
+        );
+        reject(error);
+      })
+      .action_worksheet_planned_load()
+  );
+  $groups_list.empty();
+  var sequencer = new Sequencer();
+  for (let [group_name, today_plan] of Object.entries(timetables)) {
+    let $group;
+    let $control_cell;
+    $groups_list.append( $group = $("<tr/>")
+      .append( $("<td/>")
+        .text(group_name) )
+      .append( $("<td/>")
+        .text(today_plan != null ? today_plan : "−") )
+      .append( $control_cell = $("<td/>") )
+    );
+    if (today_plan != null && today_plan > 0) {
+      $control_cell.append( $("<button/>")
+        .text("Добавить")
+        .on('click', async () => {
+          $control_cell
+            .empty()
+            .append( $("<span/>")
+              .text("в очереди")
+            );
+          let own_error = false;
+          sequencer.sequence(async () => {
+            $control_cell
+              .empty()
+              .append( $("<span/>")
+                .text("выполняется…")
+                .addClass("loading_animation")
+              );
+            await new Promise((resolve, reject) => {
+              google.script.run
+                .withSuccessHandler(resolve)
+                .withFailureHandler(function(error) {
+                  own_error = true;
+                  $control_cell
+                    .empty()
+                    .append( $("<tr/>")
+                      .append( $("<span/>")
+                        .addClass("error")
+                        .text(error.toString())
+                      )
+                    );
+                  reject(error);
+                })
+                .action_worksheet_planned_add(group_name);
+            })
+          }).then( () => {
+            $control_cell
+              .empty()
+              .append( $("<span/>")
+                .text("выполнено")
+              );
+          }, (error) => {
+            if (!own_error)
+              $control_cell
+                .empty()
+                .append( $("<span/>")
+                  .addClass("error")
+                  .text("отменено")
+                );
+          });
+        })
+      );
+    }
+  }
+});
+
+</script>
+</body>
+</html>
+
+

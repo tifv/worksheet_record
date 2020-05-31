@@ -6,10 +6,11 @@ class StudyGroupCheckError  extends StudyGroupError {};
 var StudyGroup = function() { // namespace {{{1
 
 const metadata_keys = { // {{{
-    main:         "worksheet_group",
-    filename:     "worksheet_group-filename",
-    color_scheme: "worksheet_group-color_scheme",
-//  timetable:    "worksheet_group-timetable",
+    main:           "worksheet_group",
+    filename:       "worksheet_group-filename",
+    color_scheme:   "worksheet_group-color_scheme",
+    timetable:      "worksheet_group-timetable",
+    worksheet_plan: "worksheet_group-worksheet_plan",
 }; // }}}
 
 const row_info = { // {{{
@@ -181,6 +182,24 @@ StudyGroup.add = function(spreadsheet, name, options) {
  *   color_scheme (string)
  *     code, must match spreadsheet metadata
  *     default will use default color scheme
+ *   timetable (object)
+ *     saved in sheet metadata, no direct effect
+ *   timetable["YYYY-MM-DD"] (object)
+ *   timetable["YYYY-MM-DD"]["1"…"9"] (object)
+ *     object that describes the period
+ *   timetable["YYYY-MM-DD"]["1"…"9"].time
+ *     minutes since 00:00
+ *   worksheet_plan (object)
+ *     saved in sheet metadata, no direct effect
+ *   worksheet_plan["YYYY-MM-DD"] (list)
+ *   worksheet_plan["YYYY-MM-DD"][*].period (string)
+ *     integer from 1…9; optional
+ *   worksheet_plan["YYYY-MM-DD"][*].category (string)
+ *     category code; optional
+ *   worksheet_plan.initial (list)
+ *     XXX not implemented
+ *     works same as dated worksheet lists, except is not saved in metadata
+ *     and used immediately to add worksheets
  *   rating (boolean)
  *     whether to create a total rating
  *     default is yes
@@ -269,6 +288,10 @@ function Initializer(sheet, name, options) { // {{{
     } else {
         this.color_scheme = ColorSchemes.get_default();
     }
+    if (this.options.timetable != null)
+      this.group.set_timetable(this.options.timetable);
+    if (this.options.worksheet_plan != null)
+      this.group.set_worksheet_plan(this.options.worksheet_plan);
     Object.defineProperty(this.group, "dim", {value:
         generate_group_dim.call(this.group, this.options.rows) });
 
@@ -1321,9 +1344,9 @@ StudyGroup.prototype.get_filename = function() {
 StudyGroup.prototype.set_filename = function(filename) {
     if (filename == null) {
         SheetMetadata.unset(this.sheet, metadata_keys.filename);
-    } else {
-        SheetMetadata.set(this.sheet, metadata_keys.filename, filename);
+        return;
     }
+    SheetMetadata.set(this.sheet, metadata_keys.filename, filename);
 } // }}}
 
 // StudyGroup().get_color_scheme {{{
@@ -1342,11 +1365,135 @@ StudyGroup.prototype.set_color_scheme = function(color_scheme) {
     // color_scheme may include one additional field, 'name'
     if (color_scheme == null) {
         SheetMetadata.unset(this.sheet, metadata_keys.color_scheme);
-    } else {
-        color_scheme = ColorSchemes.copy(color_scheme, ["name"]);
-        SheetMetadata.set_object( this.sheet,
-            metadata_keys.color_scheme, color_scheme );
+        return;
     }
+    color_scheme = ColorSchemes.copy(color_scheme, ["name"]);
+    SheetMetadata.set_object( this.sheet,
+        metadata_keys.color_scheme, color_scheme );
+} // }}}
+
+// StudyGroup().get_timetable {{{
+StudyGroup.prototype.get_timetable = function() {
+    var timetable = SheetMetadata.get_object(this.sheet, metadata_keys.timetable);
+    if (timetable == null)
+        return null;
+    return timetable;
+} // }}}
+
+// StudyGroup().get_today_timetable (today?) {{{
+StudyGroup.prototype.get_today_timetable = function(today = WorksheetDate.today()) {
+    var timetable = this.get_timetable();
+    if (timetable == null)
+        return null;
+    return timetable[today.format()];
+} // }}}
+
+// StudyGroup().get_current_period {{{
+StudyGroup.prototype.get_current_period = function(offset = 0) {
+    var today_timetable = this.get_today_timetable();
+    if (today_timetable == null)
+      return null;
+    let now = new Date();
+    let current_time = now.getHours() * 60 + now.getMinutes() + offset;
+    let current_period = null;
+    for (let [period, {time: period_time}] of Object.entries(today_timetable)) {
+      period = parseInt(period);
+      if (isNaN(period))
+        continue;
+      if (period_time > current_time)
+        continue;
+      if (current_period == null || period > current_period)
+        current_period = period;
+    }
+    return current_period;
+} // }}}
+
+// StudyGroup().set_timetable (timetable) {{{
+StudyGroup.prototype.set_timetable = function(timetable) {
+    if (timetable == null) {
+        SheetMetadata.unset(this.sheet, metadata_keys.timetable);
+        return null;
+    }
+    function objgenmap(obj, gen) {
+      return Object.fromEntries(gen(Object.entries(obj)));
+    }
+    SheetMetadata.set_object( this.sheet, metadata_keys.timetable,
+      objgenmap(timetable, function*(entries) {
+        for (let [date_key, date_value] of entries) {
+          if (WorksheetDate.parse_date(date_key) == null)
+            continue;
+          yield [ date_key,
+            objgenmap(date_value || {}, function*(entries) {
+              for (let [period_key, period_value] of entries) {
+                if (!/^\d$/.exec(period_key))
+                  continue;
+                let {time = null, duration = null} = period_value;
+                if (time != null && typeof time != "number")
+                  time = null;
+                if (duration != null && (time == null || typeof duration != "number"))
+                  duration = null;
+                yield [period_key, Object.assign( {},
+                  time != null ? {time: time} : null,
+                  duration != null ? {duration: duration} : null,
+                )];
+              }
+            })
+          ];
+        }
+      })
+    );
+} // }}}
+
+// StudyGroup().get_worksheet_plan {{{
+StudyGroup.prototype.get_worksheet_plan = function() {
+    var worksheet_plan = SheetMetadata.get_object(this.sheet, metadata_keys.worksheet_plan);
+    if (worksheet_plan == null)
+        return null;
+    return worksheet_plan;
+} // }}}
+
+// StudyGroup().get_today_worksheet_plan {{{
+StudyGroup.prototype.get_today_worksheet_plan = function(today = WorksheetDate.today()) {
+    var worksheet_plan = SheetMetadata.get_object(this.sheet, metadata_keys.worksheet_plan);
+    if (worksheet_plan == null)
+        return null;
+    return worksheet_plan[today.format()];
+} // }}}
+
+// StudyGroup().set_worksheet_plan (timetable) {{{
+StudyGroup.prototype.set_worksheet_plan = function(worksheet_plan) {
+    if (worksheet_plan == null) {
+        SheetMetadata.unset(this.sheet, metadata_keys.worksheet_plan);
+        return null;
+    }
+    function listgenmap(list, gen) {
+      return Array.from(gen(list));
+    }
+    function objgenmap(obj, gen) {
+      return Object.fromEntries(gen(Object.entries(obj)));
+    }
+    SheetMetadata.set_object( this.sheet, metadata_keys.worksheet_plan,
+      objgenmap(worksheet_plan, function*(entries) {
+        for (let [date_key, date_value] of entries) {
+          if (WorksheetDate.parse_date(date_key) == null)
+            continue;
+          yield [ date_key,
+            listgenmap(date_value || [], function*(items) {
+              for (let worksheet_item of items) {
+                let {period, category} = worksheet_item;
+                if (period != null && !/^\d$/.exec(period))
+                  period = null;
+                if (category != null && typeof category != "string")
+                  category = null;
+                yield Object.assign( {},
+                  period != null ? {period: period} : {},
+                  category != null ? {category: category} : {}, );
+              }
+            })
+          ];
+        }
+      })
+    );
 } // }}}
 
 return StudyGroup;

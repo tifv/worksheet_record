@@ -189,44 +189,20 @@ function test_add_uploads() {
   UploadRecord.create();
 }
 
-function test_formula_parser() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
-  const sheet = spreadsheet.getActiveSheet();
-  const cell = sheet.getActiveCell();
-  const base_cell = [cell.getRow(), cell.getColumn()];
-  var formula_R1C1 = cell.getFormulaR1C1();
-  var formula_A1 = cell.getFormula();
-  function compare_and_log(formula_orig, formula) {
-    console.log(formula_orig);
-    if (formula_orig != formula) {
-      console.error(formula);
-    }
-  }
-
-  var formulaX = new Formula(formula_R1C1, {notation: "R1C1"});
-  for (let token of formulaX.tokens) {
-    console.log(token.constructor.name + " " + JSON.stringify(token));
-  }
-  compare_and_log( formula_R1C1,
-    formulaX.toString({notation: "R1C1"}) );
-  compare_and_log( formula_A1,
-    formulaX.toString({notation: "A1", base_cell: base_cell}) );
-
-  var formulaY = new Formula(formula_A1, {notation: "A1", base_cell: base_cell});
-  for (let token of formulaY.tokens) {
-    console.log(token.constructor.name + " " + JSON.stringify(token));
-  }
-  compare_and_log( formula_R1C1,
-    formulaY.toString({notation: "R1C1"}) );
-  compare_and_log( formula_A1,
-    formulaY.toString({notation: "A1", base_cell: base_cell}) );
+function test_set_sheet_timetable() {
+  var group = ActionHelpers.get_active_group();
+  group.set_timetable({
+    "2020-05-28" : {
+      "1": {"time":  600},
+      "2": {"time":  700},
+      "3": {"time":  800},
+      "4": {"time":  900},
+      "5": {"time": 1000}},
+  });
+  group.set_worksheet_plan({
+    "2020-05-27" : [{}, {}, {}, {}, {}],
+    "2020-05-28" : [{}, {}, {}, {}, {}],
+  });
+  console.log(JSON.stringify(group.get_timetable()));
+  console.log(JSON.stringify(group.get_worksheet_plan()));
 }
-
-function test_conditional_formatting() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
-  const sheet = spreadsheet.getActiveSheet();
-  var cfrules = ConditionalFormatting.RuleList.load(sheet);
-  cfrules.forEach(cfrule => { console.log(JSON.stringify(cfrule)); });
-  cfrules.save(sheet);
-}
-
