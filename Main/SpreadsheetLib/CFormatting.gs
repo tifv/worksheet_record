@@ -79,11 +79,11 @@ class CFGradientCondition extends CFCondition {
         }
         return (
             cfcondition.min_type == this.min_type &&
-                cfcondition.min_values == this.min_values &&
+                cfcondition.min_value == this.min_value &&
             cfcondition.mid_type == this.mid_type &&
-                this.mid_values == this.mid_values &&
+                cfcondition.mid_value == this.mid_value &&
             cfcondition.max_type == this.max_type &&
-                cfcondition.max_values == this.max_values
+                cfcondition.max_value == this.max_value
         );
     }
 }

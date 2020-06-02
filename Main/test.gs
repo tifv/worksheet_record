@@ -178,31 +178,31 @@ function test_set_upload_config() {
     secret_key: get_value("Secret key"),
     region:     get_value("Region"),
     bucket_url: get_value("Bucket URL"),
+    enable_solutions: true,
   });
 }
 
 function test_add_uploads() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = spreadsheet.getSheetByName("uploads");
   if (sheet != null)
     spreadsheet.deleteSheet(sheet);
   UploadRecord.create();
 }
 
-function test_set_sheet_timetable() {
-  var group = ActionHelpers.get_active_group();
-  group.set_timetable({
-    "2020-05-28" : {
-      "1": {"time":  600},
-      "2": {"time":  700},
-      "3": {"time":  800},
-      "4": {"time":  900},
-      "5": {"time": 1000}},
-  });
-  group.set_worksheet_plan({
-    "2020-05-27" : [{}, {}, {}, {}, {}],
-    "2020-05-28" : [{}, {}, {}, {}, {}],
-  });
-  console.log(JSON.stringify(group.get_timetable()));
-  console.log(JSON.stringify(group.get_worksheet_plan()));
+function test_set_timetables() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  function get_metadata(name) {
+    return load_antijson_(spreadsheet.getRangeByName(name).getValues());
+  }
+  for (let group of StudyGroup.list(spreadsheet)) {
+    let name = group.name;
+    group.set_timetable(get_metadata("timetable_" + name));
+    console.log( name + "'s timetable: " +
+      JSON.stringify(group.get_timetable()) );
+    group.set_worksheet_plan(get_metadata("worksheet_plan_" + name));
+    console.log( name + "'s worksheet plan: " +
+      JSON.stringify(group.get_worksheet_plan()) );
+  }
 }
+

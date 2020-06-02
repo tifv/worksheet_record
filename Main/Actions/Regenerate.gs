@@ -8,7 +8,7 @@ function action_regenerate_toc() {
     spreadsheet.deleteSheet(toc_sheet);
   }
   var min_group_sheet_index = null;
-  var formula_pieces = ["={"];
+  var formula_pieces = ['={"Оглавление","",""'];
   var first_group = true;
   for (let group of StudyGroup.list(spreadsheet)) {
     if (toc_sheet_index == null) {
@@ -19,8 +19,7 @@ function action_regenerate_toc() {
     let start_col = Worksheet.find_start_col(group);
     if (start_col == null)
       continue;
-    if (!first_group)
-      formula_pieces.push(';"","","";');
+    formula_pieces.push(';"","","";');
     first_group = false;
     let name = group.name;
     let title_ref = "'" + name + "'!R" + group.dim.title_row + "C" + start_col + ":R" + group.dim.title_row;
@@ -44,15 +43,17 @@ function action_regenerate_toc() {
     toc_sheet = spreadsheet.insertSheet(toc_name);
   }
   toc_sheet.getRange(1, 1).setFormulaR1C1(formula_pieces.join(""));
-  var group_range = toc_sheet.getRange("A:A");
-  var title_range = toc_sheet.getRange("C:C");
-  group_range.setFontSize(20);
+  var group_range = toc_sheet.getRange("A2:A");
+  var title_range = toc_sheet.getRange("C2:C");
+  var toc_sheet_height = toc_sheet.getMaxRows();
+  toc_sheet.getRange(1,1).setFontSize(20);
+  group_range.setFontSize(16);
   title_range.setFontSize(12);
   var cfrules = new ConditionalFormatting.RuleList();
   cfrules.push( ConditionalFormatting.Rule.from_object({ type: "boolean",
     condition: { type: SpreadsheetApp.BooleanCriteria.TEXT_STARTS_WITH,
       values: ["{"] },
-    ranges: [[1, 3, title_range.getHeight(), 1]],
+    ranges: [[2, 3, toc_sheet_height - 1, 1]],
     effect: {font_color: "#dddddd"},
   }));
   for (let [code, category] of Object.entries(Categories.get(spreadsheet))) {
@@ -64,11 +65,12 @@ function action_regenerate_toc() {
         values: [ "=exact(" +
           '"' + code.replace('"', '""') + '"' + ",R[0]C2)" ]
       },
-      ranges: [[1, 3, title_range.getHeight(), 1]],
+      ranges: [[2, 3, toc_sheet_height - 1, 1]],
       effect: {background: HSL.to_hex(color)},
     }));
   }
   cfrules.save(toc_sheet);
+  toc_sheet.setFrozenRows(1);
   toc_sheet.setColumnWidth(1, 25);
   toc_sheet.setColumnWidth(2, 25);
   toc_sheet.hideColumns(2);

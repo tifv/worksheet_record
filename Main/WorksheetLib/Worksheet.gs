@@ -719,7 +719,7 @@ Worksheet.get_cfcondition_weight = function(group) {
         min_type: SpreadsheetApp.InterpolationType.NUMBER,
         min_value: formula_base + " + 1",
         max_type: SpreadsheetApp.InterpolationType.NUMBER,
-        max_value: formula_base + " + 21",
+        max_value: formula_base + " + 46",
     });
 } // }}}
 
@@ -989,19 +989,19 @@ Worksheet.surrounding = function(group, range) {
     }
     var range_start = range.getColumn(), range_end = range.getLastColumn();
     group.sheetbuf.ensure_loaded(range_start, range_end);
-    var start = group.sheetbuf.find_last_value( "label_row",
-        marker.start, range_end + data_offset.start );
-    var end = group.sheetbuf.find_value( "label_row",
-        marker.end, range_start - data_offset.end );
-    if (start == null || end == null || end - start + 1 <= data_offset.width) {
+    var marker_start = group.sheetbuf.find_last_value( "label_row",
+        marker.start, range_end + data_offset.start - 1 );
+    var marker_end = group.sheetbuf.find_value( "label_row",
+        marker.end, range_start - data_offset.end + 1);
+    if (marker_start == null || marker_end == null || marker_end - marker_start <= 1) {
         throw new WorksheetDetectError(
             "unable to locate surrounding worksheet",
             range );
     }
     var worksheet = new Worksheet( group,
         get_column_range_( group.sheet,
-            start - data_offset.start + 1,
-            end - start + 1 + data_offset.width - 2 )
+            marker_start - data_offset.start + 1,
+            marker_end - marker_start + 1 + data_offset.width - 2 )
     );
     try {
         worksheet.check();

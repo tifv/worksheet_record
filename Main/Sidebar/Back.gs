@@ -144,6 +144,7 @@ function sidebar_load_contents_section_(section, validated = false) {
     category: worksheet.get_category(),
     labels: group.sheetbuf.slice_values( "label_row",
       section.dim.data_start, section.dim.data_end ),
+      // XXX somehow join subproblems maybe?
     date: date != null ? date.to_object() : null,
     date_s: date != null ? date.format() : null,
     date_filename: date != null ? date.format({filename: true}) : null,
