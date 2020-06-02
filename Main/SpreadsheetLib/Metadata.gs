@@ -9,29 +9,32 @@
 var SpreadsheetMetadata = function () { // namespace
 
 function get(spreadsheet, key) {
-  var metadata = spreadsheet.createDeveloperMetadataFinder()
+  if (typeof key != "string")
+    throw new Error("type error: key must be a string");
+  var [metadatum] = spreadsheet.createDeveloperMetadataFinder()
     .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.SPREADSHEET)
     .withVisibility(SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT)
     .withKey(key)
     .find();
-  var metadatum = metadata[0];
   if (metadatum == null)
     return null;
   return metadatum.getValue();
 }
 
 function unset(spreadsheet, key) {
-  var metadata = spreadsheet.createDeveloperMetadataFinder()
+  if (typeof key != "string")
+    throw new Error("type error: key must be a string");
+  spreadsheet.createDeveloperMetadataFinder()
     .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.SPREADSHEET)
     .withVisibility(SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT)
     .withKey(key)
-    .find();
-  for (var i = 0; i < metadata.length; ++i) {
-    metadata[i].remove();
-  }
+    .find()
+    .forEach(metadatum => { metadatum.remove(); });
 }
 
 function set(spreadsheet, key, value) {
+  if (typeof key != "string")
+    throw new Error("type error: key must be a string");
   unset(spreadsheet, key);
   spreadsheet.addDeveloperMetadata( key, value,
     SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT );
@@ -58,29 +61,32 @@ return {
 var SheetMetadata = function () { // namespace
 
 function get(sheet, key) {
-  var metadata = sheet.createDeveloperMetadataFinder()
+  if (typeof key != "string")
+    throw new Error("type error: key must be a string");
+  var [metadatum] = sheet.createDeveloperMetadataFinder()
     .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.SHEET)
     .withVisibility(SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT)
     .withKey(key)
     .find();
-  var metadatum = metadata[0];
   if (metadatum == null)
-    return metadatum;
+    return null;
   return metadatum.getValue();
 }
 
 function unset(sheet, key) {
-  var metadata = sheet.createDeveloperMetadataFinder()
+  if (typeof key != "string")
+    throw new Error("type error: key must be a string");
+  sheet.createDeveloperMetadataFinder()
     .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.SHEET)
     .withVisibility(SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT)
     .withKey(key)
-    .find();
-  for (var i = 0; i < metadata.length; ++i) {
-    metadata[i].remove();
-  }
+    .find()
+    .forEach(metadatum => { metadatum.remove(); });
 }
 
 function set(sheet, key, value) {
+  if (typeof key != "string")
+    throw new Error("type error: key must be a string");
   unset(sheet, key);
   sheet.addDeveloperMetadata( key, value,
     SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT );
@@ -101,5 +107,64 @@ function set_object(sheet, key, value_object) {
 return {
   get: get, unset: unset, set: set,
   get_object: get_object, set_object: set_object };
+}(); // end SheetMetadata namespace
+
+
+var SheetMetacell = function () { // namespace
+
+function get(sheet, key) {
+  if (typeof key != "string")
+    throw new Error("type error: key must be a string");
+  var [row_metadatum] = sheet.createDeveloperMetadataFinder()
+    .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.ROW)
+    .withVisibility(SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT)
+    .withKey(key)
+    .find();
+  if (row_metadatum == null)
+    return null;
+  var row = row_metadatum.getLocation().getRow().getRow();
+  var [col_metadatum] = sheet.createDeveloperMetadataFinder()
+    .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.COLUMN)
+    .withVisibility(SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT)
+    .withKey(key)
+    .find();
+  if (col_metadatum == null)
+    return null;
+  var col = col_metadatum.getLocation().getColumn().getColumn();
+  return sheet.getRange(row, col);
+}
+
+function unset(sheet, key) {
+  if (typeof key != "string")
+    throw new Error("type error: key must be a string");
+  [
+    ...sheet.createDeveloperMetadataFinder()
+      .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.ROW)
+      .withVisibility(SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT)
+      .withKey(key)
+      .find(),
+    ...sheet.createDeveloperMetadataFinder()
+      .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.COLUMN)
+      .withVisibility(SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT)
+      .withKey(key)
+      .find(),
+  ].forEach(metadatum => { metadatum.remove(); });
+}
+
+function set(sheet, key, range) {
+  if (typeof key != "string")
+    throw new Error("type error: key must be a string");
+  if (range.getNumRows() > 1 || range.getNumColumns() > 1) {
+    throw new Error("range is not a cell");
+  }
+  unset(sheet, key);
+  get_column_range_(sheet, range.getColumn()).addDeveloperMetadata( key,
+    SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT );
+  get_row_range_(sheet, range.getRow()).addDeveloperMetadata( key,
+    SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT );
+}
+
+return {
+  get: get, unset: unset, set: set };
 }(); // end SheetMetadata namespace
 

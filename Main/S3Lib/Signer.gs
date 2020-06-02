@@ -184,9 +184,9 @@ function string_to_bytes(string) {
 
 function bytes_to_hex(bytes) {
   var pieces = [];
-  for (var i = 0; i < bytes.length; ++i) {
+  for (let byte of bytes) {
     pieces.push(
-      ((bytes[i] + 256) % 256).toString(16).padStart(2, "0")
+      ((byte + 256) % 256).toString(16).padStart(2, "0")
     );
   }
   return pieces.join("");

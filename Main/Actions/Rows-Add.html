@@ -64,7 +64,7 @@
 <script>
 $(function() {
   var $select_index_container = $("#select_index--container");
-  for (var i = sample_is_hidden ? 1 : 0; i < names.length; ++i) {
+  for (let i = sample_is_hidden ? 1 : 0; i < names.length; ++i) {
     $select_index_container.append(
       $('<div/>')
         .text(i.toString() + ". " + names[i])

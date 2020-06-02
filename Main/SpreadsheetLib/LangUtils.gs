@@ -14,7 +14,7 @@ function define_lazy_property_(object, name, generator) {
 
 function lazy_properties_factory_(generators) {
   var properties = {};
-  for (var name in generators) {
+  for (let name in generators) {
     properties[name] = lazy_property_factory_.call(this, name, generators[name]);
   }
   return properties;
@@ -31,7 +31,7 @@ function* group_by_(array, valuater = (x => x)) {
   var v = valuater(array[0]);
   var len = 1;
   var result = [];
-  for (var i = 1; i < array.length; ++i) {
+  for (let i = 1; i < array.length; ++i) {
     var vv = valuater(array[i]);
     if (vv === v) {
       ++len;

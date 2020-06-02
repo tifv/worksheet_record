@@ -502,7 +502,7 @@ SheetBuffer.prototype.unmerge = function(row_name, start, end) {
 }
 
 function SheetBuffer_insert_columns(column, num_columns) {
-    Object.defineProperty(this.dim, "sheet_width",
+    Object.defineProperty( this.dim, "sheet_width",
         {configurable: true, value: this.dim.sheet_width + num_columns} );
     if (this._loaded_start == null || column > this._loaded_end) {
         // no-op
@@ -545,7 +545,7 @@ SheetBuffer.prototype.insert_columns_before = function(column, num_columns) {
 
 function SheetBuffer_delete_columns(column, num_columns) {
     var start = column, end = column + num_columns - 1;
-    Object.defineProperty(this.dim, "sheet_width",
+    Object.defineProperty( this.dim, "sheet_width",
         {configurable: true, value: this.dim.sheet_width - num_columns} );
     if (this._loaded_start != null) {
         let delete_start = start > this._loaded_start ?

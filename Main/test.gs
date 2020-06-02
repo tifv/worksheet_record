@@ -206,3 +206,11 @@ function test_set_timetables() {
   }
 }
 
+function test_set_student_count_cell() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const group = StudyGroup.get_active(spreadsheet);
+  const cell = spreadsheet.getActiveCell();
+  group.set_student_count_cell(cell);
+  console.log((new StudyGroup(group.sheet)).student_count_cell.getA1Notation());
+}
+

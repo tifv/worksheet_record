@@ -97,7 +97,7 @@ DataTable.prototype.toString = function() {
 
 function revert_keys(keys) {
   var key_columns = new Map();
-  for (var i = 0; i < keys.length; ++i) {
+  for (let i = 0; i < keys.length; ++i) {
     if (keys[i] == null)
       continue;
     key_columns.set(keys[i], i + 1);

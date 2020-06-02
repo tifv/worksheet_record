@@ -295,7 +295,7 @@ Initializer.prototype.init_data_range = function() {
 // Initializer().init_label_range {{{
 Initializer.prototype.init_label_range = function() {
     var labels = [];
-    for (var i = 1; i <= this.dim.data_width; ++i) {
+    for (let i = 1; i <= this.dim.data_width; ++i) {
         if (i <= 3)
             labels[i-1] = i.toString();
         else
@@ -713,13 +713,19 @@ Worksheet.prototype.new_cfrule_data_limit = function(color_scheme) {
 Worksheet.get_cfcondition_weight = function(group) {
     var weight_R1C1 = "R" + group.dim.weight_row + "C[0]";
     var max_R1C1 = "R" + group.dim.max_row + "C[0]";
+    var student_count_R1C1 = group.student_count_cell != null ? (
+        "R" + group.student_count_cell.getRow() +
+        "C" + group.student_count_cell.getColumn()
+    ) : null;
     var formula_base = ( "=R[0]C[0]" +
         " - 1/power(" + weight_R1C1 + "*max(" + max_R1C1 + ",1),2)" );
     return new ConditionalFormatting.GradientCondition({
         min_type: SpreadsheetApp.InterpolationType.NUMBER,
         min_value: formula_base + " + 1",
         max_type: SpreadsheetApp.InterpolationType.NUMBER,
-        max_value: formula_base + " + 46",
+        max_value: formula_base + " + " +
+            ( student_count_R1C1 != null ?
+                "max(" + student_count_R1C1 + ",7)" : "7" ),
     });
 } // }}}
 
@@ -1594,7 +1600,7 @@ WorksheetSection.prototype.remove_excess_columns = function() {
         } else if (label_values[i] != "") {
             col_is_blank = false;
         } else {
-            for (var data_row of data_values) {
+            for (let data_row of data_values) {
                 if (data_row[i] != "") {
                     col_is_blank = false;
                     break;

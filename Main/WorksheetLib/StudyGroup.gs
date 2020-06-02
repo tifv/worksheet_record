@@ -11,6 +11,7 @@ const metadata_keys = { // {{{
     color_scheme:   "worksheet_group-color_scheme",
     timetable:      "worksheet_group-timetable",
     worksheet_plan: "worksheet_group-worksheet_plan",
+    student_count:  "worksheet_group-student_count",
 }; // }}}
 
 const row_info = { // {{{
@@ -45,7 +46,7 @@ const initial = { // {{{
 }; // }}}
 
 // StudyGroup constructor (sheet, name) {{{
-var StudyGroup = function(sheet, name) {
+var StudyGroup = function(sheet, name = null) {
     if (sheet == null) {
         throw new StudyGroupError("sheet must not be null");
     }
@@ -66,6 +67,10 @@ define_lazy_properties_(StudyGroup.prototype, {
             this.dim );
     },
     dim: generate_group_dim,
+    student_count_cell: function() {
+        return SheetMetacell.get(
+            this.sheet, metadata_keys.student_count );
+    }
 }); // }}}
 
 // generate_group_dim (initial_rows) {{{
@@ -110,8 +115,8 @@ function generate_group_dim(initial_rows) {
             throw new StudyGroupInitError(
                 "data_row not defined" );
         }
-        for (var name in row_info) {
-            var row = initial_rows[name];
+        for (let name in row_info) {
+            let row = initial_rows[name];
             if (row == null) {
                 throw new StudyGroupInitError(
                     name + " not defined" );
@@ -140,8 +145,8 @@ function generate_group_dim(initial_rows) {
         var marker_values = sheet.getRange(1, 1, dim.data_row - 1, 1)
             .getValues()
             .map(function(v) { return v[0]; });
-        for (var name in row_info) {
-            var row = dim[name];
+        for (let name in row_info) {
+            let row = dim[name];
             row = marker_values.indexOf(row_info[name].marker) + 1;
             if (row < 1)
                 throw new StudyGroupDetectError(
@@ -262,7 +267,7 @@ function Initializer(sheet, name, options) { // {{{
     this.options = this.rectify_options(options);
     this.dim = {};
     this.dim.data_row = this.options.rows.data_row;
-    for (var row_name in row_info) {
+    for (let row_name in row_info) {
         this.dim[row_name] = this.options.rows[row_name];
     }
     this.attendance_total_row = this.dim.weight_row;
@@ -275,10 +280,11 @@ function Initializer(sheet, name, options) { // {{{
         .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
     sheet.setHiddenGridlines(true);
     this.init_rows();
-    this.init_columns();
+    var {student_count_cell} = this.init_columns();
 
     this.group = new StudyGroup(sheet, name);
     this.group.add_metadatum({skip_remove: true});
+    this.group.set_student_count_cell(student_count_cell);
     if (this.options.filename != null) {
         this.group.set_filename(this.options.filename);
     }
@@ -444,14 +450,14 @@ Initializer.prototype.init_columns = function() {
     sheet.setColumnWidths(2, header_columns, 75);
     sheet.getRange(1, 1, max_rows, frozen_columns)
         .setHorizontalAlignment("left");
-    var group_title_range, group_count_range;
+    var group_title_range, student_count_cell;
     if (this.dim.mirror_row == 1 && this.dim.label_row > 4) {
         group_title_range = sheet.getRange(2, 2, 2, header_columns);
-        group_count_range = sheet.getRange(this.dim.label_row - 1, 2);
+        student_count_cell = sheet.getRange(this.dim.label_row - 1, 2);
     } else {
         group_title_range = sheet.getRange(
             this.dim.title_row, 2, 1, header_columns );
-        group_count_range = sheet.getRange(this.dim.max_row, 2);
+        student_count_cell = sheet.getRange(this.dim.max_row, 2);
     }
     group_title_range.getCell(1, 1)
         .setValue("Название группы");
@@ -462,7 +468,7 @@ Initializer.prototype.init_columns = function() {
         .setFontFamily("Verdana")
         .setVerticalAlignment("top");
     const data_column_R1C1 = "R" + this.dim.data_row + "C[0]:C[0]";
-    group_count_range
+    student_count_cell
         .setFormulaR1C1(
             '= counta(' + data_column_R1C1 + ') - ' +
             'sum(arrayformula(' +
@@ -471,7 +477,7 @@ Initializer.prototype.init_columns = function() {
         .setNumberFormat("0 чел\\.")
         .setFontSize(8)
         .setVerticalAlignment("bottom");
-    group_count_range.offset(0, 1)
+    student_count_cell.offset(0, 1)
         .setValue("каб. ?")
         .setNumberFormat('@STRING@')
         .setFontSize(8)
@@ -510,6 +516,7 @@ Initializer.prototype.init_columns = function() {
         .setBorder(true, true, true, true, null, null);
     sheet.setColumnWidths(
         frozen_columns + 1, max_columns - frozen_columns, 21 );
+    return {student_count_cell: student_count_cell};
 } // }}}
 
 // Initializer().allocate_columns (num_columns) => (start_column) {{{
@@ -1265,6 +1272,17 @@ StudyGroup.prototype.add_metadatum = function(options = {}) {
     }
     this.sheet.addDeveloperMetadata( metadata_keys.main,
         SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT );
+} // }}}
+
+// StudyGroup().set_student_count_cell (range) {{{
+StudyGroup.prototype.set_student_count_cell = function(range) {
+    Object.defineProperty( this, "student_count_cell",
+      {configurable: true, value: range} );
+    if (range == null) {
+        SheetMetacell.unset(this.sheet, metadata_keys.student_count);
+        return;
+    }
+    SheetMetacell.set(this.sheet, metadata_keys.student_count, range);
 } // }}}
 
 // initialize }}}2
