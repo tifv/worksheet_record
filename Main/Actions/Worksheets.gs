@@ -22,13 +22,17 @@ function action_worksheet_add() {
     var group = ActionHelpers.get_active_group();
     var sheet = group.sheet;
     var last_column = sheet.getLastColumn();
+    // XXX also check that the insertion column is not in the frozen range
     if (last_column == group.dim.sheet_width) {
       throw ReportError("Последний столбец вкладки должен быть пустым.");
     }
-    Worksheet.add(group, sheet.getRange(1, last_column + 1));
+    var date = WorksheetDate.today();
+    date.period = group.get_current_period(7);
+    Worksheet.add(group, sheet.getRange(1, last_column + 1), {date: date});
     lock.releaseLock();
     group.sheet.getParent().toast(
-      "Исправьте дату в примечании к заголовку таблички, если требуется." );
+      "Дата: " + date.format() + "; " +
+      "исправьте её в примечании к заголовку таблички, если требуется." );
   } catch (error) {
     report_error(error);
   }
@@ -169,7 +173,8 @@ function action_worksheet_planned_add(group_name) {
     var lock = ActionHelpers.acquire_lock();
     const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     var group = StudyGroup.find_by_name(spreadsheet, group_name);
-    var plan = group.get_today_worksheet_plan();
+    var today = WorksheetDate.today();
+    var plan = group.get_today_worksheet_plan(today);
     if (plan == null)
       return;
     var sheet = group.sheet;
@@ -178,6 +183,13 @@ function action_worksheet_planned_add(group_name) {
       throw ReportError("Последний столбец вкладки должен быть пустым.");
     }
     for (let plan_item of plan) {
+      plan_item.date = today;
+      if (plan_item.period != null) {
+        plan_item.date.period = parseInt(plan_item.period, "10");
+      }
+      if (plan_item.title == null) {
+        plan_item.title = "{Бланк " + plan_item.date.format() + "}";
+      }
       Worksheet.add(group, sheet.getRange(1, last_column + 1), plan_item);
       last_column = sheet.getLastColumn();
     }

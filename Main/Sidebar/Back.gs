@@ -90,13 +90,13 @@ function sidebar_load_contents_validate(contents_item) {
       group.sheet.getRange(1, column_by_note) );
     sections.push(section_by_note);
   }
-  if (title_id == get_checked_id(section_by_note)) {
+  if (section_by_note != null && title_id == get_checked_id(section_by_note)) {
     section_by_id = section_by_note;
     section_by_note = null;
   } else {
     let column_by_id = Worksheet.find_title_column_by_id(group, title_id);
     if (column_by_id != null) {
-      var section_by_id = Worksheet.surrounding_section( group, null,
+      section_by_id = Worksheet.surrounding_section( group, null,
         group.sheet.getRange(1, column_by_id) );
       if (title_id != get_checked_id(section_by_id)) {
         // metadatum seems to be misplaced, we better remove it

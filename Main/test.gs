@@ -182,25 +182,23 @@ function test_set_upload_config() {
   });
 }
 
-function test_add_uploads() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = spreadsheet.getSheetByName("uploads");
-  if (sheet != null)
-    spreadsheet.deleteSheet(sheet);
-  UploadRecord.create();
-}
-
 function test_set_timetables() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   function get_metadata(name) {
-    return load_antijson_(spreadsheet.getRangeByName(name).getValues());
+    var range = spreadsheet.getRangeByName(name);
+    if (range == null)
+      return null;
+    return load_antijson_(range.getValues());
   }
   for (let group of StudyGroup.list(spreadsheet)) {
     let name = group.name;
-    group.set_timetable(get_metadata("timetable_" + name));
+    let timetable = get_metadata("timetable_" + name);
+    if (timetable)
+      group.set_timetable(timetable);
     console.log( name + "'s timetable: " +
       JSON.stringify(group.get_timetable()) );
-    group.set_worksheet_plan(get_metadata("worksheet_plan_" + name));
+    let worksheet_plan = get_metadata("worksheet_plan_" + name);
+    group.set_worksheet_plan(worksheet_plan);
     console.log( name + "'s worksheet plan: " +
       JSON.stringify(group.get_worksheet_plan()) );
   }

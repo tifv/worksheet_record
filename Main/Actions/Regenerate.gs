@@ -80,3 +80,7 @@ function action_regenerate_toc() {
   toc_sheet.protect().setWarningOnly(true);
 }
 
+function actions_regenerate_uploads() {
+  UploadRecord.create();
+}
+
