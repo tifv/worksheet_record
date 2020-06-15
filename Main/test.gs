@@ -92,7 +92,7 @@ function test_worksheet_color_() {
   function named_scheme(name) {
     return Object.assign({name: name}, color_schemes[name]);
   }
-  var group = StudyGroup.add(spreadsheet, "test_color", {
+  var group = StudyGroupBuilder.build(spreadsheet, "test_color", {
     rows: {
       mirror_row:   1,
       category_row: 5,

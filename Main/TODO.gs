@@ -1,10 +1,15 @@
 /*
 
 # Priority TODO
-• Upload solutions:
-  • add it to the sidebar
+• группы без веса, максимума, категории, зеркала;
+• листочки без рейтинга (заменить на ○); без суммы; без сдачи задач;
+  в том числе без соответствующих колонок?
+• доп материалы: подсказки, ответы, решения, конспект (список хранится в метаданных);
+• пресеты листочков: игра, конспект, … (список хранится в метаданных);
 
 # Second-priority TODO
+• Upload solutions:
+  • add it to the sidebar
 • Make sidebar safe against concurrent runs
 • Timetable
   • auto-expand worksheet column groups after a period
@@ -15,6 +20,8 @@
 • Sidebar refactoring:
   • factor out contents item as a class of its own.
 • Sidebar upload optimization: open upload dialog immediately, filling necessary fields and enabling ui as data is validated
+  • concept: OpportunisticPromise
+  • refactor category_css to use data-category attribute
 • Worksheet plan
   • optimize worksheet generation to only load and save cfrules once
 • Add action: sort rows in name order

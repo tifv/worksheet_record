@@ -27,7 +27,7 @@ function action_add_group_new(group_name, options) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   //console.log(JSON.stringify(options.timetable));
   //console.log(JSON.stringify(options.worksheet_plan));
-  var group = StudyGroup.add(spreadsheet, group_name, options);
+  var group = StudyGroupBuilder.build(spreadsheet, group_name, options);
   //console.log(JSON.stringify(group.get_timetable()));
   //console.log(JSON.stringify(group.get_worksheet_plan()));
 }
