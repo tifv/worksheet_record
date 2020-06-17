@@ -31,7 +31,7 @@ function test_worksheet_clear_(spreadsheet, name) {
 function test_worksheet_1_() {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   test_worksheet_clear_(spreadsheet, "test_1");
-  var group = StudyGroup.add(spreadsheet, "test_1", {
+  var group = StudyGroupBuilder.build(spreadsheet, "test_1", {
     rows: {
       mirror_row:   1,
       category_row: 5,
@@ -146,7 +146,7 @@ function test_worksheet_color_() {
 
 function test_worksheet_add_(group, options) {
   const sheet = group.sheet;
-  var worksheet = Worksheet.add(group, sheet.getRange(1,sheet.getMaxColumns()), options);
+  var worksheet = WorksheetBuilder.build(group, sheet.getRange(1,sheet.getMaxColumns()), options);
   SpreadsheetApp.getActiveSpreadsheet().getRangeByName("D20_data")
     .copyValuesToRange( sheet.getSheetId(), worksheet.dim.data_start, worksheet.dim.data_end, group.dim.data_row + 1, sheet.getMaxRows() );
   SpreadsheetApp.getActiveSpreadsheet().getRangeByName("D20_labels")
@@ -155,7 +155,7 @@ function test_worksheet_add_(group, options) {
 
 function test_worksheet_add_random_(group, options) {
   const sheet = group.sheet;
-  var worksheet = Worksheet.add(group, sheet.getRange(1,sheet.getMaxColumns()), options);
+  var worksheet = WorksheetBuilder.build(group, sheet.getRange(1,sheet.getMaxColumns()), options);
   SpreadsheetApp.getActiveSpreadsheet().getRangeByName("D20_data_random")
     .copyValuesToRange( sheet.getSheetId(), worksheet.dim.data_start, worksheet.dim.data_end, group.dim.data_row + 1, sheet.getMaxRows() );
   SpreadsheetApp.getActiveSpreadsheet().getRangeByName("D20_labels")

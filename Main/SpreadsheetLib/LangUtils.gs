@@ -15,7 +15,8 @@ function define_lazy_property_(object, name, generator) {
 function lazy_properties_factory_(generators) {
   var properties = {};
   for (let name in generators) {
-    properties[name] = lazy_property_factory_.call(this, name, generators[name]);
+    properties[name] = lazy_property_factory_.call( this,
+      name, generators[name] );
   }
   return properties;
 }

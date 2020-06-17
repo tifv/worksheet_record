@@ -22,20 +22,38 @@ const row_markers = { // {{{
     label_row:    "β",
 }; // }}}
 
+const row_names = Object.keys(row_markers);
+
+function assert_number_type(value) {
+    if (typeof value != "number" || isNaN(value))
+        throw new Error("StudyGroupDim: value is not a number");
+    return value;
+}
+
 // load (sheet) {{{
 function load(sheet) {
     var dim = {};
     define_lazy_properties_(dim, {
-        sheet_id: function() {
-            return sheet.getSheetId(); },
-        sheet_height: function() {
-            return sheet.getMaxRows(); },
-        frozen_height: function() {
-            return sheet.getFrozenRows(); },
-        data_row: function() {
-            return this.frozen_height + 1; },
-        data_height: function() {
-            return this.sheet_height - this.data_row + 1; },
+        sheet_id: function get_sheet_id() {
+            return assert_number_type(
+                sheet.getSheetId() );
+        },
+        sheet_height: function get_sheet_height() {
+            return assert_number_type(
+                sheet.getMaxRows() );
+        },
+        frozen_height: function get_frozen_height() {
+            return assert_number_type(
+                sheet.getFrozenRows() );
+        },
+        data_row: function get_data_row() {
+            return assert_number_type(
+                this.frozen_height + 1 );
+        },
+        data_height: function get_data_height() {
+            return assert_number_type(
+                this.sheet_height - this.data_row + 1 );
+        },
     });
     setup_set_row.call(dim);
     if (dim.data_row <= 1) {
@@ -48,7 +66,7 @@ function load(sheet) {
     var marker_values = sheet.getRange(1, 1, dim.data_row - 1, 1)
         .getValues()
         .map(v => v[0]);
-    for (let name in row_markers) {
+    for (let name of row_names) {
         let row = marker_values.indexOf(row_markers[name]) + 1;
         if (row < 1)
             throw new StudyGroupDetectError(
@@ -80,7 +98,7 @@ function init(sheet, init_dim) {
         throw new StudyGroupInitError(
             "data_row not defined" );
     }
-    for (let name in row_markers) {
+    for (let name of row_names) {
         let row = init_dim[name];
         if (row == null) {
             throw new StudyGroupInitError(
@@ -130,13 +148,13 @@ function set_row(name, row) {
 
 return {
     load: load, init: init,
-    row_names: Object.keys(row_markers),
+    row_names: row_names,
 };
 }(); // end StudyGroupDim namespace }}}1
 
 var StudyGroup = function() { // namespace {{{1
 
-const metadata_keys = { // {{{
+StudyGroup.metadata_keys = { // {{{
     main:           "worksheet_group",
     filename:       "worksheet_group-filename",
     color_scheme:   "worksheet_group-color_scheme",
@@ -146,7 +164,7 @@ const metadata_keys = { // {{{
 }; // }}}
 
 // StudyGroup constructor (sheet, name) {{{
-var StudyGroup = function(sheet, name = null) {
+function StudyGroup(sheet, name = null) {
     if (sheet == null) {
         throw new StudyGroupError("sheet must not be null");
     }
@@ -155,8 +173,6 @@ var StudyGroup = function(sheet, name = null) {
         Object.defineProperty(this, "name", {value: name});
     }
 } // }}}
-
-StudyGroup.metadata_keys = metadata_keys;
 
 // StudyGroup properties: name, sheetbuf, dim, student_count_cell {{{
 define_lazy_properties_(StudyGroup.prototype, {
@@ -172,8 +188,8 @@ define_lazy_properties_(StudyGroup.prototype, {
         return StudyGroupDim.load(this.sheet);
     },
     student_count_cell: function() {
-        return SheetMetacell.get(
-            this.sheet, metadata_keys.student_count );
+        return SheetMetacell.get( this.sheet,
+            this.constructor.metadata_keys.student_count );
     }
 }); // }}}
 
@@ -222,13 +238,14 @@ StudyGroup.prototype.add_metadatum = function(options = {}) {
                 SpreadsheetApp.DeveloperMetadataLocationType.SHEET )
             .withVisibility(
                 SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT )
-            .withKey(metadata_keys.main)
+            .withKey(this.constructor.metadata_keys.main)
             .find()
             .forEach(function(metadatum) {
                 metadatum.remove();
             });
     }
-    this.sheet.addDeveloperMetadata( metadata_keys.main,
+    this.sheet.addDeveloperMetadata(
+        this.constructor.metadata_keys.main,
         SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT );
 } // }}}
 
@@ -237,10 +254,12 @@ StudyGroup.prototype.set_student_count_cell = function(range) {
     Object.defineProperty( this, "student_count_cell",
       {configurable: true, value: range} );
     if (range == null) {
-        SheetMetacell.unset(this.sheet, metadata_keys.student_count);
+        SheetMetacell.unset( this.sheet,
+            this.constructor.metadata_keys.student_count);
         return;
     }
-    SheetMetacell.set(this.sheet, metadata_keys.student_count, range);
+    SheetMetacell.set( this.sheet,
+        this.constructor.metadata_keys.student_count, range );
 } // }}}
 
 // StudyGroup().check (options) {{{
@@ -254,7 +273,7 @@ StudyGroup.prototype.check = function(options = {}) {
                 SpreadsheetApp.DeveloperMetadataLocationType.SHEET )
             .withVisibility(
                 SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT )
-            .withKey(metadata_keys.main)
+            .withKey(this.constructor.metadata_keys.main)
             .find();
         if (metadata.length < 1)
             throw new StudyGroupCheckError(
@@ -293,7 +312,7 @@ StudyGroup.list = function*(spreadsheet) {
                 SpreadsheetApp.DeveloperMetadataLocationType.SHEET )
             .withVisibility(
                 SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT )
-            .withKey(metadata_keys.main)
+            .withKey(this.metadata_keys.main)
             .find()
     ) {
         yield new StudyGroup(metadatum.getLocation().getSheet());
@@ -309,7 +328,8 @@ StudyGroup.list_names = function*(spreadsheet) {
 
 // StudyGroup().get_filename {{{
 StudyGroup.prototype.get_filename = function() {
-    var filename = SheetMetadata.get(this.sheet, metadata_keys.filename);
+    var filename = SheetMetadata.get( this.sheet,
+        this.constructor.metadata_keys.filename );
     if (filename == null)
         return this.name;
 } // }}}
@@ -317,17 +337,19 @@ StudyGroup.prototype.get_filename = function() {
 // StudyGroup().set_filename (filename) {{{
 StudyGroup.prototype.set_filename = function(filename) {
     if (filename == null) {
-        SheetMetadata.unset(this.sheet, metadata_keys.filename);
+        SheetMetadata.unset( this.sheet,
+            this.constructor.metadata_keys.filename );
         return;
     }
-    SheetMetadata.set(this.sheet, metadata_keys.filename, filename);
+    SheetMetadata.set( this.sheet,
+        this.constructor.metadata_keys.filename, filename );
 } // }}}
 
 // StudyGroup().get_color_scheme {{{
 StudyGroup.prototype.get_color_scheme = function() {
     // returned color_scheme may include one additional field, 'name'
     var color_scheme = SheetMetadata.get_object( this.sheet,
-        metadata_keys.color_scheme );
+        this.constructor.metadata_keys.color_scheme );
     if (color_scheme == null)
         return ColorSchemes.get_default();
     color_scheme = ColorSchemes.copy(color_scheme, ["name"]);
@@ -338,24 +360,28 @@ StudyGroup.prototype.get_color_scheme = function() {
 StudyGroup.prototype.set_color_scheme = function(color_scheme) {
     // color_scheme may include one additional field, 'name'
     if (color_scheme == null) {
-        SheetMetadata.unset(this.sheet, metadata_keys.color_scheme);
+        SheetMetadata.unset( this.sheet,
+            this.constructor.metadata_keys.color_scheme );
         return;
     }
     color_scheme = ColorSchemes.copy(color_scheme, ["name"]);
     SheetMetadata.set_object( this.sheet,
-        metadata_keys.color_scheme, color_scheme );
+        this.constructor.metadata_keys.color_scheme, color_scheme );
 } // }}}
 
 // StudyGroup().get_timetable {{{
 StudyGroup.prototype.get_timetable = function() {
-    var timetable = SheetMetadata.get_object(this.sheet, metadata_keys.timetable);
+    var timetable = SheetMetadata.get_object( this.sheet,
+        this.constructor.metadata_keys.timetable );
     if (timetable == null)
         return null;
     return timetable;
 } // }}}
 
 // StudyGroup().get_today_timetable (today?) {{{
-StudyGroup.prototype.get_today_timetable = function(today = WorksheetDate.today()) {
+StudyGroup.prototype.get_today_timetable = function(
+    today = WorksheetDate.today()
+) {
     var timetable = this.get_timetable();
     if (timetable == null)
         return null;
@@ -370,14 +396,16 @@ StudyGroup.prototype.get_current_period = function(offset = 0) {
     let now = new Date();
     let current_time = now.getHours() * 60 + now.getMinutes() + offset;
     let current_period = null;
-    for (let [period, {time: period_time}] of Object.entries(today_timetable)) {
-      period = parseInt(period);
-      if (isNaN(period))
-        continue;
-      if (period_time > current_time)
-        continue;
-      if (current_period == null || period > current_period)
-        current_period = period;
+    for ( let [period, {time: period_time}]
+        of Object.entries(today_timetable)
+    ) {
+        period = parseInt(period);
+        if (isNaN(period))
+            continue;
+        if (period_time > current_time)
+            continue;
+        if (current_period == null || period > current_period)
+            current_period = period;
     }
     return current_period;
 } // }}}
@@ -385,59 +413,68 @@ StudyGroup.prototype.get_current_period = function(offset = 0) {
 // StudyGroup().set_timetable (timetable) {{{
 StudyGroup.prototype.set_timetable = function(timetable) {
     if (timetable == null) {
-        SheetMetadata.unset(this.sheet, metadata_keys.timetable);
+        SheetMetadata.unset( this.sheet,
+            this.constructor.metadata_keys.timetable );
         return null;
     }
     function objgenmap(obj, gen) {
       return Object.fromEntries(gen(Object.entries(obj)));
     }
-    SheetMetadata.set_object( this.sheet, metadata_keys.timetable,
-      objgenmap(timetable, function*(entries) {
-        for (let [date_key, date_value] of entries) {
-          if (WorksheetDate.parse_date(date_key) == null)
-            continue;
-          yield [ date_key,
-            objgenmap(date_value || {}, function*(entries) {
-              for (let [period_key, period_value] of entries) {
+    function copy_date_value(date_value) {
+        return objgenmap(date_value || {}, function*(entries) {
+            for (let [period_key, period_value] of entries) {
                 if (!/^\d$/.exec(period_key))
-                  continue;
+                    continue;
                 let {time = null, duration = null} = period_value;
                 if (time != null && typeof time != "number")
-                  time = null;
-                if (duration != null && (time == null || typeof duration != "number"))
-                  duration = null;
+                    time = null;
+                if ( duration != null &&
+                    (time == null || typeof duration != "number") )
+                    duration = null;
                 yield [period_key, Object.assign( {},
-                  time != null ? {time: time} : null,
-                  duration != null ? {duration: duration} : null,
+                    time != null ? {time: time} : null,
+                    duration != null ? {duration: duration} : null,
                 )];
-              }
-            })
-          ];
-        }
-      })
+            }
+        })
+    }
+    SheetMetadata.set_object( this.sheet,
+        this.constructor.metadata_keys.timetable,
+        objgenmap(timetable, function*(entries) {
+            for (let [date_key, date_value] of entries) {
+                if (WorksheetDate.parse_date(date_key) == null)
+                    continue;
+                yield [ date_key, copy_date_value(date_value) ];
+            }
+        })
     );
 } // }}}
 
 // StudyGroup().get_worksheet_plan {{{
 StudyGroup.prototype.get_worksheet_plan = function() {
-    var worksheet_plan = SheetMetadata.get_object(this.sheet, metadata_keys.worksheet_plan);
+    var worksheet_plan = SheetMetadata.get_object( this.sheet,
+        this.constructor.metadata_keys.worksheet_plan );
     if (worksheet_plan == null)
         return null;
     return worksheet_plan;
 } // }}}
 
 // StudyGroup().get_today_worksheet_plan {{{
-StudyGroup.prototype.get_today_worksheet_plan = function(today = WorksheetDate.today()) {
-    var worksheet_plan = SheetMetadata.get_object(this.sheet, metadata_keys.worksheet_plan);
+StudyGroup.prototype.get_today_worksheet_plan = function(
+    today = WorksheetDate.today()
+) {
+    var worksheet_plan = SheetMetadata.get_object( this.sheet,
+        this.constructor.metadata_keys.worksheet_plan );
     if (worksheet_plan == null)
         return null;
     return worksheet_plan[today.format()];
 } // }}}
 
-// StudyGroup().set_worksheet_plan (timetable) {{{
+// StudyGroup().set_worksheet_plan (worksheet_plan) {{{
 StudyGroup.prototype.set_worksheet_plan = function(worksheet_plan) {
     if (worksheet_plan == null) {
-        SheetMetadata.unset(this.sheet, metadata_keys.worksheet_plan);
+        SheetMetadata.unset( this.sheet,
+            this.constructor.metadata_keys.worksheet_plan );
         return null;
     }
     function listgenmap(list, gen) {
@@ -446,27 +483,29 @@ StudyGroup.prototype.set_worksheet_plan = function(worksheet_plan) {
     function objgenmap(obj, gen) {
       return Object.fromEntries(gen(Object.entries(obj)));
     }
-    SheetMetadata.set_object( this.sheet, metadata_keys.worksheet_plan,
-      objgenmap(worksheet_plan, function*(entries) {
-        for (let [date_key, date_value] of entries) {
-          if (WorksheetDate.parse_date(date_key) == null)
-            continue;
-          yield [ date_key,
-            listgenmap(date_value || [], function*(items) {
-              for (let worksheet_item of items) {
+    function copy_date_value(date_value) {
+        return listgenmap(date_value || [], function*(items) {
+            for (let worksheet_item of items) {
                 let {period, category} = worksheet_item;
                 if (period != null && !/^\d$/.exec(period))
-                  period = null;
+                    period = null;
                 if (category != null && typeof category != "string")
-                  category = null;
+                    category = null;
                 yield Object.assign( {},
-                  period != null ? {period: period} : {},
-                  category != null ? {category: category} : {}, );
-              }
-            })
-          ];
-        }
-      })
+                    period != null ? {period: period} : {},
+                    category != null ? {category: category} : {}, );
+            }
+        })
+    }
+    SheetMetadata.set_object( this.sheet,
+        this.constructor.metadata_keys.worksheet_plan,
+        objgenmap(worksheet_plan, function*(entries) {
+            for (let [date_key, date_value] of entries) {
+                if (WorksheetDate.parse_date(date_key) == null)
+                    continue;
+                yield [date_key, copy_date_value(date_value)];
+            }
+        })
     );
 } // }}}
 
@@ -475,6 +514,19 @@ return StudyGroup;
 
 var StudyGroupBuilder = function() { // namespace {{{1
 
+// StudyGroupBuilder.build (spreadsheet, name, options) {{{
+StudyGroupBuilder.build = function(spreadsheet, name, options) {
+    try {
+        var sheet = spreadsheet.insertSheet(name);
+    } catch (error) {
+        throw new StudyGroupInitError(
+          "Unable to create a new sheet with the name “" + name + "” " +
+          "(probably because it already exists)." );
+    }
+    return (new this(sheet, name, options)).group;
+} // }}}
+
+// XXX make this a class property of StudyGroup
 const initial = { // {{{
     data_height: 20,
     attendance: {
@@ -585,17 +637,6 @@ const initial = { // {{{
  *   attendance.columns.date_lists[*].title (string)
  * }}} */
 
-function build(spreadsheet, name, options) {
-    try {
-        var sheet = spreadsheet.insertSheet(name);
-    } catch (error) {
-        throw new StudyGroupInitError(
-          "Unable to create a new sheet with the name “" + name + "” " +
-          "(probably because it already exists)." );
-    }
-    return (new this(sheet, name, options)).group;
-}
-
 function StudyGroupBuilder(sheet, name, options) { // {{{
     this.sheet = sheet;
     this.options = this.rectify_options(options);
@@ -682,8 +723,6 @@ function StudyGroupBuilder(sheet, name, options) { // {{{
     ));
     cfrules.save(sheet);
 } // }}}
-
-StudyGroupBuilder.build = build;
 
 // StudyGroupBuilder().rectify_options [options -> options] {{{
 StudyGroupBuilder.prototype.rectify_options = function(options) {

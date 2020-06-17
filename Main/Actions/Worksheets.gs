@@ -4,7 +4,7 @@ function action_worksheet_insert() {
     var worksheet = ActionHelpers.get_active_worksheet();
     var note_info = Worksheet.parse_title_note(worksheet.get_title_note());
     // XXX check that the next column exists and is empty
-    Worksheet.add(
+    WorksheetBuilder.build(
       worksheet.group,
       worksheet.sheet.getRange(1, worksheet.dim.end + 1),
       {date: note_info.date} );
@@ -22,13 +22,20 @@ function action_worksheet_add() {
     var group = ActionHelpers.get_active_group();
     var sheet = group.sheet;
     var last_column = sheet.getLastColumn();
-    // XXX also check that the insertion column is not in the frozen range
-    if (last_column == group.dim.sheet_width) {
+    {
+      let frozen_columns = sheet.getFrozenColumns();
+      if (frozen_columns > last_column)
+        last_column = frozen_columns;
+    }
+    if (last_column >= group.dim.sheet_width) {
       throw ReportError("Последний столбец вкладки должен быть пустым.");
     }
     var date = WorksheetDate.today();
     date.period = group.get_current_period(7);
-    Worksheet.add(group, sheet.getRange(1, last_column + 1), {date: date});
+    WorksheetBuilder.build( group,
+      sheet.getRange( 1, last_column + 1,
+        1, group.sheetbuf.dim.sheet_width - last_column ),
+      {date: date} );
     lock.releaseLock();
     group.sheet.getParent().toast(
       "Дата: " + date.format() + "; " +
@@ -190,7 +197,7 @@ function action_worksheet_planned_add(group_name) {
       if (plan_item.title == null) {
         plan_item.title = "{Бланк " + plan_item.date.format() + "}";
       }
-      Worksheet.add(group, sheet.getRange(1, last_column + 1), plan_item);
+      WorksheetBuilder.build(group, sheet.getRange(1, last_column + 1), plan_item);
       last_column = sheet.getLastColumn();
     }
     lock.releaseLock();
