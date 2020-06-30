@@ -8,6 +8,8 @@ const emoji = {
     moon:    "\uD83C\uDF1D",
     devil:   "\uD83D\uDC7F",
     pizza:   "\uD83C\uDF55", // U+1F355
+    cookie:  "\uD83C\uDF6A", // U+1F36A
+    cake:    "\uD83E\uDD67", // U+1F967
     snake:   "\uD83D\uDC0D", // U+1F40D
 };
 
@@ -76,10 +78,15 @@ function menu_create() {
     if (UploadConfig.is_configured()) {
         menu.addItem( emojipad.sun   + "Выложить листочек…",
             "action_worksheet_upload" );
-        if (UploadConfig.solutions_enabled()) {
-            menu.addItem( emojipad.pizza + "Выложить решения…",
-                "action_worksheet_upload_solutions" );
-        }
+        let addendum_menu = ui.createMenu("Выложить другое");
+        addendum_menu
+            .addItem( emojipad.cookie + "подсказки…",
+                "action_worksheet_upload_addendum.hints" )
+            .addItem( emojipad.cake   + "ответы…",
+                "action_worksheet_upload_addendum.answers" )
+            .addItem( emojipad.pizza  + "решения…",
+                "action_worksheet_upload_addendum.solutions" );
+        menu.addSubMenu(addendum_menu);
     }
     menu.addSeparator();
     if (User.admin_is_acquired()) {

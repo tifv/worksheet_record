@@ -123,9 +123,7 @@ function sidebar_load_contents_section_(section, validated = false) {
   var section_location = section.get_location({check_id: false});
   var title_id = section.get_title_metadata_id({check: false});
   var title_note = section.get_title_note();
-  var title_note_info = Worksheet.parse_title_note(title_note);
-  var date = title_note_info.date;
-  var is_solutions = section.is_solutions();
+  var date = section.get_title_note_data().get("date");
   var contents_item = {
     id: title_id,
     validated: validated,
@@ -137,7 +135,6 @@ function sidebar_load_contents_section_(section, validated = false) {
     is_unused: worksheet.get_title().startsWith("{"),
       // XXX hide such worksheets in the sidebar
     is_subsection: section.dim.offset > 0,
-    is_solutions: is_solutions,
     title: section.get_title(),
     qualified_title: section.get_qualified_title(),
     title_note: title_note,

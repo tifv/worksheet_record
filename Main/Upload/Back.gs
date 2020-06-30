@@ -73,7 +73,7 @@ function upload_start_dialog_(section, options = {}) {
     (category != null ? "категория " + category : "mixture");
   var title = options.title || section.get_qualified_title();
   var title_id = section.get_title_metadata_id({check: true});
-  var date = Worksheet.parse_title_note(section.get_title_note()).date;
+  var date = section.get_title_note_data().get("date");
   var author = UploadAuthor.get();
   var filename_base; {
     let filename_pieces = [];
@@ -250,28 +250,22 @@ function is_configured() {
   return load().configured;
 }
 
-function solutions_enabled() {
-  return load().enable_solutions;
-}
-
 function get_signer() {
   return new S3Signer(load());
 }
 
 function set({
   region, bucket_url, access_key, secret_key,
-  enable_solutions = false
 }) {
   save({
     configured: true,
     region: region, bucket_url: bucket_url,
     access_key: access_key, secret_key: secret_key,
-    enable_solutions: enable_solutions,
   });
 }
 
 return {
-  is_configured: is_configured, solutions_enabled: solutions_enabled,
+  is_configured: is_configured,
   get_signer: get_signer,
   set: set,
 };

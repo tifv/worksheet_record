@@ -2,12 +2,12 @@ function action_worksheet_insert() {
   try {
     var lock = ActionHelpers.acquire_lock();
     var worksheet = ActionHelpers.get_active_worksheet();
-    var note_info = Worksheet.parse_title_note(worksheet.get_title_note());
+    var note_data = worksheet.get_title_note_data();
     // XXX check that the next column exists and is empty
     WorksheetBuilder.build(
       worksheet.group,
       worksheet.sheet.getRange(1, worksheet.dim.end + 1),
-      {date: note_info.date} );
+      {date: note_data.get("date")} );
     lock.releaseLock();
     worksheet.sheet.getParent().toast(
       "Исправьте дату в примечании к заголовку таблички, если требуется." );
@@ -109,13 +109,13 @@ function action_worksheet_upload() {
     }
     var lock = ActionHelpers.acquire_lock();
     var section = ActionHelpers.get_active_section();
-    if (!section.is_solutions()) {
+    if (!section.is_addendum()) {
       upload_start_dialog_(section);
     } else {
-      let problems_section = section.get_unsolutions();
+      let original_section = section.get_original();
       upload_start_dialog_( section,
-        action_worksheet_upload_solutions.get_dialog_options(
-          problems_section, section )
+        action_worksheet_upload_addendum.get_dialog_options(
+          original_section, section )
       );
     }
     lock.releaseLock();
@@ -124,23 +124,29 @@ function action_worksheet_upload() {
   }
 }
 
-function action_worksheet_upload_solutions() {
+function action_worksheet_upload_addendum(options) {
+  if (options.type == null)
+    throw new Error("internal error: missing option");
   try {
     if (!upload_enabled_()) {
       throw new ReportError("Загрузка файлов не настроена");
     }
     var lock = ActionHelpers.acquire_lock();
     var section = ActionHelpers.get_active_section();
-    var solutions_section;
-    if (section.is_solutions()) {
-      solutions_section = section;
+    var addendum_section;
+    if (section.is_addendum()) {
+      if (section.get_addendum_type() == options.type) {
+        addendum_section = section;
+      } else {
+        throw new ReportError("Несовместимый тип доп. материалов")
+      }
     } else {
-      solutions_section = section.get_solutions({title: "решения"});
+      addendum_section = section.get_addendum(options);
     }
-    var problems_section = solutions_section.get_unsolutions();
-    upload_start_dialog_( solutions_section,
-      action_worksheet_upload_solutions.get_dialog_options(
-        problems_section, solutions_section )
+    var original_section = addendum_section.get_original();
+    upload_start_dialog_( addendum_section,
+      action_worksheet_upload_addendum.get_dialog_options(
+        original_section, addendum_section )
     );
     lock.releaseLock();
   } catch (error) {
@@ -148,12 +154,27 @@ function action_worksheet_upload_solutions() {
   }
 }
 
-action_worksheet_upload_solutions.get_dialog_options =
-function(problems_section, solutions_section) {
+action_worksheet_upload_addendum.get_dialog_options =
+function(original_section, addendum_section) {
   return {
-    filename_suffix: "solutions",
-    filename_date: Worksheet.parse_title_note(problems_section.get_title_note()).date,
+    filename_suffix: addendum_section.get_addendum_type(),
+    filename_date: original_section.get_title_note_data().get("date"),
   };
+}
+
+action_worksheet_upload_addendum.hints = function() {
+  return this({ type: "hints",
+    title: "подсказки", label: emoji.cookie })
+}
+
+action_worksheet_upload_addendum.answers = function() {
+  return this({ type: "answers",
+    title: "ответы", label: emoji.cake })
+}
+
+action_worksheet_upload_addendum.solutions = function() {
+  return this({ type: "solutions",
+    title: "решения", label: emoji.pizza })
 }
 
 function action_worksheet_planned() {
