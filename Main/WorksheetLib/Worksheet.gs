@@ -1,59 +1,27 @@
 class WorksheetError extends SpreadsheetError {};
-class WorksheetInitError   extends WorksheetError {};
-class WorksheetDetectError extends WorksheetError {};
-class WorksheetCheckError  extends WorksheetError {};
+class WorksheetInitError extends WorksheetError {};
+class WorksheetDetectionError extends WorksheetError {};
 
 class WorksheetSectionError extends WorksheetError {};
-class WorksheetSectionInitError   extends WorksheetSectionError {};
-class WorksheetSectionDetectError extends WorksheetSectionError {};
-class WorksheetSectionCheckError  extends WorksheetSectionError {};
+class WorksheetSectionInitError extends WorksheetSectionError {};
+class WorksheetSectionDetectionError extends WorksheetSectionError {};
 
 
 var Worksheet = function() { // namespace {{{1
 
-Worksheet.metadata_keys = { // {{{
+class WorksheetBase {}; // {{{2
+
+WorksheetBase.metadata_keys = { // {{{
     title: "worksheet-title",
 }; // }}}
 
-Worksheet.data_offset = {start: 3, end: 1, width: 4};
-
-Worksheet.marker = {start: "‹", end: "›"};
-
-Worksheet.initial = { // {{{
-    data_width: 15,
-    title: "{Бланк}",
-}; // }}}
-
-// Worksheet constructor (group, full_range) {{{
-function Worksheet(group, full_range) {
-    if (group == null) {
-        group = new StudyGroup(full_range.getSheet());
-        group.check();
-    } else if (!(group instanceof StudyGroup)) {
-        throw new Error("Worksheet.constructor: type error (group)");
-    }
-    this.group = group;
-    this.full_range = full_range;
-} // }}}
-
-define_lazy_properties_(Worksheet.prototype, { // {{{
+define_lazy_properties_(WorksheetBase.prototype, { // {{{
+    group: function() {
+        throw new Error("not implemented"); },
     sheet: function() {
         return this.group.sheet; },
     dim: function() {
-        var dim = {};
-        dim.start = this.full_range.getColumn();
-        dim.end = this.full_range.getLastColumn();
-        dim.data_start = dim.start + this.constructor.data_offset.start;
-        dim.data_end   = dim.end   - this.constructor.data_offset.end;
-        dim.marker_start = dim.data_start - 1;
-        dim.marker_end   = dim.data_end   + 1;
-        dim.width = dim.end - dim.start + 1;
-        dim.data_width = dim.data_end - dim.data_start + 1;
-        dim.title = dim.start;
-        dim.rating = dim.start;
-        dim.sum = dim.start + 1;
-        return dim;
-    },
+        throw new Error("not implemented"); },
     title_range: function() {
         return this.sheet.getRange(
             this.group.dim.title_row, this.dim.start,
@@ -70,14 +38,291 @@ define_lazy_properties_(Worksheet.prototype, { // {{{
             1, this.dim.data_width );
     },
     max_range: function() {
+        if (this.group.dim.max_row == null)
+            return null;
         return this.sheet.getRange(
             this.group.dim.max_row, this.dim.data_start,
             1, this.dim.data_width );
     },
     weight_range: function() {
+        if (this.group.dim.weight_row == null)
+            return null;
         return this.sheet.getRange(
             this.group.dim.weight_row, this.dim.data_start,
             1, this.dim.data_width );
+    },
+    title_column_range: function() {
+        return get_column_range_(this.sheet, this.dim.title);
+    },
+}); // }}}
+
+// WorksheetBase().get_title {{{
+WorksheetBase.prototype.get_title = function() {
+    // also applies to WorksheetSection
+    return this.group.sheetbuf.get_value( "title_row",
+        this.dim.title ).toString();
+} // }}}
+
+// WorksheetBase().set_title (value) {{{
+WorksheetBase.prototype.set_title = function(value) {
+    // also applies to WorksheetSection
+    this.group.sheetbuf.set_value("title_row", this.dim.title, value);
+} // }}}
+
+// WorksheetBase().get_title_formula {{{
+WorksheetBase.prototype.get_title_formula = function() {
+    // also applies to WorksheetSection
+    return this.group.sheetbuf.get_formula("title_row", this.dim.title);
+} // }}}
+
+// WorksheetBase().set_title_formula (formula, value_replace?) {{{
+WorksheetBase.prototype.set_title_formula = function(formula, value_replace = "") {
+    // also applies to WorksheetSection
+    this.group.sheetbuf.set_formula( "title_row",
+        this.dim.title, formula, value_replace );
+} // }}}
+
+// WorksheetBase().get_title_note {{{
+WorksheetBase.prototype.get_title_note = function() {
+    // also applies to WorksheetSection
+    return this.group.sheetbuf.get_note("title_row", this.dim.title);
+} // }}}
+
+// WorksheetBase().set_title_note (note) {{{
+WorksheetBase.prototype.set_title_note = function(note) {
+    // also applies to WorksheetSection
+    this.group.sheetbuf.set_note("title_row", this.dim.title, note);
+} // }}}
+
+WorksheetBase.NoteData = class NoteData extends Map { // {{{
+    constructor(entries = [], lines = []) {
+        super(entries);
+        this.lines = lines;
+    }
+} // }}}
+
+// WorksheetBase.NoteData.parse (note) {{{
+WorksheetBase.NoteData.parse = function(note) {
+    var data = new this();
+    for (let line of note.split("\n")) {
+        line_date: {
+            let date = WorksheetDate.parse(line);
+            if (date == null || data.has("date"))
+                break line_date;
+            data.set("date", date);
+            data.lines.push({key: "date"});
+            continue;
+        }
+        line_key: {
+            let key_match = /^([0-9a-zA-Z_\-]+)=(.*)$/.exec(line);
+            if (key_match == null)
+                break line_key;
+            let [, key, value] = key_match;
+            if (data.has(key))
+                break line_key;
+            if (key == "id") {
+                if (/^[0-9]+$/.exec(value) == null) {
+                    break line_key;
+                } else {
+                    value = parseInt(value, 10);
+                }
+            } else if (key == "date") {
+                break line_key;
+            }
+            data.set(key, value)
+            data.lines.push({key: key});
+            continue;
+        }
+        data.lines.push(line);
+    }
+    return data;
+} // }}}
+
+// WorksheetBase.NoteData().format {{{
+WorksheetBase.NoteData.prototype.format = function() {
+    var keys = new Set(this.keys());
+    var lines = [];
+    var push_key = (key) => {
+        let value = this.get(key);
+        if (key == "date") {
+            lines.push(value.format());
+        } else {
+            lines.push(key + "=" + value);
+        }
+    }
+    for (let line of (this.lines || [])) {
+        if (typeof line == "string") {
+            lines.push(line);
+            continue
+        }
+        let key = line.key;
+        if (key == null)
+            continue;
+        if (!keys.delete(key))
+            continue;
+        push_key(key);
+    }
+    for (let key of keys) {
+        push_key(key);
+    }
+    return lines.join("\n");
+} // }}}
+
+// WorksheetBase().get_title_note_data {{{
+WorksheetBase.prototype.get_title_note_data = function() {
+    // also applies to WorksheetSection
+    return this.constructor.NoteData.parse(this.get_title_note());
+} // }}}
+
+// WorksheetBase().set_title_note_data (data) {{{
+WorksheetBase.prototype.set_title_note_data = function(data) {
+    // also applies to WorksheetSection
+    this.set_title_note(data.format());
+} // }}}
+
+// WorksheetBase().get_title_metadata_id (options?) {{{
+WorksheetBase.prototype.get_title_metadata_id = function(options = {}) {
+    // also applies to WorksheetSection
+    ({
+        check: options.check = true,
+            // check value from the title note agains actual metadata
+        write: options.write = true,
+            // write value to the title note if necessary
+            // if false, the method may return null
+    } = options);
+    if (!options.check || options.write) {
+        var note_data = this.get_title_note_data();
+        var note_id = note_data.get("id");
+        if (!options.check && note_id != null)
+            return note_id;
+    }
+    var metadatum = this.get_title_metadata({
+        create: options.write ? null : false });
+    if (!options.write && metadatum == null)
+        return null;
+    var metadatum_id = metadatum.getId();
+    if (options.write && note_id != metadatum_id) {
+        note_data.set("id", metadatum_id);
+        this.set_title_note_data(note_data);
+    }
+    return metadatum_id;
+} // }}}
+
+// WorksheetBase().get_title_metadata {{{
+WorksheetBase.prototype.get_title_metadata = function(options = {}) {
+    // also applies to WorksheetSection
+    ({
+        create: options.create = null,
+        // true: create metadatum, find it and return;
+        // false: find metadatum and return it; otherwise return null;
+        // null: find metadatum and return it; otherwise create, etc.
+    } = options);
+    if (options.create) {
+        this.title_column_range.addDeveloperMetadata(
+            this.constructor.metadata_keys.title,
+            SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT );
+    }
+    var metadata = this.title_column_range.createDeveloperMetadataFinder()
+        .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.COLUMN)
+        .withVisibility(SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT)
+        .withKey(this.constructor.metadata_keys.title)
+        .find();
+    if (metadata.length > 0)
+        return metadata[0];
+    if (options.create)
+        throw new Error("WorksheetBase().get_title_metadata: internal error");
+    if (options.create == null)
+        return this.get_title_metadata({create: true});
+    if (options.create == false)
+        return null;
+} // }}}
+
+// WorksheetBase().get_weight_formula {{{
+WorksheetBase.prototype.get_weight_formula = function() {
+    // also applies to WorksheetSection
+    for (let i = 0; i < this.dim.data_width; ++i) {
+        let formula = this.group.sheetbuf.get_formula( "weight_row",
+            this.dim.data_start + i )
+        if (formula !== "")
+            return formula;
+        let value = this.group.sheetbuf.get_value( "weight_row",
+            this.dim.data_start + i )
+        if (value !== "")
+            return value;
+    }
+    return null;
+} // }}}
+
+// WorksheetBase().has_weight_row {{{
+WorksheetBase.prototype.has_weight_row = function() {
+    // also applies to WorksheetSection
+    return this.get_weight_formula() != null;
+} // }}}
+
+// WorksheetBase().get_max_formula {{{
+WorksheetBase.prototype.get_max_formula = function() {
+    // also applies to WorksheetSection
+    for (let i = 0; i < this.dim.data_width; ++i) {
+        let formula = this.group.sheetbuf.get_formula( "max_row",
+            this.dim.data_start + i )
+        if (formula !== "")
+            return formula;
+        let value = this.group.sheetbuf.get_value( "max_row",
+            this.dim.data_start + i )
+        if (value !== "")
+            return value;
+    }
+    return null;
+} // }}}
+
+// WorksheetBase().has_max_row {{{
+WorksheetBase.prototype.has_max_row = function() {
+    // also applies to WorksheetSection
+    return this.get_max_formula() != null;
+} // }}}
+
+// end WorksheetBase definition }}}2
+
+// Worksheet constructor (group, full_range) {{{
+class Worksheet extends WorksheetBase {
+    constructor(group, full_range) {
+        super();
+        if (group == null) {
+            group = new StudyGroup(full_range.getSheet());
+            group.check();
+        } else if (!(group instanceof StudyGroup)) {
+            throw new Error("Worksheet.constructor: type error (group)");
+        }
+        Object.defineProperty(this, "group", { value: group,
+            configurable: true });
+        this.full_range = full_range;
+    }
+} // }}}
+
+Worksheet.marker = {start: "‹", end: "›"};
+
+Worksheet.data_offset = {start: 3, end: 1, width: 4};
+
+Worksheet.initial = { // {{{
+    data_width: 15,
+    title: "{Бланк}",
+}; // }}}
+
+define_lazy_properties_(Worksheet.prototype, { // {{{
+    dim: function() {
+        var dim = {};
+        dim.start = this.full_range.getColumn();
+        dim.end = this.full_range.getLastColumn();
+        dim.data_start = dim.start + this.constructor.data_offset.start;
+        dim.data_end   = dim.end   - this.constructor.data_offset.end;
+        dim.marker_start = dim.data_start - 1;
+        dim.marker_end   = dim.data_end   + 1;
+        dim.width = dim.end - dim.start + 1;
+        dim.data_width = dim.data_end - dim.data_start + 1;
+        dim.title = dim.start;
+        dim.rating = dim.start;
+        dim.sum = dim.start + 1;
+        return dim;
     },
     rating_range: function() {
         return this.sheet.getRange(
@@ -90,12 +335,11 @@ define_lazy_properties_(Worksheet.prototype, { // {{{
             this.group.dim.data_height, 1 );
     },
     mirror_range: function() {
+        if (this.group.dim.mirror_row == null)
+            return null;
         return this.sheet.getRange(
             this.group.dim.mirror_row, this.dim.start,
             1, this.dim.width );
-    },
-    title_column_range: function() {
-        return get_column_range_(this.sheet, this.dim.title);
     },
     metaweight_cell: function() {
         return this.sheet.getRange(
@@ -115,7 +359,7 @@ Worksheet.prototype.check = function(options = {}) {
             this.full_range.isEndRowBounded() ||
             this.dim.width < this.constructor.data_offset.width + 1
         ) {
-            throw new WorksheetCheckError(
+            throw new WorksheetDetectionError(
                 "full_range is incorrect " +
                 "(must be row-unbounded and of width at least " +
                     (this.constructor.data_offset.width + 1) + ")",
@@ -132,7 +376,7 @@ Worksheet.prototype.check = function(options = {}) {
             this.group.sheetbuf.find_value( "label_row",
                 this.constructor.marker.end, this.dim.start, this.dim.end )
         ) {
-            throw new WorksheetCheckError(
+            throw new WorksheetDetectionError(
                 "markers are missing or interwine",
                 this.sheet.getRange(
                     this.sheet.dim.title_row, this.dim.start,
@@ -469,243 +713,6 @@ Worksheet.prototype.set_metaweight = function(value, options = {}) {
         this.dim.rating, metaweight );
 } // }}}
 
-// Worksheet().get_title {{{
-Worksheet.prototype.get_title = function() {
-    // also applies to WorksheetSection
-    return this.group.sheetbuf.get_value( "title_row",
-        this.dim.title ).toString();
-} // }}}
-
-// Worksheet().set_title (value) {{{
-Worksheet.prototype.set_title = function(value) {
-    // also applies to WorksheetSection
-    this.group.sheetbuf.set_value("title_row", this.dim.title, value);
-} // }}}
-
-// Worksheet().get_title_formula {{{
-Worksheet.prototype.get_title_formula = function() {
-    // also applies to WorksheetSection
-    return this.group.sheetbuf.get_formula("title_row", this.dim.title);
-} // }}}
-
-// Worksheet().set_title_formula (formula, value_replace?) {{{
-Worksheet.prototype.set_title_formula = function(formula, value_replace = "") {
-    // also applies to WorksheetSection
-    this.group.sheetbuf.set_formula( "title_row",
-        this.dim.title, formula, value_replace );
-} // }}}
-
-// Worksheet().get_title_note {{{
-Worksheet.prototype.get_title_note = function() {
-    // also applies to WorksheetSection
-    return this.group.sheetbuf.get_note("title_row", this.dim.title);
-} // }}}
-
-// Worksheet().set_title_note (note) {{{
-Worksheet.prototype.set_title_note = function(note) {
-    // also applies to WorksheetSection
-    this.group.sheetbuf.set_note("title_row", this.dim.title, note);
-} // }}}
-
-Worksheet.NoteData = class NoteData extends Map { // {{{
-    constructor(entries = [], lines = []) {
-        super(entries);
-        this.lines = lines;
-    }
-} // }}}
-
-// Worksheet.NoteData.parse (note) {{{
-Worksheet.NoteData.parse = function(note) {
-    var data = new this();
-    for (let line of note.split("\n")) {
-        line_date: {
-            let date = WorksheetDate.parse(line);
-            if (date == null || data.has("date"))
-                break line_date;
-            data.set("date", date);
-            data.lines.push({key: "date"});
-            continue;
-        }
-        line_key: {
-            let key_match = /^([0-9a-zA-Z_\-]+)=(.*)$/.exec(line);
-            if (key_match == null)
-                break line_key;
-            let [, key, value] = key_match;
-            if (data.has(key))
-                break line_key;
-            if (key == "id") {
-                if (/^[0-9]+$/.exec(value) == null) {
-                    break line_key;
-                } else {
-                    value = parseInt(value, 10);
-                }
-            } else if (key == "date") {
-                break line_key;
-            }
-            data.set(key, value)
-            data.lines.push({key: key});
-            continue;
-        }
-        data.lines.push(line);
-    }
-    return data;
-} // }}}
-
-// Worksheet.NoteData().format {{{
-Worksheet.NoteData.prototype.format = function() {
-    var keys = new Set(this.keys());
-    var lines = [];
-    var push_key = (key) => {
-        let value = this.get(key);
-        if (key == "date") {
-            lines.push(value.format());
-        } else {
-            lines.push(key + "=" + value);
-        }
-    }
-    for (let line of (this.lines || [])) {
-        if (typeof line == "string") {
-            lines.push(line);
-            continue
-        }
-        let key = line.key;
-        if (key == null)
-            continue;
-        if (!keys.delete(key))
-            continue;
-        push_key(key);
-    }
-    for (let key of keys) {
-        push_key(key);
-    }
-    return lines.join("\n");
-} // }}}
-
-// Worksheet.parse_title_note (note) {{{ // XXX remove
-Worksheet.parse_title_note = function(note) {
-    return this.NoteData.parse(note);
-} // }}}
-
-// Worksheet.format_title_note (data) {{{ // XXX remove
-Worksheet.format_title_note = function(data) {
-    if (!(data instanceof this.NoteData))
-        throw new Error("type error");
-    return data.format();
-} // }}}
-
-// Worksheet().get_title_note_data {{{
-Worksheet.prototype.get_title_note_data = function() {
-    // also applies to WorksheetSection
-    return this.constructor.NoteData.parse(this.get_title_note());
-} // }}}
-
-// Worksheet().set_title_note_data (data) {{{
-Worksheet.prototype.set_title_note_data = function(data) {
-    // also applies to WorksheetSection
-    this.set_title_note(data.format());
-} // }}}
-
-// Worksheet().get_title_metadata_id (options?) {{{
-Worksheet.prototype.get_title_metadata_id = function(options = {}) {
-    // also applies to WorksheetSection
-    ({
-        check: options.check = true,
-            // check value from the title note agains actual metadata
-        write: options.write = true,
-            // write value to the title note if necessary
-            // if false, the method may return null
-    } = options);
-    if (!options.check || options.write) {
-        var note_data = this.get_title_note_data();
-        var note_id = note_data.get("id");
-        if (!options.check && note_id != null)
-            return note_id;
-    }
-    var metadatum = this.get_title_metadata({
-        create: options.write ? null : false });
-    if (!options.write && metadatum == null)
-        return null;
-    var metadatum_id = metadatum.getId();
-    if (options.write && note_id != metadatum_id) {
-        note_data.set("id", metadatum_id);
-        this.set_title_note_data(note_data);
-    }
-    return metadatum_id;
-} // }}}
-
-// Worksheet().get_title_metadata {{{
-Worksheet.prototype.get_title_metadata = function(options = {}) {
-    // also applies to WorksheetSection
-    ({
-        create: options.create = null,
-        // true: create metadatum, find it and return;
-        // false: find metadatum and return it; otherwise return null;
-        // null: find metadatum and return it; otherwise create, etc.
-    } = options);
-    if (options.create) {
-        this.title_column_range.addDeveloperMetadata(
-            this.constructor.metadata_keys.title,
-            SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT );
-    }
-    var metadata = this.title_column_range.createDeveloperMetadataFinder()
-        .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.COLUMN)
-        .withVisibility(SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT)
-        .withKey(this.constructor.metadata_keys.title)
-        .find();
-    if (metadata.length > 0)
-        return metadata[0];
-    if (options.create)
-        throw new Error("Worksheet().get_title_metadata: internal error");
-    if (options.create == null)
-        return this.get_title_metadata({create: true});
-    if (options.create == false)
-        return null;
-} // }}}
-
-// Worksheet().get_weight_formula {{{
-Worksheet.prototype.get_weight_formula = function() {
-    // also applies to WorksheetSection
-    for (let i = 0; i < this.dim.data_width; ++i) {
-        let formula = this.group.sheetbuf.get_formula( "weight_row",
-            this.dim.data_start + i )
-        if (formula !== "")
-            return formula;
-        let value = this.group.sheetbuf.get_value( "weight_row",
-            this.dim.data_start + i )
-        if (value !== "")
-            return value;
-    }
-    return null;
-} // }}}
-
-// Worksheet().has_weight_row {{{
-Worksheet.prototype.has_weight_row = function() {
-    // also applies to WorksheetSection
-    return this.get_weight_formula() != null;
-} // }}}
-
-// Worksheet().get_max_formula {{{
-Worksheet.prototype.get_max_formula = function() {
-    // also applies to WorksheetSection
-    for (let i = 0; i < this.dim.data_width; ++i) {
-        let formula = this.group.sheetbuf.get_formula( "max_row",
-            this.dim.data_start + i )
-        if (formula !== "")
-            return formula;
-        let value = this.group.sheetbuf.get_value( "max_row",
-            this.dim.data_start + i )
-        if (value !== "")
-            return value;
-    }
-    return null;
-} // }}}
-
-// Worksheet().has_max_row {{{
-Worksheet.prototype.has_max_row = function() {
-    // also applies to WorksheetSection
-    return this.get_max_formula() != null;
-} // }}}
-
 // Worksheet.find_title_column_by_id (group, title_id) {{{
 Worksheet.find_title_column_by_id = function(group, title_id) {
     if (!(group instanceof StudyGroup)) {
@@ -784,7 +791,7 @@ Worksheet.surrounding = function(group, range) {
     if ( marker_start == null || marker_end == null ||
         marker_end - marker_start <= 1 )
     {
-        throw new WorksheetDetectError(
+        throw new WorksheetDetectionError(
             "unable to locate surrounding worksheet",
             range );
     }
@@ -793,15 +800,7 @@ Worksheet.surrounding = function(group, range) {
             marker_start - this.data_offset.start + 1,
             marker_end - marker_start + 1 + this.data_offset.width - 2 )
     );
-    try {
-        worksheet.check();
-    } catch (error) {
-        if (error instanceof WorksheetCheckError) {
-            throw new WorksheetDetectError(error.message, error.range);
-        } else {
-            throw error;
-        }
-    }
+    worksheet.check();
     return worksheet;
 } // }}}
 
@@ -848,7 +847,7 @@ Worksheet.find_by_location = function(group, location) {
             column = title_metadata[0].getLocation().getColumn().getColumn();
             break find_column;
         }
-        throw new WorksheetDetectError(
+        throw new WorksheetDetectionError(
             "unable to locate worksheet starting column" );
     }
     if (width != null)
@@ -865,18 +864,18 @@ Worksheet.find_by_location = function(group, location) {
 
 // Worksheet().alloy_subproblems {{{
 Worksheet.prototype.alloy_subproblems = function() {
-    var options = {
-        skip_weight: ! this.has_weight_row()
-    };
     for (let section of this.list_sections()) {
-        section.alloy_subproblems(Object.assign({}, options));
+        section.alloy_subproblems();
     }
 } // }}}
 
 // WorksheetSection constructor (worksheet, full_range) {{{
-function WorksheetSection(worksheet, full_range) {
-    this.worksheet = worksheet;
-    this.full_range = full_range;
+class WorksheetSection extends WorksheetBase {
+    constructor(worksheet, full_range) {
+        super();
+        this.worksheet = worksheet;
+        this.full_range = full_range;
+    }
 } // }}}
 
 WorksheetSection.initial = { // {{{
@@ -886,15 +885,9 @@ WorksheetSection.initial = { // {{{
 
 Worksheet.Section = WorksheetSection;
 WorksheetSection.Worksheet = Worksheet;
-Object.defineProperty( WorksheetSection,
-    "metadata_keys", {enumerable: false, get: function() {
-        return this.Worksheet.metadata_keys;
-    }} );
 
-// WorksheetSection properties: group, sheet, dim, ranges… {{{
-define_lazy_properties_(WorksheetSection.prototype, {
+define_lazy_properties_(WorksheetSection.prototype, { // {{{
     group: function() { return this.worksheet.group; },
-    sheet: function() { return this.worksheet.sheet; },
     dim: function() {
         var dim = {};
         dim.start = this.full_range.getColumn();
@@ -909,39 +902,6 @@ define_lazy_properties_(WorksheetSection.prototype, {
         dim.data_width = dim.data_end - dim.data_start + 1;
         dim.title = dim.start;
         return dim;
-    },
-    title_range: function() {
-        return this.sheet.getRange(
-            this.group.dim.title_row, this.dim.start,
-            1, this.dim.width );
-    },
-    data_range: function() {
-        return this.sheet.getRange(
-            this.group.dim.data_row, this.dim.data_start,
-            this.group.dim.data_height, this.dim.data_width );
-    },
-    label_range: function() {
-        return this.sheet.getRange(
-            this.group.dim.label_row, this.dim.data_start,
-            1, this.dim.data_width );
-    },
-    max_range: function() {
-        return this.sheet.getRange(
-            this.group.dim.max_row, this.dim.data_start,
-            1, this.dim.data_width );
-    },
-    weight_range: function() {
-        return this.sheet.getRange(
-            this.group.dim.weight_row, this.dim.data_start,
-            1, this.dim.data_width );
-    },
-    mirror_range: function() {
-        return this.sheet.getRange(
-            this.group.dim.mirror_row, this.dim.start,
-            1, this.dim.width );
-    },
-    title_column_range: function() {
-        return get_column_range_(this.sheet, this.dim.title);
     },
 }); // }}}
 
@@ -960,7 +920,7 @@ WorksheetSection.prototype.check = function(options = {}) {
             this.dim.end < this.worksheet.dim.data_start ||
             this.dim.end > this.worksheet.dim.end
         ) {
-            throw new WorksheetSectionCheckError(
+            throw new WorksheetSectionDetectionError(
                 "range is incorrect " +
                 "(must be row-unbounded and " +
                     "contained in the worksheet range " +
@@ -976,7 +936,7 @@ WorksheetSection.prototype.check = function(options = {}) {
             if ( this.group.sheetbuf.find_merge( "title_row",
                     title_end + 1, this.dim.end ) != null
             ) {
-                throw new WorksheetSectionCheckError(
+                throw new WorksheetSectionDetectionError(
                     "misaligned title detected",
                     this.title_range );
             }
@@ -990,45 +950,6 @@ WorksheetSection.prototype.set_category = function(
 ) {
     this.group.sheetbuf.set_value("category_row", this.dim.title, code);
 } // }}}
-
-// WorksheetSection methods (copied from Worksheet) {{{
-WorksheetSection.prototype.get_title =
-    Worksheet.prototype.get_title ;
-WorksheetSection.prototype.set_title =
-    Worksheet.prototype.set_title ;
-WorksheetSection.prototype.get_title_formula =
-    Worksheet.prototype.get_title_formula ;
-WorksheetSection.prototype.set_title_formula =
-    Worksheet.prototype.set_title_formula ;
-Object.defineProperties(WorksheetSection, {
-    NoteData: {get : function() {
-        return this.Worksheet.NoteData; }},
-    parse_title_note: {get : function() { // XXX remove
-        return this.Worksheet.parse_title_note; }},
-    format_title_note: {get : function() { // XXX remove
-        return this.Worksheet.format_title_note; }},
-});
-WorksheetSection.prototype.get_title_note =
-    Worksheet.prototype.get_title_note ;
-WorksheetSection.prototype.set_title_note =
-    Worksheet.prototype.set_title_note ;
-WorksheetSection.prototype.get_title_note_data =
-    Worksheet.prototype.get_title_note_data ;
-WorksheetSection.prototype.set_title_note_data =
-    Worksheet.prototype.set_title_note_data ;
-WorksheetSection.prototype.get_title_metadata_id =
-    Worksheet.prototype.get_title_metadata_id ;
-WorksheetSection.prototype.get_title_metadata =
-    Worksheet.prototype.get_title_metadata ;
-WorksheetSection.prototype.get_weight_formula =
-    Worksheet.prototype.get_weight_formula ;
-WorksheetSection.prototype.has_weight_row =
-    Worksheet.prototype.has_weight_row ;
-WorksheetSection.prototype.get_max_formula =
-    Worksheet.prototype.get_max_formula ;
-WorksheetSection.prototype.has_max_row =
-    Worksheet.prototype.has_max_row ;
-// }}}
 
 // WorksheetSection().get_qualified_title {{{
 WorksheetSection.prototype.get_qualified_title = function() {
@@ -1077,7 +998,7 @@ Worksheet.prototype.list_sections = function*(start_offset = 0) {
             if ( section_end < this.data_start ||
                 section_start > this.data_end
             ) {
-                throw new WorksheetSectionDetectError(
+                throw new WorksheetSectionDetectionError(
                     "worksheet section titles are malformed " +
                     "(each section must contain at least one data column)",
                     this.title_range );
@@ -1091,7 +1012,7 @@ Worksheet.prototype.list_sections = function*(start_offset = 0) {
         }
     } catch (error) {
         if (error instanceof SheetBufferMergeOverlap) {
-            throw new WorksheetSectionDetectError(
+            throw new WorksheetSectionDetectionError(
                 "merged ranges overlap worksheet title range",
                 (start_offset == 0) ?
                     this.title_range :
@@ -1104,17 +1025,16 @@ Worksheet.prototype.list_sections = function*(start_offset = 0) {
     }
 } // }}}
 
-// XXX move to Worksheet.Section.surrounding
-// Worksheet.surrounding_section (group?, worksheet?, range) {{{
-Worksheet.surrounding_section = function(group, worksheet, range) {
+// WorksheetSection.surrounding (group?, worksheet?, range) {{{
+WorksheetSection.surrounding = function(group, worksheet, range) {
     if (group != null && !(group instanceof StudyGroup)) {
-        throw new Error( "Worksheet.surrounding_section: " +
+        throw new Error( "WorksheetSection.surrounding: " +
             "type error (group)" );
     }
     if (worksheet == null) {
         worksheet = Worksheet.surrounding(group, range);
     } else if (!(worksheet instanceof Worksheet)) {
-        throw new Error( "Worksheet.surrounding_section: " +
+        throw new Error( "WorksheetSection.surrounding: " +
             "type error (worksheet)" );
     }
     group = worksheet.group; // may have been null
@@ -1138,11 +1058,11 @@ Worksheet.surrounding_section = function(group, worksheet, range) {
         section_end = next_title_cols[0] - 1;
     }
     if (section_start > range_start || section_end < range_end) {
-        throw new WorksheetSectionDetectError(
+        throw new WorksheetSectionDetectionError(
             "unable to locate surrounding worksheet section",
             range );
     }
-    var section = new this.Section( worksheet,
+    var section = new this( worksheet,
         get_column_range_( worksheet.sheet,
             section_start, section_end - section_start + 1 )
     );
@@ -1192,7 +1112,7 @@ Worksheet.prototype.find_section_by_location = function(location) {
             column = title_metadata[0].getLocation().getColumn().getColumn();
             break find_column;
         }
-        throw new WorksheetSectionDetectError(
+        throw new WorksheetSectionDetectionError(
             "unable to locate worksheet section starting column" );
     }
     var end_column;
@@ -1235,7 +1155,7 @@ WorksheetSection.prototype.get_addendum = function(options = {}) {
         column_width: options.column_width = 80,
     } = options);
     if (this.is_addendum())
-        throw new WorksheetSectionDetectError(
+        throw new WorksheetSectionDetectionError(
             "Cannot have an addendum section for an addendum section." );
     var after_section = this;
     for ( let section of
@@ -1485,18 +1405,18 @@ WorksheetSection.prototype.remove_excess_columns = function() {
 } // }}}
 
 // WorksheetSection().alloy_subproblems (options) {{{
-WorksheetSection.prototype.alloy_subproblems = function(options = {}) {
+WorksheetSection.prototype.alloy_subproblems = function() {
     var labels = this.group.sheetbuf.slice_values( "label_row",
         this.dim.data_start, this.dim.data_end );
-    ({
-        skip_weight: options.skip_weight = ! this.has_weight_row()
-    } = options);
     var ranges_heights = [
         [this.label_range, 1],
         [this.data_range, this.group.dim.data_height],
-        [this.max_range, 1] ];
-    if (!options.skip_weight) {
+    ];
+    if (this.has_weight_row()) {
         ranges_heights.push([this.weight_range, 1]);
+    }
+    if (this.has_max_row()) {
+        ranges_heights.push([this.max_range, 1]);
     }
     let l = null, lb = null;
     let alloying = 0;
@@ -1805,6 +1725,8 @@ WorksheetBuilder.prototype.init_metaweight_cell = function() {
 
 // WorksheetBuilder().init_mirror_range {{{
 WorksheetBuilder.prototype.init_mirror_range = function() {
+    if (this.group.dim.mirror_row == null)
+        return;
     var left_marker_mirror_R1C1  = 'R' + this.group.dim.label_row +
         'C[' + (this.dim.data_start - 1 - this.dim.start) + ']';
     var right_marker_mirror_R1C1 = 'R' + this.group.dim.label_row +

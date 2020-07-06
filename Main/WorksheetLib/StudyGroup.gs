@@ -1,7 +1,6 @@
 class StudyGroupError extends SpreadsheetError {};
-class StudyGroupInitError   extends StudyGroupError {};
-class StudyGroupDetectError extends StudyGroupError {};
-class StudyGroupCheckError  extends StudyGroupError {};
+class StudyGroupInitError extends StudyGroupError {};
+class StudyGroupDetectionError extends StudyGroupError {};
 
 // StudyGroupDim plan
 // * we need to load it from existing group
@@ -57,7 +56,7 @@ function load(sheet) {
     });
     setup_set_row.call(dim);
     if (dim.data_row <= 1) {
-        throw new StudyGroupDetectError(
+        throw new StudyGroupDetectionError(
             "no frozen rows in the sheet" );
     }
     SpreadsheetFlusher.add_dimensions( true,
@@ -69,7 +68,7 @@ function load(sheet) {
     for (let name of row_names) {
         let row = marker_values.indexOf(row_markers[name]) + 1;
         if (row < 1)
-            throw new StudyGroupDetectError(
+            throw new StudyGroupDetectionError(
                 "unable to determine position for " + name );
         set_row.call(dim, name, row);
     }
@@ -107,7 +106,7 @@ function init(sheet, init_dim) {
         try {
             set_row.call(dim, name, init_dim[name]);
         } catch (error) {
-            if (error instanceof StudyGroupDetectError) {
+            if (error instanceof StudyGroupDetectionError) {
                 throw new StudyGroupInitError(error.message);
             }
             throw error;
@@ -126,19 +125,19 @@ function setup_set_row() {
 // [dim].set_row (name, row) {{{
 function set_row(name, row) {
     if (row >= this.data_row) {
-        throw new StudyGroupDetectError(
+        throw new StudyGroupDetectionError(
             "all header rows must lie before data_row, " +
             "i.e. in the frozen area (" + name + "=" + row + ")" );
     }
     if (this[name] != null && this[name] != row) {
-        throw new StudyGroupDetectError(
+        throw new StudyGroupDetectionError(
             "row conflict: " +
             name + "=" + dim[name] + " and " +
             name + "=" + row );
     }
     this[name] = row;
     if (this.inverse[row] != null && this.inverse[row] != name) {
-        throw new StudyGroupDetectError(
+        throw new StudyGroupDetectionError(
             "row conflict: " +
             this.inverse[row] + "=" + row + " and " +
             name + "=" + row );
@@ -166,7 +165,7 @@ StudyGroup.metadata_keys = { // {{{
 // StudyGroup constructor (sheet, name) {{{
 function StudyGroup(sheet, name = null) {
     if (sheet == null) {
-        throw new StudyGroupError("sheet must not be null");
+        throw new Error("StudyGroup: sheet must not be null");
     }
     this.sheet = sheet;
     if (name != null) {
@@ -276,7 +275,7 @@ StudyGroup.prototype.check = function(options = {}) {
             .withKey(this.constructor.metadata_keys.main)
             .find();
         if (metadata.length < 1)
-            throw new StudyGroupCheckError(
+            throw new StudyGroupDetectionError(
                 "sheet " + this.name + " " +
                 "is not marked as group by metadata" );
     }
@@ -284,9 +283,17 @@ StudyGroup.prototype.check = function(options = {}) {
 
 // StudyGroup.find_by_name (spreadsheet, group_name) {{{
 StudyGroup.find_by_name = function(spreadsheet, group_name) {
-    var group = new StudyGroup(
-        spreadsheet.getSheetByName(group_name), group_name );
-    group.check();
+    var sheet = spreadsheet.getSheetByName(group_name);
+    if (sheet == null)
+        return null;
+    var group = new StudyGroup(sheet, group_name);
+    try {
+        group.check();
+    } catch (error) {
+        if (error instanceof StudyGroupDetectionError)
+            return null;
+        throw error;
+    }
     return group;
 } // }}}
 
@@ -295,9 +302,9 @@ StudyGroup.get_active = function(spreadsheet) {
     var sheet = spreadsheet.getActiveSheet();
     var group = new StudyGroup(sheet);
     try {
-        group.check()
+        group.check();
     } catch (error) {
-        if (error instanceof StudyGroupCheckError)
+        if (error instanceof StudyGroupDetectionError)
             return null;
         throw error;
     }
@@ -519,9 +526,10 @@ StudyGroupBuilder.build = function(spreadsheet, name, options) {
     try {
         var sheet = spreadsheet.insertSheet(name);
     } catch (error) {
+        console.error(error);
         throw new StudyGroupInitError(
-          "Unable to create a new sheet with the name “" + name + "” " +
-          "(probably because it already exists)." );
+            "Unable to create a new sheet with the name “" + name + "” " +
+            "(probably because it already exists)." );
     }
     return (new this(sheet, name, options)).group;
 } // }}}

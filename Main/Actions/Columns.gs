@@ -68,7 +68,7 @@ function action_add_section_finish(
   var lock = ActionHelpers.acquire_lock();
   var group = StudyGroup.find_by_name(spreadsheet, group_name);
   var worksheet = Worksheet.find_by_location(group, worksheet_location);
-  var last_section = Worksheet.surrounding_section( group, worksheet,
+  var last_section = Worksheet.Section.surrounding( group, worksheet,
     group.sheet.getRange(1, worksheet.dim.end) );
   var date;
   if (date_obj != null) {

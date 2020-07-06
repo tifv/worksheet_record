@@ -86,7 +86,7 @@ function sidebar_load_contents_validate(contents_item) {
   group.sheetbuf.ensure_loaded(column, column + width - 1);
   var column_by_note = group.sheetbuf.find_closest("notes", "title_row", title_note, column);
   if (column_by_note != null) {
-    section_by_note = Worksheet.surrounding_section( group, null,
+    section_by_note = Worksheet.Section.surrounding( group, null,
       group.sheet.getRange(1, column_by_note) );
     sections.push(section_by_note);
   }
@@ -96,7 +96,7 @@ function sidebar_load_contents_validate(contents_item) {
   } else {
     let column_by_id = Worksheet.find_title_column_by_id(group, title_id);
     if (column_by_id != null) {
-      section_by_id = Worksheet.surrounding_section( group, null,
+      section_by_id = Worksheet.Section.surrounding( group, null,
         group.sheet.getRange(1, column_by_id) );
       if (title_id != get_checked_id(section_by_id)) {
         // metadatum seems to be misplaced, we better remove it
