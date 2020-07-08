@@ -58,39 +58,33 @@ define_lazy_properties_(WorksheetBase.prototype, { // {{{
 
 // WorksheetBase().get_title {{{
 WorksheetBase.prototype.get_title = function() {
-    // also applies to WorksheetSection
     return this.group.sheetbuf.get_value( "title_row",
         this.dim.title ).toString();
 } // }}}
 
 // WorksheetBase().set_title (value) {{{
 WorksheetBase.prototype.set_title = function(value) {
-    // also applies to WorksheetSection
     this.group.sheetbuf.set_value("title_row", this.dim.title, value);
 } // }}}
 
 // WorksheetBase().get_title_formula {{{
 WorksheetBase.prototype.get_title_formula = function() {
-    // also applies to WorksheetSection
     return this.group.sheetbuf.get_formula("title_row", this.dim.title);
 } // }}}
 
 // WorksheetBase().set_title_formula (formula, value_replace?) {{{
 WorksheetBase.prototype.set_title_formula = function(formula, value_replace = "") {
-    // also applies to WorksheetSection
     this.group.sheetbuf.set_formula( "title_row",
         this.dim.title, formula, value_replace );
 } // }}}
 
 // WorksheetBase().get_title_note {{{
 WorksheetBase.prototype.get_title_note = function() {
-    // also applies to WorksheetSection
     return this.group.sheetbuf.get_note("title_row", this.dim.title);
 } // }}}
 
 // WorksheetBase().set_title_note (note) {{{
 WorksheetBase.prototype.set_title_note = function(note) {
-    // also applies to WorksheetSection
     this.group.sheetbuf.set_note("title_row", this.dim.title, note);
 } // }}}
 
@@ -170,19 +164,16 @@ WorksheetBase.NoteData.prototype.format = function() {
 
 // WorksheetBase().get_title_note_data {{{
 WorksheetBase.prototype.get_title_note_data = function() {
-    // also applies to WorksheetSection
     return this.constructor.NoteData.parse(this.get_title_note());
 } // }}}
 
 // WorksheetBase().set_title_note_data (data) {{{
 WorksheetBase.prototype.set_title_note_data = function(data) {
-    // also applies to WorksheetSection
     this.set_title_note(data.format());
 } // }}}
 
 // WorksheetBase().get_title_metadata_id (options?) {{{
 WorksheetBase.prototype.get_title_metadata_id = function(options = {}) {
-    // also applies to WorksheetSection
     ({
         check: options.check = true,
             // check value from the title note agains actual metadata
@@ -210,7 +201,6 @@ WorksheetBase.prototype.get_title_metadata_id = function(options = {}) {
 
 // WorksheetBase().get_title_metadata {{{
 WorksheetBase.prototype.get_title_metadata = function(options = {}) {
-    // also applies to WorksheetSection
     ({
         create: options.create = null,
         // true: create metadatum, find it and return;
@@ -239,7 +229,8 @@ WorksheetBase.prototype.get_title_metadata = function(options = {}) {
 
 // WorksheetBase().get_weight_formula {{{
 WorksheetBase.prototype.get_weight_formula = function() {
-    // also applies to WorksheetSection
+    if (this.group.dim.weight_row == null)
+        return null;
     for (let i = 0; i < this.dim.data_width; ++i) {
         let formula = this.group.sheetbuf.get_formula( "weight_row",
             this.dim.data_start + i )
@@ -255,13 +246,13 @@ WorksheetBase.prototype.get_weight_formula = function() {
 
 // WorksheetBase().has_weight_row {{{
 WorksheetBase.prototype.has_weight_row = function() {
-    // also applies to WorksheetSection
     return this.get_weight_formula() != null;
 } // }}}
 
 // WorksheetBase().get_max_formula {{{
 WorksheetBase.prototype.get_max_formula = function() {
-    // also applies to WorksheetSection
+    if (this.group.dim.max_row == null)
+        return null;
     for (let i = 0; i < this.dim.data_width; ++i) {
         let formula = this.group.sheetbuf.get_formula( "max_row",
             this.dim.data_start + i )
@@ -277,7 +268,6 @@ WorksheetBase.prototype.get_max_formula = function() {
 
 // WorksheetBase().has_max_row {{{
 WorksheetBase.prototype.has_max_row = function() {
-    // also applies to WorksheetSection
     return this.get_max_formula() != null;
 } // }}}
 
@@ -342,6 +332,8 @@ define_lazy_properties_(Worksheet.prototype, { // {{{
             1, this.dim.width );
     },
     metaweight_cell: function() {
+        if (this.group.dim.weight_row == null)
+            return null;
         return this.sheet.getRange(
             this.group.dim.weight_row, this.dim.rating );
     },
@@ -396,83 +388,141 @@ Worksheet.prototype.reset_column_widths = function() {
     this.sheet.setColumnWidth(this.dim.end + 1, 13);
 } // }}}
 
-// Worksheet().reset_data_borders (col_begin, col_end, options) {{{
-// options = { open_left: bool, open_right: bool,
-//     skip_max: bool, skip_weight: bool }
-//   open_left   --- no solid border on the left
-//   open_right  --- no solid border on the left
-//   skip_max --- do not draw borders around max_range
-//   skip_weight --- do not draw borders around weight_range
-Worksheet.prototype.reset_data_borders = function( col_begin, col_end,
+// WorksheetBase().set_data_borders (start, end, options) {{{
+WorksheetBase.prototype.set_data_borders = function( start, end,
     options = {}
 ) {
-    const group = this.group;
-    if (group.dim.max_row == null)
-        options.skip_max = true;
-    if (group.dim.weight_row == null)
-        options.skip_weight = true;
-    var col_num = col_end - col_begin + 1;
-    var ranges = [
-        this.sheet.getRange(group.dim.label_row, col_begin, 1, col_num),
-        this.sheet.getRange(
-            group.dim.data_row, col_begin, group.dim.data_height, col_num )
+    ({
+        horizontal: options.horizontal = true,
+        max_row: options.max_row = null,
+        weight_row: options.weight_row = null,
+        left: options.left = {},
+        right: options.right = {},
+        alloy_columns: options.alloy_columns = null,
+    } = options);
+    if (!options.left.open) {
+        ({
+            open: options.left.open = false,
+            max_row: options.left.max_row = false,
+            weight_row: options.left.weight_row = false,
+        } = options.left);
+    }
+    if (!options.right.open) {
+        ({
+            open: options.right.open = false,
+            max_row: options.right.max_row = false,
+            weight_row: options.right.weight_row = false,
+        } = options.right);
+    }
+    console.log(options);
+    if (this.group.dim.max_row == null)
+        options.max_row = null;
+    if (this.group.dim.weight_row == null)
+        options.weight_row = null;
+    function get_R1C1( start_row, end_row = start_row,
+        start_col = start, end_col = end,
+    ) {
+        return ( "R" + start_row + "C" + start_col +
+            ":R" + end_row + "C" + end_col );
+    }
+    var row_dim = {
+        title_row: this.group.dim.title_row,
+        label_row: this.group.dim.label_row,
+        max_row: this.group.dim.max_row,
+        weight_row: this.group.dim.weight_row,
+        data_start_row: this.group.dim.data_row,
+        data_end_row: this.group.dim.data_row + this.group.dim.data_height - 1,
+    };
+    var solid_rows = [
+        [row_dim.data_start_row, row_dim.data_end_row],
+        [row_dim.label_row, row_dim.label_row],
     ];
-    if (!options.skip_max) {
-        ranges.push(
-            this.sheet.getRange(group.dim.max_row, col_begin, 1, col_num) );
-    }
-    if (!options.skip_weight) {
-        ranges.push(
-            this.sheet.getRange(group.dim.weight_row, col_begin, 1, col_num) );
-    }
-    // horizontal {{{
-        for (let range of ranges) {
-            range.setBorder(true, null, true, null, null, null);
-        };
-        // horizontal between weight_range and sum_range
-        if ( !options.skip_max && !options.skip_weight &&
-                group.dim.weight_row - group.dim.max_row == -1 )
-        {
-            this.sheet.getRange(
-                    group.dim.weight_row, col_begin,
-                    group.dim.max_row - group.dim.weight_row + 1, col_num )
-                .setBorder( null, null, null, null, null, true,
-                    'black', SpreadsheetApp.BorderStyle.DOTTED );
+    if ( options.max_row && options.weight_row &&
+        row_dim.max_row - row_dim.weight_row == 1
+    ) {
+        solid_rows.push([row_dim.weight_row, row_dim.max_row]);
+    } else if ( options.max_row && options.weight_row &&
+        row_dim.max_row - row_dim.weight_row == -1
+    ) {
+        solid_rows.push([row_dim.max_row, row_dim.weight_row]);
+    } else {
+        if (options.max_row) {
+            solid_rows.push([row_dim.max_row, row_dim.max_row]);
         }
-    // }}}
-    // vertical {{{
-        var open_left = options.open_left, open_right = options.open_right;
-        if (open_left !== true) { // vertical left
-            // from outside
-            for (let range of ranges) {
-                range.offset(0, -1, range.getNumRows(), 1)
-                    .setBorder( null, null, null, true, null, null );
-            };
-            // from inside
-            for (let range of ranges) {
-                range.setBorder( null, true, null, null, null, null );
-            };
-            open_left = null;
-        } // else open_left === true
-        if (open_right !== true) { // vertical right
-            // from outside
-            for (let range of ranges) {
-                range.offset(0, col_num, range.getNumRows(), 1)
-                    .setBorder( null, true, null, null, null, null );
-            };
-            // from inside
-            for (let range of ranges) {
-                range.setBorder( null, null, null, true, null, null );
-            };
-            open_right = null;
-        } // else open_right === true
-        // vertical internal
-        for (let range of ranges) {
-            range.setBorder( null, open_left, null, open_right, true, null,
+        if (options.weight_row) {
+            solid_rows.push([row_dim.weight_row, row_dim.weight_row]);
+        }
+    }
+    const sheet = this.group.sheet;
+    if (options.horizontal) { // remove borders {{{
+        let ranges_R1C1 = [];
+        if (options.max_row === false)
+            ranges_R1C1.push(get_R1C1(row_dim.max_row))
+        if (options.weight_row === false)
+            ranges_R1C1.push(get_R1C1(row_dim.weight_row))
+        if (ranges_R1C1.length > 0)
+            sheet.getRangeList(ranges_R1C1)
+                .setBorder(false, false, false, false, false, false);
+    } // }}}
+    if (options.horizontal) { // {{{
+        let ranges_R1C1 = [];
+        for (let [a_row, b_row] of solid_rows)
+            ranges_R1C1.push(get_R1C1(a_row, b_row));
+        sheet.getRangeList(ranges_R1C1)
+            .setBorder(true, null, true, null, null, null)
+            .setBorder(null, null, null, null, null, true,
                 'black', SpreadsheetApp.BorderStyle.DOTTED );
-        };
-    // }}}
-}; // }}}
+        sheet.getRange(row_dim.title_row, start, 1, end - start + 1)
+            .setBorder(true, null, null, null, null, null)
+    } // }}}
+    { // vertical internal {{{
+        let ranges_R1C1 = [];
+        for (let [a_row, b_row] of solid_rows)
+            ranges_R1C1.push(get_R1C1(a_row, b_row));
+        sheet.getRangeList(ranges_R1C1)
+            .setBorder(
+                null, options.left.open ? true : null,
+                null, options.right.open ? true : null,
+                true, null,
+                'black', SpreadsheetApp.BorderStyle.DOTTED );
+    } // }}}
+    if (options.alloy_columns != null) { // {{{
+        let ranges_R1C1 = [];
+        for (let [a_row, b_row] of solid_rows) {
+            for (let [a_col, b_col] of options.alloy_columns)
+                ranges_R1C1.push(get_R1C1(a_row, b_row, a_col, b_col));
+        }
+        if (ranges_R1C1.length > 0)
+            sheet.getRangeList(ranges_R1C1)
+                .setBorder( null, null, null, null, true, null,
+                    "#cccccc", SpreadsheetApp.BorderStyle.DOTTED );
+    } // }}}
+    if (!options.left.open) { // {{{
+        let ranges_R1C1 = [
+            get_R1C1(row_dim.data_start_row, row_dim.data_end_row),
+            get_R1C1(row_dim.label_row, row_dim.label_row),
+        ];
+        if (options.max_row || options.left.max_row)
+            ranges_R1C1.push(get_R1C1(row_dim.max_row));
+        if (options.weight_row || options.left.weight_row)
+            ranges_R1C1.push(get_R1C1(row_dim.weight_row));
+        sheet.getRangeList(ranges_R1C1)
+            .setBorder(null, true, null, null, null, null)
+    } // }}}
+    if (!options.right.open) { // {{{
+        let ranges_R1C1 = [
+            get_R1C1(row_dim.data_start_row, row_dim.data_end_row),
+            get_R1C1(row_dim.label_row, row_dim.label_row),
+        ];
+        if (options.max_row || options.right.max_row)
+            ranges_R1C1.push(get_R1C1(row_dim.max_row));
+        if (options.weight_row || options.right.weight_row)
+            ranges_R1C1.push(get_R1C1(row_dim.weight_row));
+        sheet.getRangeList(ranges_R1C1)
+            .setBorder(null, null, null, true, null, null)
+    } // }}}
+    SpreadsheetFlusher.reset();
+} // }}}
 
 // Worksheet().add_column_group {{{
 Worksheet.prototype.add_column_group = function() {
@@ -1136,6 +1186,22 @@ Worksheet.prototype.find_section_by_location = function(location) {
     return section;
 } // }}}
 
+// WorksheetSection().get_previous {{{
+WorksheetSection.prototype.get_previous = function() {
+    if (this.dim.start <= this.worksheet.dim.data_start)
+        return null;
+    return this.constructor.surrounding( this.group, this.worksheet,
+        this.sheet.getRange(1, this.dim.start - 1) );
+} // }}}
+
+// WorksheetSection().get_next {{{
+WorksheetSection.prototype.get_next = function() {
+    if (this.dim.end >= this.worksheet.dim.data_end)
+        return null;
+    return this.constructor.surrounding( this.group, this.worksheet,
+        this.sheet.getRange(1, this.dim.end + 1) );
+} // }}}
+
 // WorksheetSection().is_addendum {{{
 WorksheetSection.prototype.is_addendum = function() {
     return this.get_addendum_type() != null;
@@ -1175,7 +1241,9 @@ WorksheetSection.prototype.get_addendum = function(options = {}) {
         title: options.title, data_width: 1,
         title_note_data: new this.constructor.NoteData(
             [["addendum-type", options.type]],
-            [{key: "id"}, {key: "addendum-type"}] )
+            [{key: "id"}, {key: "addendum-type"}] ),
+        max_row: false,
+        weight_row: false,
     });
     group.sheetbuf.set_value( "label_row", section.dim.data_start,
         options.label );
@@ -1216,15 +1284,19 @@ Worksheet.prototype.add_section_after = function(section, options = {}) {
             this.constructor.Section.initial.title,
         title_note_data: options.title_note_data =
             new this.constructor.NoteData(),
+        max_row: options.max_row = true,
+        weight_row: options.weight_row = true,
     } = options);
     if (section.worksheet !== this)
         throw new Error( "Worksheet().add_section_after: " +
             "the section does not belong to this worksheet" );
     var dim = {prev_end: section.dim.data_end};
-    var max_formula = this.group.dim.max_row != null ?
-        this.get_max_formula() : null;
-    var weight_formula = this.group.dim.weight_row != null ?
-        this.get_weight_formula() : null;
+    var max_formula =
+        (options.max_row && this.group.dim.max_row != null) ?
+            this.get_max_formula() : null;
+    var weight_formula =
+        (options.weight_row && this.group.dim.weight_row != null) ?
+            this.get_weight_formula() : null;
     var category = this.get_category();
     if (section.dim.end > section.dim.data_end) {
         this.group.sheetbuf.unmerge( "title_row",
@@ -1257,15 +1329,6 @@ Worksheet.prototype.add_section_after = function(section, options = {}) {
 
     this.sheet.setColumnWidths(dim.data_start, dim.data_width, 21);
 
-    this.reset_data_borders(
-        dim.data_start, dim.data_end,
-        {
-            open_left: false,
-            open_right: false,
-            skip_max: (max_formula == null),
-            skip_weight: (weight_formula == null)
-        },
-    );
     this.group.sheetbuf.merge("title_row", dim.start, dim.end);
     this.sheet.getRange(this.group.dim.title_row, dim.start, 1, dim.width)
         .setBorder(true, true, null, true, null, null);
@@ -1279,6 +1342,27 @@ Worksheet.prototype.add_section_after = function(section, options = {}) {
     options.title_note_data.set("id", title_id);
     new_section.set_title_note_data(options.title_note_data);
     this.group.sheetbuf.set_value("title_row", dim.start, options.title);
+    var prev_section = new_section.get_previous();
+    var next_section = new_section.get_next();
+    new_section.set_data_borders(
+        new_section.dim.data_start, new_section.dim.data_end,
+        {
+            max_row: (max_formula != null),
+            weight_row: (weight_formula != null),
+            left: { open: false,
+                max_row: (prev_section == null) ? false :
+                    prev_section.has_max_row(),
+                weight_row: (prev_section == null) ? false :
+                    prev_section.has_weight_row(),
+            },
+            right: { open: false,
+                max_row: (next_section == null) ? false :
+                    next_section.has_max_row(),
+                weight_row: (next_section == null) ? false :
+                    next_section.has_weight_row(),
+            },
+        },
+    );
     return new_section;
 } // }}}
 
@@ -1334,13 +1418,33 @@ WorksheetSection.prototype.add_columns = function(data_index, data_width) {
 
     this.sheet.setColumnWidths(dim.data_start, dim.data_width, 21);
 
-    this.worksheet.reset_data_borders(
+    let left_border_opt = {};
+    if (data_index > 0) {
+        left_border_opt.open = true;
+    } else {
+        let prev_section = new_section.get_previous();
+        left_border_opt.max_row = (prev_section == null) ? false :
+            prev_section.has_max_row();
+        left_border_opt.weight_row = (prev_section == null) ? false :
+            prev_section.has_weight_row();
+    }
+    let right_border_opt = {};
+    if (data_index < this.dim.data_width) {
+        right_border_opt.open = true;
+    } else {
+        let next_section = new_section.get_next();
+        right_border_opt.max_row = (next_section == null) ? false :
+            next_section.has_max_row();
+        right_border_opt.weight_row = (next_section == null) ? false :
+            next_section.has_weight_row();
+    }
+    this.worksheet.set_data_borders(
         dim.data_start, dim.data_end,
         {
-            open_left: data_index > 0,
-            open_right: data_index < this.dim.data_width,
-            skip_max: (max_formula == null),
-            skip_weight: (weight_formula == null)
+            max_row: (max_formula != null),
+            weight_row: (weight_formula != null),
+            left: left_border_opt,
+            right: right_border_opt,
         },
     );
 } // }}}
@@ -1418,10 +1522,9 @@ WorksheetSection.prototype.alloy_subproblems = function() {
     if (this.has_max_row()) {
         ranges_heights.push([this.max_range, 1]);
     }
-    let l = null, lb = null;
-    let alloying = 0;
+    var alloy_columns = [];
     labels.push(null);
-    for (let i = 0; i < labels.length; ++i) {
+    for (let i = 0, l = null, lb = null, s = 0; i < labels.length; ++i) {
         let label = labels[i];
         if (label != null)
             label = label.toString();
@@ -1440,21 +1543,26 @@ WorksheetSection.prototype.alloy_subproblems = function() {
             labelbase != "" && lb == labelbase && l != label
         ) {
             l = label;
-            ++alloying;
+            ++s;
         } else {
-            if (alloying > 1) {
-                for (let [range, height] of ranges_heights) {
-                    range.offset(0, i - alloying, height, alloying)
-                        .setBorder( null, null, null, null, true, null,
-                            "#cccccc", SpreadsheetApp.BorderStyle.DOTTED );
-                }
-                SpreadsheetFlusher.reset();
+            if (s > 1) {
+                alloy_columns.push([i - s, i - 1]);
             }
             l = label;
             lb = labelbase;
-            alloying = 1;
+            s = 1;
         }
     }
+    if (alloy_columns.length == 0)
+        return;
+    var data_start = this.dim.data_start;
+    this.set_data_borders(this.dim.data_start, this.dim.data_end, {
+        horizontal: false,
+        max_row: this.has_max_row() ? true : null,
+        weight_row: this.has_weight_row() ? true : null,
+        alloy_columns: alloy_columns.map( ([x,y]) =>
+            [data_start + x, data_start + y] ),
+    });
 } // }}}
 
 return Worksheet;
@@ -1714,6 +1822,8 @@ WorksheetBuilder.prototype.init_sum_range = function() {
 
 // WorksheetBuilder().init_metaweight_cell {{{
 WorksheetBuilder.prototype.init_metaweight_cell = function() {
+    if (this.group.dim.weight_row == null)
+        return;
     this.group.sheetbuf.set_value( "weight_row",
         this.dim.rating, 1 );
     this.group.sheetbuf.set_note( "weight_row",
@@ -1778,9 +1888,12 @@ WorksheetBuilder.prototype.init_borders = function() {
         1, this.dim.width + 2
     )
         .setBorder(null, null, true, null, null, null);
-    this.worksheet.reset_data_borders(
+    this.worksheet.set_data_borders(
         this.dim.data_start, this.dim.data_end,
-        {open_left: false, open_right: false} );
+        {
+            max_row: this.group.dim.max_row != null ? true : null,
+            weight_row: this.group.dim.weight_row != null ? true : null,
+        } );
     var rating_sum_range = this.sheet.getRange(
         this.group.dim.data_row, this.dim.start,
         this.group.dim.data_height, 2 );
