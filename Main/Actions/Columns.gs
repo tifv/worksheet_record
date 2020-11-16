@@ -9,7 +9,7 @@ function action_add_columns() {
     template.standalone = true;
     template.group_name = group.name;
     template.worksheet_location = worksheet.get_location();
-    template.section_location = section.get_location({check_id: section.offset > 0});
+    template.section_location = section.get_location({check_id: section.dim.offset > 0});
     template.title = section.get_qualified_title();
     template.labels = group.sheetbuf.slice_values( "label_row",
       section.dim.data_start, section.dim.data_end );

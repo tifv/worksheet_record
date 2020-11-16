@@ -1,7 +1,7 @@
 /*
 
 # Priority TODO
-• группы без веса, максимума, категории, зеркала;
+• Convert worksheet to olympiad
 • листочки без рейтинга (заменить на ○); без суммы; без сдачи задач;
   в том числе без соответствующих колонок?
 • доп материалы: подсказки, ответы, решения, конспект (список хранится в метаданных);
@@ -31,7 +31,6 @@
 • StudyGroup metadata editor
 • Spreadsheet metadata editor
 • Upload configuration editor
-• Convert worksheet to olympiad
 • Convert worksheet to theory
 • Resolve Actions/Worksheets XXX
 • Resolve any other XXX

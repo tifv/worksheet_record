@@ -6,9 +6,9 @@
  * • find existing rule with (ac) and extend it to given range or
  *   create a new rule that covers this range;
  *   • ensure that this new rule comes before any other rule
- *     specified with (a);
+ *     specified with (a');
  * • find all rules with (ab) or (abc) and remove them from given range;
- *   • replace them;
+ *   • replace them with a rule with given effect;
  * • find all rules with (a) and replace them with similar rule
  *   that covers the same ranges and has given effect;
  */

@@ -39,7 +39,7 @@ function menu_create() {
         .addItem( "Оглавление (панель)",
             "sidebar_show" )
         .addSeparator();
-    { let columns_menu = ui.createMenu("Колонки-задачи");
+    { let columns_menu = ui.createMenu("Колонки");
         columns_menu
             .addItem( emojipad.plus    + "Добавить колонки…",
                 "action_add_columns" )
@@ -55,7 +55,7 @@ function menu_create() {
             ;
         menu.addSubMenu(columns_menu);
     }
-    { let rows_menu = ui.createMenu("Строки-участники");
+    { let rows_menu = ui.createMenu("Строки");
         rows_menu
             .addItem( emoji.plus  + " Добавить строки…",
                 "action_add_rows" )
@@ -64,7 +64,7 @@ function menu_create() {
             ;
         menu.addSubMenu(rows_menu);
     }
-    { let worksheets_menu = ui.createMenu("Таблички-листочки");
+    { let worksheets_menu = ui.createMenu("Листочки");
         worksheets_menu
             .addItem( emoji.plus + " Вставить бланк рядом справа",
                 "action_worksheet_insert" )
@@ -101,8 +101,8 @@ function menu_create() {
 function menu_add_admin_(menu) {
     menu
         .addItem("Метаданные ведомости…", "metadata_editor")
-        .addItem("(wip) Добавить группу…", "action_add_group")
-        .addItem("(wip) Листочки по плану…", "action_worksheet_planned")
+        .addItem("(WIP) Добавить группу…", "action_add_group")
+        .addItem("(WIP) Листочки по плану…", "action_worksheet_planned")
         .addItem("Воссоздать toc", "action_regenerate_toc")
         .addItem("Воссоздать uploads", "action_regenerate_uploads")
         .addItem("Обновить меню", "menu_create")

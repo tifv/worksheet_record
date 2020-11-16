@@ -405,6 +405,7 @@ WorksheetBase.prototype.set_data_borders = function( start, end,
             open: options.left.open = false,
             max_row: options.left.max_row = false,
             weight_row: options.left.weight_row = false,
+            outer: options.left.outer = false,
         } = options.left);
     }
     if (!options.right.open) {
@@ -412,13 +413,19 @@ WorksheetBase.prototype.set_data_borders = function( start, end,
             open: options.right.open = false,
             max_row: options.right.max_row = false,
             weight_row: options.right.weight_row = false,
+            outer: options.right.outer = false,
         } = options.right);
     }
-    console.log(options);
-    if (this.group.dim.max_row == null)
+    if (this.group.dim.max_row == null) {
         options.max_row = null;
-    if (this.group.dim.weight_row == null)
+        options.left.max_row = false;
+        options.right.max_row = false;
+    }
+    if (this.group.dim.weight_row == null) {
         options.weight_row = null;
+        options.left.weight_row = false;
+        options.right.weight_row = false;
+    }
     function get_R1C1( start_row, end_row = start_row,
         start_col = start, end_col = end,
     ) {
@@ -454,7 +461,7 @@ WorksheetBase.prototype.set_data_borders = function( start, end,
         }
     }
     const sheet = this.group.sheet;
-    if (options.horizontal) { // remove borders {{{
+    if (options.horizontal) { // remove borders that should not be there {{{
         let ranges_R1C1 = [];
         if (options.max_row === false)
             ranges_R1C1.push(get_R1C1(row_dim.max_row))
@@ -497,29 +504,63 @@ WorksheetBase.prototype.set_data_borders = function( start, end,
                 .setBorder( null, null, null, null, true, null,
                     "#cccccc", SpreadsheetApp.BorderStyle.DOTTED );
     } // }}}
-    if (!options.left.open) { // {{{
+    if (!options.left.open) { // vertical left {{{
         let ranges_R1C1 = [
             get_R1C1(row_dim.data_start_row, row_dim.data_end_row),
             get_R1C1(row_dim.label_row, row_dim.label_row),
         ];
-        if (options.max_row || options.left.max_row)
+        if (options.max_row || options.left.max_row) {
             ranges_R1C1.push(get_R1C1(row_dim.max_row));
-        if (options.weight_row || options.left.weight_row)
+        }
+        if (options.weight_row || options.left.weight_row) {
             ranges_R1C1.push(get_R1C1(row_dim.weight_row));
+        }
         sheet.getRangeList(ranges_R1C1)
-            .setBorder(null, true, null, null, null, null)
+            .setBorder(null, true, null, null, null, null);
+        if (options.left.outer) { // vertical left outer {{{
+            let colcol = [start - 1, start - 1];
+            let ranges_R1C1 = [
+                get_R1C1(row_dim.data_start_row, row_dim.data_end_row, ...colcol),
+                get_R1C1(row_dim.label_row, row_dim.label_row, ...colcol),
+            ];
+            if (options.max_row) {
+                ranges_R1C1.push(get_R1C1(row_dim.max_row, row_dim.max_row, ...colcol));
+            }
+            if (options.weight_row) {
+                ranges_R1C1.push(get_R1C1(row_dim.weight_row, row_dim.weight_row, ...colcol));
+            }
+            sheet.getRangeList(ranges_R1C1)
+                .setBorder(null, null, null, true, null, null);
+        } // }}}
     } // }}}
-    if (!options.right.open) { // {{{
+    if (!options.right.open) { // vertical right {{{
         let ranges_R1C1 = [
             get_R1C1(row_dim.data_start_row, row_dim.data_end_row),
             get_R1C1(row_dim.label_row, row_dim.label_row),
         ];
-        if (options.max_row || options.right.max_row)
+        if (options.max_row || options.right.max_row) {
             ranges_R1C1.push(get_R1C1(row_dim.max_row));
-        if (options.weight_row || options.right.weight_row)
+        }
+        if (options.weight_row || options.right.weight_row) {
             ranges_R1C1.push(get_R1C1(row_dim.weight_row));
+        }
         sheet.getRangeList(ranges_R1C1)
-            .setBorder(null, null, null, true, null, null)
+            .setBorder(null, null, null, true, null, null);
+        if (options.right.outer) { // vertical right outer {{{
+            let colcol = [end + 1, end + 1];
+            let ranges_R1C1 = [
+                get_R1C1(row_dim.data_start_row, row_dim.data_end_row, ...colcol),
+                get_R1C1(row_dim.label_row, row_dim.label_row, ...colcol),
+            ];
+            if (options.max_row || options.right.max_row) {
+                ranges_R1C1.push(get_R1C1(row_dim.max_row, row_dim.max_row, ...colcol));
+            }
+            if (options.weight_row || options.right.weight_row) {
+                ranges_R1C1.push(get_R1C1(row_dim.weight_row, row_dim.weight_row, ...colcol));
+            }
+            sheet.getRangeList(ranges_R1C1)
+                .setBorder(null, true, null, null, null, null);
+        } // }}}
     } // }}}
     SpreadsheetFlusher.reset();
 } // }}}
@@ -539,41 +580,47 @@ Worksheet.recolor_cf_rules = function( group, color_scheme,
     var location_width = group.sheetbuf.dim.sheet_width - start_col + 1;
     var location_data = [ group.dim.data_row, start_col,
         group.dim.data_height, location_width ];
-    var location_max = [group.dim.max_row, start_col,1, location_width];
-    var location_weight = [group.dim.weight_row, start_col,1, location_width];
+    var location_max = group.dim.max_row == null ? null :
+        [group.dim.max_row, start_col,1, location_width];
+    var location_weight = group.dim.weight_row == null ? null :
+        [group.dim.weight_row, start_col,1, location_width];
     cfrules.replace({ type: "boolean",
         condition: this.get_cfcondition_data(),
-        locations: [location_data, location_max],
+        locations: [location_data, location_max].filter(l => l != null),
     }, this.get_cfeffect_data(color_scheme));
-    var data_limit_filter = ConditionalFormatting.RuleFilter.from_object({
-        type: "boolean",
-        condition: {
-            type: SpreadsheetApp.BooleanCriteria
-                .NUMBER_GREATER_THAN_OR_EQUAL_TO,
-            values: [null] },
-        locations: [location_data, location_max],
-    });
-    var data_limit_formula_regex = new RegExp(
-      "=R" + group.dim.weight_row + "C\d+" );
-    data_limit_filter.condition.match = (cfcondition) => {
-        return (
-            cfcondition instanceof ConditionalFormatting.BooleanCondition &&
-            cfcondition.type ==
-                SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN_OR_EQUAL_TO &&
-            cfcondition.values.length == 1 &&
-            typeof cfcondition.values[0] == "string" &&
-            data_limit_formula_regex.exec(cfcondition.values[0])
-        );
+    if (group.dim.weight_row != null) {
+        var data_limit_filter = ConditionalFormatting.RuleFilter.from_object({
+            type: "boolean",
+            condition: {
+                type: SpreadsheetApp.BooleanCriteria
+                    .NUMBER_GREATER_THAN_OR_EQUAL_TO,
+                values: [null] },
+            locations: [location_data, location_max].filter(l => l != null),
+        });
+        var data_limit_formula_regex = new RegExp(
+          "=R" + group.dim.weight_row + "C\d+" );
+        data_limit_filter.condition.match = (cfcondition) => {
+            return (
+                cfcondition instanceof ConditionalFormatting.BooleanCondition &&
+                cfcondition.type ==
+                    SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN_OR_EQUAL_TO &&
+                cfcondition.values.length == 1 &&
+                typeof cfcondition.values[0] == "string" &&
+                data_limit_formula_regex.exec(cfcondition.values[0])
+            );
+        }
+        cfrules.replace( data_limit_filter,
+            this.get_cfeffect_data_limit(color_scheme) );
     }
-    cfrules.replace( data_limit_filter,
-      this.get_cfeffect_data_limit(color_scheme) );
+    if (group.dim.weight_row != null) {
+        cfrules.replace({ type: "gradient",
+            condition: this.get_cfcondition_weight(group),
+            locations: [location_weight],
+        }, this.get_cfeffect_weight(color_scheme));
+    }
     cfrules.replace({ type: "gradient",
-      condition: this.get_cfcondition_weight(group),
-      locations: [location_weight],
-    }, this.get_cfeffect_weight(color_scheme));
-    cfrules.replace({ type: "gradient",
-      condition: group.get_cfcondition_rating(),
-      locations: [location_data, location_max],
+        condition: group.get_cfcondition_rating(),
+        locations: [location_data, location_max].filter(l => l != null),
     }, group.get_cfeffect_rating(color_scheme));
     if (ext_cfrules == null)
         cfrules.save(this.sheet);
@@ -585,15 +632,17 @@ Worksheet.prototype.recolor_cf_rules = function(color_scheme) {
     var cfrule_data_obj = this.new_cfrule_data(color_scheme);
     cfrules.remove(Object.assign({}, cfrule_data_obj, {effect: null}));
     cfrules.insert(cfrule_data_obj);
-    var cfrule_data_limit_obj = this.new_cfrule_data_limit(color_scheme);
-    cfrules.replace(
-        Object.assign({}, cfrule_data_limit_obj, {effect: null}),
-        cfrule_data_limit_obj.effect );
-    var cfrule_weight_obj = this.new_cfrule_weight(color_scheme);
-    // XXX weight coloring may be missing
-    // (e.g. when weights are reset by hand)
-    cfrules.remove(Object.assign({}, cfrule_weight_obj, {effect: null}));
-    cfrules.insert(cfrule_weight_obj);
+    if (this.group.dim.weight_row != null) {
+        var cfrule_data_limit_obj = this.new_cfrule_data_limit(color_scheme);
+        cfrules.replace(
+            Object.assign({}, cfrule_data_limit_obj, {effect: null}),
+            cfrule_data_limit_obj.effect );
+        var cfrule_weight_obj = this.new_cfrule_weight(color_scheme);
+        // XXX weight coloring may be missing
+        // (e.g. when weights are reset by hand)
+        cfrules.remove(Object.assign({}, cfrule_weight_obj, {effect: null}));
+        cfrules.insert(cfrule_weight_obj);
+    }
     var cfrule_rating_obj = this.new_cfrule_rating(color_scheme);
     cfrules.remove(Object.assign({}, cfrule_rating_obj, {effect: null}));
     cfrules.insert(cfrule_rating_obj);
@@ -618,13 +667,11 @@ Worksheet.prototype.new_cfrule_data = function(color_scheme) {
     return { type: "boolean",
         condition: this.constructor.get_cfcondition_data(this.group),
         ranges: [
-            [
-                this.group.dim.data_row, this.dim.data_start - 1,
+            [ this.group.dim.data_row, this.dim.data_start - 1,
                 this.group.dim.data_height, this.dim.data_width + 2 ],
-            [
-                this.group.dim.max_row, this.dim.data_start - 1,
-                1, this.dim.data_width + 2 ]
-        ],
+            [ this.group.dim.max_row, this.dim.data_start - 1,
+                1, this.dim.data_width + 2 ],
+        ].filter(([r,]) => r != null),
         effect: this.constructor.get_cfeffect_data(color_scheme),
     };
 } // }}}
@@ -637,40 +684,45 @@ Worksheet.get_cfeffect_data_limit = function(color_scheme) {
 
 // Worksheet().new_cfrule_data_limit {{{
 Worksheet.prototype.new_cfrule_data_limit = function(color_scheme) {
+    if (this.group.dim.weight_row == null)
+        throw new WorksheetError( "Worksheet().new_cfrule_data_limit: " +
+            "impossible without weight_row" );
     return { type: "boolean",
         condition: {
             type: SpreadsheetApp.BooleanCriteria
                 .NUMBER_GREATER_THAN_OR_EQUAL_TO ,
             values: ["=R" + this.group.dim.weight_row + "C" + this.dim.sum] },
         ranges: [
-            [
-                this.group.dim.data_row, this.dim.data_start - 1,
+            [ this.group.dim.data_row, this.dim.data_start - 1,
                 this.group.dim.data_height, this.dim.data_width + 2 ],
-            [
-                this.group.dim.max_row, this.dim.data_start - 1,
-                1, this.dim.data_width + 2 ]
-        ],
+            [ this.group.dim.max_row, this.dim.data_start - 1,
+                1, this.dim.data_width + 2 ],
+        ].filter(([r,]) => r != null),
         effect: this.constructor.get_cfeffect_data_limit(color_scheme),
     };
 } // }}}
 
 // Worksheet.get_cfcondition_weight (group) {{{
 Worksheet.get_cfcondition_weight = function(group) {
+    if (group.dim.weight_row == null)
+        throw new WorksheetError( "Worksheet().get_cfcondition_weight: " +
+            "impossible without weight_row" );
     var weight_R1C1 = "R" + group.dim.weight_row + "C[0]";
-    var max_R1C1 = "R" + group.dim.max_row + "C[0]";
-    var student_count_R1C1 = group.student_count_cell != null ? (
+    var max_R1C1 = group.dim.max_row != null ?
+        ("R" + group.dim.max_row + "C[0]") :
+        ("R" + group.dim.data_row + "C[0]:C[0]");
+    var student_count_R1C1 = group.student_count_cell == null ? null : (
         "R" + group.student_count_cell.getRow() +
-        "C" + group.student_count_cell.getColumn()
-    ) : null;
+        "C" + group.student_count_cell.getColumn() );
     var formula_base = ( "=R[0]C[0]" +
-        " - 1/power(" + weight_R1C1 + "*max(" + max_R1C1 + ",1),2)" );
+        " - 1/power(" + weight_R1C1 + "*max(1," + max_R1C1 + "),2)" );
     return new ConditionalFormatting.GradientCondition({
         min_type: SpreadsheetApp.InterpolationType.NUMBER,
         min_value: formula_base + " + 1",
         max_type: SpreadsheetApp.InterpolationType.NUMBER,
         max_value: formula_base + " + " +
-            ( student_count_R1C1 != null ?
-                "max(" + student_count_R1C1 + ",7)" : "7" ),
+            ( student_count_R1C1 == null ? "7" :
+                "max(7," + student_count_R1C1 + ")" ),
     });
 } // }}}
 
@@ -684,6 +736,9 @@ Worksheet.get_cfeffect_weight = function(color_scheme) {
 
 // Worksheet().new_cfrule_weight {{{
 Worksheet.prototype.new_cfrule_weight = function(color_scheme) {
+    if (this.group.dim.weight_row == null)
+        throw new WorksheetError( "Worksheet().new_cfrule_weight: " +
+            "impossible without weight_row" );
     return { type: "gradient",
         condition: this.constructor.get_cfcondition_weight(this.group),
         ranges: [
@@ -698,15 +753,16 @@ Worksheet.prototype.new_cfrule_weight = function(color_scheme) {
 // Worksheet().new_cfrule_rating {{{
 Worksheet.prototype.new_cfrule_rating = function(color_scheme) {
     return this.group.new_cfrule_rating([
-        [
-            this.group.dim.data_row, this.dim.rating,
+        [ this.group.dim.data_row, this.dim.rating,
             this.group.dim.data_height, 2 ],
         [this.group.dim.max_row, this.dim.rating, 1, 2],
-    ], color_scheme);
+    ].filter(([r,]) => r != null), color_scheme);
 } // }}}
 
 // Worksheet().get_category {{{
 Worksheet.prototype.get_category = function() {
+    if (this.group.dim.category_row == null)
+        return null;
     var category = this.group.sheetbuf.get_value( "category_row",
         this.dim.start );
     if (category === "")
@@ -720,6 +776,9 @@ Worksheet.prototype.set_category = function(code, options = {}) {
         ignore_sections: options.ignore_sections = false,
         // make the call faster by not checking for worksheet sections
     } = options);
+    if (this.group.dim.category_row == null)
+        throw new WorksheetError( "Worksheet().get_category: " +
+            "impossible without category_row" );
     this.group.sheetbuf.set_value("category_row", this.dim.rating, code);
     this.group.sheetbuf.set_value("category_row", this.dim.sum, code);
     if (options.ignore_sections)
@@ -746,10 +805,14 @@ Worksheet.prototype.get_metaweight = function() {
 Worksheet.prototype.set_metaweight = function(value, options = {}) {
     ({
         add: options.add = false,
-        // add the supplied value to the metaweight instead of replacing
+        // add the value to the metaweight instead of replacing
     } = options);
-    if (this.dim.rating == null || this.group.dim.weight_row == null)
-        return;
+    if (this.group.dim.weight_row == null)
+        throw new WorksheetError( "Worksheet().set_metaweight: " +
+            "impossible without weight_row" );
+    if (this.dim.rating == null)
+        throw new WorksheetError( "Worksheet().set_metaweight: " +
+            "impossible without rating column" );
     var metaweight;
     if (options.add) {
         var metaweight = this.get_metaweight();
@@ -998,6 +1061,9 @@ WorksheetSection.prototype.check = function(options = {}) {
 WorksheetSection.prototype.set_category = function(
     code = this.worksheet.get_category()
 ) {
+    if (this.group.dim.category_row == null)
+        throw new WorksheetSectionError( "WorksheetSection().set_category: " +
+            "impossible without category_row" );
     this.group.sheetbuf.set_value("category_row", this.dim.title, code);
 } // }}}
 
@@ -1236,7 +1302,6 @@ WorksheetSection.prototype.get_addendum = function(options = {}) {
     }
     const group = this.group;
     const sheet = this.sheet;
-    // XXX remove weight and max in the section
     var section = this.worksheet.add_section_after(after_section, {
         title: options.title, data_width: 1,
         title_note_data: new this.constructor.NoteData(
@@ -1366,7 +1431,6 @@ Worksheet.prototype.add_section_after = function(section, options = {}) {
     return new_section;
 } // }}}
 
-// XXX return new section object
 // WorksheetSection().add_columns (data_index, data_width) {{{
 WorksheetSection.prototype.add_columns = function(data_index, data_width) {
     // after this function is applied, all worksheet structures
@@ -1397,15 +1461,17 @@ WorksheetSection.prototype.add_columns = function(data_index, data_width) {
             var category = this.worksheet.get_category();
             var metadata = this.get_title_metadata();
             var metadata_range = this.title_column_range;
-            this.set_category(null);
+            if (this.group.dim.category_row != null)
+                this.set_category(null);
         }
         this.group.sheetbuf.insert_columns_before(
             insert_column, dim.data_width );
         if (dim.data_start == this.dim.start) {
             this.group.sheetbuf.merge( "title_row",
                 this.dim.start, this.dim.end + dim.data_width );
-            this.group.sheetbug.set_value( "category_row",
-                this.dim.title, category );
+            if (this.group.dim.category_row != null)
+                this.group.sheetbuf.set_value( "category_row",
+                    this.dim.title, category );
             metadata.moveToColumn(metadata_range);
         }
     }
@@ -1418,6 +1484,12 @@ WorksheetSection.prototype.add_columns = function(data_index, data_width) {
 
     this.sheet.setColumnWidths(dim.data_start, dim.data_width, 21);
 
+    var new_worksheet = new this.constructor.Worksheet( this.group,
+        get_column_range_( this.sheet,
+            this.worksheet.dim.start, this.worksheet.dim.width + dim.data_width )
+    );
+    var new_section = new this.constructor( new_worksheet,
+        get_column_range_(this.sheet, this.dim.start, this.dim.width + dim.data_width) );
     let left_border_opt = {};
     if (data_index > 0) {
         left_border_opt.open = true;
@@ -1447,9 +1519,9 @@ WorksheetSection.prototype.add_columns = function(data_index, data_width) {
             right: right_border_opt,
         },
     );
+    return new_section;
 } // }}}
 
-// XXX return new section object
 // WorksheetSection().remove_excess_columns {{{
 WorksheetSection.prototype.remove_excess_columns = function() {
     // after this function is applied, all worksheet structures
@@ -1639,12 +1711,16 @@ function WorksheetBuilder(group, full_range, options) { // {{{
     this.init_title_range();
     this.init_data_range();
     this.init_label_range();
-    this.init_max_range();
-    this.init_weight_range();
+    if (this.group.dim.max_row)
+        this.init_max_range();
+    if (this.group.dim.weight_row)
+        this.init_weight_range();
     this.init_rating_range();
     this.init_sum_range();
-    this.init_metaweight_cell();
-    this.init_mirror_range();
+    if (this.group.dim.weight_row)
+        this.init_metaweight_cell();
+    if (this.group.dim.mirror_row)
+        this.init_mirror_range();
     if (options.category)
         this.worksheet.set_category( options.category,
             {ignore_sections: true} );
@@ -1671,7 +1747,9 @@ WorksheetBuilder.prototype.rectify_options = function(options) {
         color_scheme: options.color_scheme = null,
         category: options.category = null,
     } = options);
-    return options
+    if (this.group.dim.category_row == null)
+        options.category = null;
+    return options;
 } // }}}
 
 // WorksheetBuilder().add_title_metadata () => (title_id) {{{
@@ -1731,6 +1809,8 @@ WorksheetBuilder.prototype.init_label_range = function() {
 
 // WorksheetBuilder().init_max_range {{{
 WorksheetBuilder.prototype.init_max_range = function() {
+    if (this.group.dim.max_row == null)
+        throw new Error("internal error");
     var data_column_R1C1 = 'R' + this.group.dim.data_row + 'C[0]:C[0]';
     var max_formula_R1C1 = '=max(0;' + data_column_R1C1 + ')';
     this.group.sheetbuf.set_formulas( "max_row",
@@ -1742,11 +1822,20 @@ WorksheetBuilder.prototype.init_max_range = function() {
 
 // WorksheetBuilder().init_weight_range {{{
 WorksheetBuilder.prototype.init_weight_range = function() {
+    if (this.group.dim.weight_row == null)
+        throw new Error("internal error");
     var data_column_R1C1 = 'R' + this.group.dim.data_row + 'C[0]:C[0]';
-    var max_R1C1 = 'R' + this.group.dim.max_row + 'C[0]';
+    var max_R1C1, max_formula;
+    if (this.group.dim.max_row != null) {
+        max_R1C1 = 'R' + this.group.dim.max_row + 'C[0]';
+        max_formula = max_R1C1;
+    } else {
+        max_R1C1 = 'R' + this.group.dim.data_row + 'C[0]:C[0]';
+        max_formula = 'max(0;' + max_R1C1 + ')';
+    }
     var weight_formula_R1C1 = ''.concat(
         '= if(',
-            max_R1C1, '; ',
+            max_formula, '; ',
             '1 / ',
             'sqrt( ',
                 'max(1;sumif(', data_column_R1C1, ';">0"))',
@@ -1764,58 +1853,82 @@ WorksheetBuilder.prototype.init_weight_range = function() {
 
 // WorksheetBuilder().init_rating_range {{{
 WorksheetBuilder.prototype.init_rating_range = function() {
-    var weight_row_rating_R1C1 =
-        'R' + this.group.dim.weight_row +
-            'C[' + (this.dim.data_start - 1 - this.dim.rating) + ']:' +
-        'R' + this.group.dim.weight_row +
-            'C[' + (this.dim.data_end   + 1 - this.dim.rating) + ']';
     var data_row_rating_R1C1 =
         'R[0]C[' + (this.dim.data_start - 1 - this.dim.rating) + ']:' +
         'R[0]C[' + (this.dim.data_end   + 1 - this.dim.rating) + ']';
-    var rating_formula_R1C1 = ''.concat(
-        '=sumproduct(',
-            weight_row_rating_R1C1, ';',
-            data_row_rating_R1C1,
-        ')'
-    );
+    var rating_formula_R1C1;
+    if (this.group.dim.weight_row != null) {
+        var weight_row_rating_R1C1 =
+            'R' + this.group.dim.weight_row +
+                'C[' + (this.dim.data_start - 1 - this.dim.rating) + ']:' +
+            'R' + this.group.dim.weight_row +
+                'C[' + (this.dim.data_end   + 1 - this.dim.rating) + ']';
+        rating_formula_R1C1 = ''.concat(
+            '=sumproduct(',
+                weight_row_rating_R1C1, ';',
+                data_row_rating_R1C1,
+            ')'
+        );
+    } else {
+        rating_formula_R1C1 = ''.concat(
+            '=sum(',
+                data_row_rating_R1C1,
+            ')'
+        );
+    }
+    var number_format = (this.group.dim.weight_row != null) ?
+        "0.00;−0.00" : "0.#;−0.#";
     this.worksheet.rating_range
         .setFormulaR1C1(rating_formula_R1C1)
-        .setNumberFormat('0.00;−0.00')
+        .setNumberFormat(number_format)
         .setFontSize(8);
-    this.group.sheetbuf.set_formula( "max_row",
-        this.dim.rating, rating_formula_R1C1 );
-    this.sheet.getRange(this.group.dim.max_row, this.dim.rating)
-        .setNumberFormat('0.00;−0.00')
-        .setFontSize(8);
+    if (this.group.dim.max_row != null) {
+        this.group.sheetbuf.set_formula( "max_row",
+            this.dim.rating, rating_formula_R1C1 );
+        this.sheet.getRange(this.group.dim.max_row, this.dim.rating)
+            .setNumberFormat(number_format)
+            .setFontSize(8);
+    }
     this.group.sheetbuf.set_value( "label_row",
         this.dim.rating, "Σ" );
 } // }}}
 
 // WorksheetBuilder().init_sum_range {{{
 WorksheetBuilder.prototype.init_sum_range = function() {
-    var max_row_sum_R1C1 =
-        'R' + this.group.dim.max_row +
-            'C[' + (this.dim.data_start - 1 - this.dim.sum) + ']:' +
-        'R' + this.group.dim.max_row +
-            'C[' + (this.dim.data_end   + 1 - this.dim.sum) + ']';
     var data_row_sum_R1C1 =
         'R[0]C[' + (this.dim.data_start - 1 - this.dim.sum) + ']:' +
         'R[0]C[' + (this.dim.data_end   + 1 - this.dim.sum) + ']';
-    var sum_formula_R1C1 = ''.concat(
-        '=countifs(',
-            max_row_sum_R1C1,  ';">0";',
-            data_row_sum_R1C1, ';">0"',
-        ')'
-    );
+    var sum_formula_R1C1;
+    if (this.group.dim.max_row != null) {
+        var max_row_sum_R1C1 =
+            'R' + this.group.dim.max_row +
+                'C[' + (this.dim.data_start - 1 - this.dim.sum) + ']:' +
+            'R' + this.group.dim.max_row +
+                'C[' + (this.dim.data_end   + 1 - this.dim.sum) + ']';
+        sum_formula_R1C1 = ''.concat(
+            '=countifs(',
+                max_row_sum_R1C1,  ';">0";',
+                data_row_sum_R1C1, ';">0"',
+            ')'
+        );
+    } else {
+        sum_formula_R1C1 = ''.concat(
+            '=countif(',
+                data_row_sum_R1C1, ';">0"',
+            ')'
+        );
+    }
     this.worksheet.sum_range
         .setFormulaR1C1(sum_formula_R1C1)
         .setNumberFormat('0')
         .setFontSize(8);
-    this.group.sheetbuf.set_formula( "max_row",
-        this.dim.sum, sum_formula_R1C1 );
-    this.sheet.getRange(this.group.dim.max_row, this.dim.sum)
-        .setNumberFormat('0')
-        .setFontSize(8);
+    if (this.group.dim.max_row != null) {
+        this.group.sheetbuf.set_formula( "max_row",
+            this.dim.sum, sum_formula_R1C1 );
+        this.sheet.getRange(this.group.dim.max_row, this.dim.sum)
+            .setNumberFormat('0')
+            .setFontSize(8);
+    }
     this.group.sheetbuf.set_value( "label_row",
         this.dim.sum, "S" );
 } // }}}
@@ -1823,7 +1936,7 @@ WorksheetBuilder.prototype.init_sum_range = function() {
 // WorksheetBuilder().init_metaweight_cell {{{
 WorksheetBuilder.prototype.init_metaweight_cell = function() {
     if (this.group.dim.weight_row == null)
-        return;
+        throw new Error("internal error");
     this.group.sheetbuf.set_value( "weight_row",
         this.dim.rating, 1 );
     this.group.sheetbuf.set_note( "weight_row",
@@ -1836,7 +1949,7 @@ WorksheetBuilder.prototype.init_metaweight_cell = function() {
 // WorksheetBuilder().init_mirror_range {{{
 WorksheetBuilder.prototype.init_mirror_range = function() {
     if (this.group.dim.mirror_row == null)
-        return;
+        throw new Error("internal error");
     var left_marker_mirror_R1C1  = 'R' + this.group.dim.label_row +
         'C[' + (this.dim.data_start - 1 - this.dim.start) + ']';
     var right_marker_mirror_R1C1 = 'R' + this.group.dim.label_row +
@@ -1893,6 +2006,8 @@ WorksheetBuilder.prototype.init_borders = function() {
         {
             max_row: this.group.dim.max_row != null ? true : null,
             weight_row: this.group.dim.weight_row != null ? true : null,
+            left:  {open: false, outer: true},
+            right: {open: false, outer: true},
         } );
     var rating_sum_range = this.sheet.getRange(
         this.group.dim.data_row, this.dim.start,
@@ -1906,13 +2021,17 @@ WorksheetBuilder.prototype.init_borders = function() {
         .setBorder(true, true, true, true, null, null)
         .setBorder( null, null, null, null, true, null,
             "black", SpreadsheetApp.BorderStyle.DOTTED );
-    rating_sum_range.offset(
-            this.group.dim.max_row - this.group.dim.data_row, 0, 1 )
-        .setBorder(true, true, true, true, null, null)
-        .setBorder( null, null, null, null, true, null,
-            "black", SpreadsheetApp.BorderStyle.DOTTED );
-    this.worksheet.metaweight_cell
-        .setBorder(true, true, true, true, null, null);
+    if (this.group.dim.max_row != null) {
+        rating_sum_range.offset(
+                this.group.dim.max_row - this.group.dim.data_row, 0, 1 )
+            .setBorder(true, true, true, true, null, null)
+            .setBorder( null, null, null, null, true, null,
+                "black", SpreadsheetApp.BorderStyle.DOTTED );
+    }
+    if (this.group.dim.weight_row != null) {
+        this.worksheet.metaweight_cell
+            .setBorder(true, true, true, true, null, null);
+    }
     this.sheet.getRange(
         this.group.dim.title_row,
         this.dim.start,
@@ -1924,11 +2043,13 @@ WorksheetBuilder.prototype.init_borders = function() {
 
 // WorksheetBuilder().add_cf_rules {{{
 WorksheetBuilder.prototype.add_cf_rules = function() {
-    ConditionalFormatting.merge(this.sheet,
-        this.worksheet.new_cfrule_data(this.color_scheme),
-        this.worksheet.new_cfrule_weight(this.color_scheme),
-        this.worksheet.new_cfrule_rating(this.color_scheme),
-    );
+    var cfrules = [];
+    cfrules.push(this.worksheet.new_cfrule_data(this.color_scheme));
+    if (this.group.dim.weight_row != null) {
+        cfrules.push(this.worksheet.new_cfrule_weight(this.color_scheme));
+    }
+    cfrules.push(this.worksheet.new_cfrule_rating(this.color_scheme));
+    ConditionalFormatting.merge(this.sheet, ...cfrules);
 } // }}}
 
 return WorksheetBuilder;

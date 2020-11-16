@@ -92,11 +92,11 @@ function restore_hardcoded(spreadsheet) {
     steel: {
       mark:       {h:-132, s: 0.35, l: 0.90},
       rating_mid: {h: -12, s: 0.50, l: 0.85},
-      rating_top: {h: -72, s: 0.60, l: 0.75},
+      rating_top: {h: -72, s: 0.60, l: 0.70},
     },
     lotus: {
       mark:       {h: 186, s: 0.30, l: 0.90},
-      rating_mid: {h: 126, s: 0.50, l: 0.80},
+      rating_mid: {h: 126, s: 0.50, l: 0.85},
       rating_top: {h:  66, s: 0.65, l: 0.65},
     },
     pixie: {

@@ -13,15 +13,17 @@ class StudyGroupDetectionError extends StudyGroupError {};
 var StudyGroupDim = function() { // namespace {{{1
 
 const row_markers = { // {{{
+    title_row:    "α",
+    label_row:    "β",
     mirror_row:   "κ",
     category_row: "τ",
-    title_row:    "α",
-    weight_row:   "σ",
     max_row:      "μ",
-    label_row:    "β",
+    weight_row:   "σ",
 }; // }}}
 
 const row_names = Object.keys(row_markers);
+
+const required_rows = new Set(["title_row", "label_row"]);
 
 function assert_number_type(value) {
     if (typeof value != "number" || isNaN(value))
@@ -67,10 +69,11 @@ function load(sheet) {
         .map(v => v[0]);
     for (let name of row_names) {
         let row = marker_values.indexOf(row_markers[name]) + 1;
-        if (row < 1)
-            throw new StudyGroupDetectionError(
-                "unable to determine position for " + name );
-        set_row.call(dim, name, row);
+        if (row < 1) {
+            set_row.call(dim, name, null);
+        } else {
+            set_row.call(dim, name, row);
+        }
     }
     return dim;
 } // }}}
@@ -99,20 +102,18 @@ function init(sheet, init_dim) {
     }
     for (let name of row_names) {
         let row = init_dim[name];
-        if (row == null) {
-            throw new StudyGroupInitError(
-                name + " not defined" );
-        }
         try {
-            set_row.call(dim, name, init_dim[name]);
+            set_row.call(dim, name, row);
         } catch (error) {
             if (error instanceof StudyGroupDetectionError) {
                 throw new StudyGroupInitError(error.message);
             }
             throw error;
         }
-        sheet.getRange(init_dim[name], 1)
-            .setValue(row_markers[name]);
+        if (row != null) {
+            sheet.getRange(row, 1)
+                .setValue(row_markers[name]);
+        }
     }
     return dim;
 } // }}}
@@ -124,30 +125,41 @@ function setup_set_row() {
 
 // [dim].set_row (name, row) {{{
 function set_row(name, row) {
-    if (row >= this.data_row) {
+    if (row == null && required_rows.has(name)) {
+        throw new StudyGroupDetectionError(
+            "missing required header row: " + name );
+    }
+    if (!(row == null || typeof row == "number" && !isNaN(row))) {
+        throw new StudyGroupDetectionError(
+            "invalid row number (" + name + "=" + row + ")" );
+    }
+    if (row != null && row >= this.data_row) {
         throw new StudyGroupDetectionError(
             "all header rows must lie before data_row, " +
             "i.e. in the frozen area (" + name + "=" + row + ")" );
     }
-    if (this[name] != null && this[name] != row) {
+    if (name in this && this[name] != row) {
         throw new StudyGroupDetectionError(
             "row conflict: " +
-            name + "=" + dim[name] + " and " +
+            name + "=" + this[name] + " and " +
             name + "=" + row );
     }
     this[name] = row;
-    if (this.inverse[row] != null && this.inverse[row] != name) {
-        throw new StudyGroupDetectionError(
-            "row conflict: " +
-            this.inverse[row] + "=" + row + " and " +
-            name + "=" + row );
+    if (row != null) {
+        if (row in this.inverse && this.inverse[row] != name) {
+            throw new StudyGroupDetectionError(
+                "row conflict: " +
+                this.inverse[row] + "=" + row + " and " +
+                name + "=" + row );
+        }
+        this.inverse[row] = name;
     }
-    this.inverse[row] = name;
 } // }}}
 
 return {
     load: load, init: init,
     row_names: row_names,
+    required_rows: required_rows,
 };
 }(); // end StudyGroupDim namespace }}}1
 
@@ -180,7 +192,9 @@ define_lazy_properties_(StudyGroup.prototype, {
     sheetbuf: function() {
         return new SheetBuffer( this.sheet,
             Object.fromEntries(
-                StudyGroupDim.row_names.map(k => [k, this.dim[k]]) ),
+                StudyGroupDim.row_names
+                    .map(k => [k, this.dim[k]])
+                    .filter(([k, v]) => v != null) ),
             this.dim );
     },
     dim: function() {
@@ -194,7 +208,12 @@ define_lazy_properties_(StudyGroup.prototype, {
 
 // StudyGroup().get_cfcondition_rating {{{
 StudyGroup.prototype.get_cfcondition_rating = function() {
-    var max_R1C1 = "R" + this.dim.max_row + "C[0]";
+    var max_R1C1;
+    if (this.dim.max_row != null) {
+        max_R1C1 = "R" + this.dim.max_row + "C[0]";
+    } else {
+        max_R1C1 = "R" + this.dim.data_row + "C[0]:C[0]";
+    }
     return new ConditionalFormatting.GradientCondition({
         min_type: SpreadsheetApp.InterpolationType.NUMBER,
         min_value: "=0.1*max(0.01," + max_R1C1 + ")",
@@ -254,7 +273,7 @@ StudyGroup.prototype.set_student_count_cell = function(range) {
       {configurable: true, value: range} );
     if (range == null) {
         SheetMetacell.unset( this.sheet,
-            this.constructor.metadata_keys.student_count);
+            this.constructor.metadata_keys.student_count );
         return;
     }
     SheetMetacell.set( this.sheet,
@@ -547,13 +566,13 @@ const initial = { // {{{
     },
     separator_col_width: 13,
     rows: {
+        data_row:     8,
+        title_row:    6,
+        label_row:    7,
         mirror_row:   1,
         category_row: 5,
-        title_row:    6,
-        weight_row:   2,
         max_row:      3,
-        label_row:    7,
-        data_row:     8,
+        weight_row:   2,
     },
 }; // }}}
 
@@ -649,7 +668,6 @@ function StudyGroupBuilder(sheet, name, options) { // {{{
     this.sheet = sheet;
     this.options = this.rectify_options(options);
     this.dim = {};
-    this.dim.data_row = this.options.rows.data_row;
     for (let row_name in initial.rows) {
         this.dim[row_name] = this.options.rows[row_name];
     }
@@ -667,7 +685,9 @@ function StudyGroupBuilder(sheet, name, options) { // {{{
 
     this.group = new StudyGroup(sheet, name);
     this.group.add_metadatum({skip_remove: true});
-    this.group.set_student_count_cell(student_count_cell);
+    if (student_count_cell != null) {
+        this.group.set_student_count_cell(student_count_cell);
+    }
     if (this.options.filename != null) {
         this.group.set_filename(this.options.filename);
     }
@@ -678,9 +698,9 @@ function StudyGroupBuilder(sheet, name, options) { // {{{
         this.color_scheme = ColorSchemes.get_default();
     }
     if (this.options.timetable != null)
-      this.group.set_timetable(this.options.timetable);
+        this.group.set_timetable(this.options.timetable);
     if (this.options.worksheet_plan != null)
-      this.group.set_worksheet_plan(this.options.worksheet_plan);
+        this.group.set_worksheet_plan(this.options.worksheet_plan);
     Object.defineProperty(this.group, "dim", {value:
         StudyGroupDim.init(this.sheet, this.dim) });
 
@@ -747,6 +767,10 @@ StudyGroupBuilder.prototype.rectify_options = function(options) {
             [row_name] : options.rows[row_name] =
                 initial.rows[row_name]
         } = options.rows);
+        if (options.rows[row_name] == null && StudyGroupDim.required_rows.has(row_name)) {
+            throw new StudyGroupInitError(
+                "rectify_options: missing required row " + row_name );
+        }
     }
     ({
         rating: options.rating = true,
@@ -755,6 +779,9 @@ StudyGroupBuilder.prototype.rectify_options = function(options) {
         category_musthave: options.category_musthave =
             (options.categories.length > 0)
     } = options);
+    if (options.rows.category_row == null) {
+        options.categories = [];
+    }
     for (let item of options.categories) {
         if (item.code == null)
             throw new StudyGroupInitError(
@@ -794,31 +821,39 @@ StudyGroupBuilder.prototype.init_rows = function() {
     sheet.setFrozenRows(this.dim.data_row - 1);
     sheet.hideRows(this.dim.data_row);
     sheet.setRowHeights(1, this.dim.data_row - 1, 5);
-    sheet.setRowHeight(this.dim.mirror_row, 21);
-    sheet.hideRows(this.dim.mirror_row);
-    sheet.setRowHeight(this.dim.category_row, 17);
-    sheet.getRange(this.dim.category_row, 1, 1, max_columns)
-        .setNumberFormat('@STRING@')
-        .setFontSize(8);
+    sheet.setRowHeights(this.dim.data_row, this.dim.data_height, 21);
     sheet.setRowHeight(this.dim.title_row, 24);
     sheet.getRange(this.dim.title_row, 1, 1, max_columns)
         .setNumberFormat('@STRING@')
         .setFontWeight('bold')
         .setFontFamily("Times New Roman,serif")
         .setFontSize(12);
-    sheet.setRowHeight(this.dim.weight_row, 17);
-    sheet.getRange(this.dim.weight_row, 1, 1, max_columns)
-        .setFontSize(8);
-    sheet.setRowHeight(this.dim.max_row, 17);
-    sheet.getRange(this.dim.max_row, 1, 1, max_columns)
-        .setFontSize(8);
     sheet.setRowHeight(this.dim.label_row, 21);
     sheet.getRange(this.dim.label_row, 1, 1, max_columns)
         .setNumberFormat('@STRING@')
         .setFontWeight('bold')
         .setFontFamily("Times New Roman,serif")
         .setVerticalAlignment("bottom");
-    sheet.setRowHeights(this.dim.data_row, this.dim.data_height, 21);
+    if (this.dim.mirror_row != null) {
+        sheet.setRowHeight(this.dim.mirror_row, 21);
+        sheet.hideRows(this.dim.mirror_row);
+    }
+    if (this.dim.category_row != null) {
+        sheet.setRowHeight(this.dim.category_row, 17);
+        sheet.getRange(this.dim.category_row, 1, 1, max_columns)
+            .setNumberFormat('@STRING@')
+            .setFontSize(8);
+    }
+    if (this.dim.max_row != null) {
+        sheet.setRowHeight(this.dim.max_row, 17);
+        sheet.getRange(this.dim.max_row, 1, 1, max_columns)
+            .setFontSize(8);
+    }
+    if (this.dim.weight_row != null) {
+        sheet.setRowHeight(this.dim.weight_row, 17);
+        sheet.getRange(this.dim.weight_row, 1, 1, max_columns)
+            .setFontSize(8);
+    }
 } // }}}
 
 // StudyGroupBuilder().init_columns {{{
@@ -839,14 +874,18 @@ StudyGroupBuilder.prototype.init_columns = function() {
     sheet.setColumnWidths(2, header_columns, 75);
     sheet.getRange(1, 1, max_rows, frozen_columns)
         .setHorizontalAlignment("left");
-    var group_title_range, student_count_cell;
-    if (this.dim.mirror_row == 1 && this.dim.label_row > 4) {
+    var group_title_range, student_count_cell = null;
+    if (this.dim.mirror_row == 1 && this.dim.label_row >= 5) {
         group_title_range = sheet.getRange(2, 2, 2, header_columns);
+        student_count_cell = sheet.getRange(this.dim.label_row - 1, 2);
+    } else if (this.dim.mirror_row == null && this.dim.label_row >= 4) {
+        group_title_range = sheet.getRange(1, 2, 2, header_columns);
         student_count_cell = sheet.getRange(this.dim.label_row - 1, 2);
     } else {
         group_title_range = sheet.getRange(
             this.dim.title_row, 2, 1, header_columns );
-        student_count_cell = sheet.getRange(this.dim.max_row, 2);
+        if (this.dim.max_row != null)
+            student_count_cell = sheet.getRange(this.dim.max_row, 2);
     }
     group_title_range.getCell(1, 1)
         .setValue("Название группы");
@@ -856,21 +895,25 @@ StudyGroupBuilder.prototype.init_columns = function() {
         .setFontWeight("bold")
         .setFontFamily("Verdana")
         .setVerticalAlignment("top");
-    const data_column_R1C1 = "R" + this.dim.data_row + "C[0]:C[0]";
-    student_count_cell
-        .setFormulaR1C1(
-            '= counta(' + data_column_R1C1 + ') - ' +
-            'sum(arrayformula(' +
-                'iferror(N(find("(→)",' + data_column_R1C1 + ')>0))' +
-            '))' )
-        .setNumberFormat("0 чел\\.")
-        .setFontSize(8)
-        .setVerticalAlignment("bottom");
-    student_count_cell.offset(0, 1)
-        .setValue("каб. ?")
-        .setNumberFormat('@STRING@')
-        .setFontSize(8)
-        .setVerticalAlignment("bottom");
+    if (student_count_cell != null) {
+        const data_column_R1C1 = "R" + this.dim.data_row + "C[0]:C[0]";
+        student_count_cell
+            .setFormulaR1C1(
+                '= counta(' + data_column_R1C1 + ') - ' +
+                'sum(arrayformula(' +
+                    'iferror(N(find("(→)",' + data_column_R1C1 + ')>0))' +
+                '))' )
+            .setNumberFormat("0 чел\\.")
+            .setFontSize(8)
+            .setVerticalAlignment("bottom");
+        if (frozen_columns >= 3) {
+            student_count_cell.offset(0, 1)
+                .setValue("каб. ?")
+                .setNumberFormat('@STRING@')
+                .setFontSize(8)
+                .setVerticalAlignment("bottom");
+        }
+    }
     sheet.getRange(this.dim.label_row, 2)
         .setValue("Фамилия Имя");
     sheet.getRange(this.dim.label_row, 2, 1, header_columns).merge();
@@ -939,7 +982,7 @@ StudyGroupBuilder.prototype.add_attendance_sum = function() {
     sheet.setColumnWidth(column, 40);
     var range = sheet.getRange(
         this.dim.data_row, column, this.dim.data_height, 1 );
-    var max_range =
+    var max_range = this.dim.max_row == null ? null :
         range.offset(this.dim.max_row - this.dim.data_row, 0, 1);
     range
         .setFontFamily("Georgia");
@@ -950,22 +993,28 @@ StudyGroupBuilder.prototype.add_attendance_sum = function() {
             this.dim.label_row - this.dim.data_row, 0,
             this.dim.data_height + this.dim.data_row - this.dim.label_row )
         .setBorder(true, true, true, true, null, null);
-    max_range
-        .setFontFamily("Georgia");
-    var max_R1C1 = "R" + this.dim.max_row + "C[0]";
+    if (max_range != null)
+        max_range.setFontFamily("Georgia");
+    var max_R1C1;
+    if (this.dim.max_row != null) {
+        max_R1C1 = "R" + this.dim.max_row + "C[0]";
+    } else {
+        max_R1C1 = "R" + this.dim.data_row + "C[0]:C[0]";
+    }
+    var cf_ranges = [[this.dim.data_row, column, this.dim.data_height, 1]];
+    if (this.dim.max_row != null) {
+        cf_ranges.push([this.dim.max_row, column, 1, 1]);
+    }
     this.cfrule_objs.push({ type: "gradient",
         condition: {
             min_type: SpreadsheetApp.InterpolationType.NUMBER,
             min_value: "0",
             mid_type: SpreadsheetApp.InterpolationType.NUMBER,
-            mid_value: "= min(0.5 * max(2," + max_R1C1 + "), 4)",
+            mid_value: "= min(0.5 * max(7," + max_R1C1 + "), 4)",
             max_type: SpreadsheetApp.InterpolationType.NUMBER,
-            max_value: "= 0.9 * max(2," + max_R1C1 + ")",
+            max_value: "= 0.9 * max(7," + max_R1C1 + ")",
         },
-        ranges: [
-            [this.dim.data_row, column, this.dim.data_height, 1],
-            [this.dim.max_row, column, 1, 1],
-        ],
+        ranges: cf_ranges,
         effect: {
             min_color: "#ffffff",
             mid_color: HSL.to_hex(initial.attendance.colors.mark),
@@ -1033,6 +1082,9 @@ StudyGroupBuilder.prototype.prepare_category_info = function() {
 
 // StudyGroupBuilder().add_category_ratinglike_range (info, label) => (range) {{{
 StudyGroupBuilder.prototype.add_category_ratinglike_range = function(info, label) {
+    if (this.dim.category_row == null)
+        throw new StudyGroupInitError(
+            "add_category_ratinglike_range: internal error" );
     const sheet = this.sheet;
     var width = info.codes.length;
     var column = this.allocate_columns(width);
@@ -1041,7 +1093,7 @@ StudyGroupBuilder.prototype.add_category_ratinglike_range = function(info, label
         this.dim.data_row, column, this.dim.data_height, width );
     range.offset(this.dim.label_row - this.dim.data_row, 0, 1)
         .setValue(label);
-    if (info.integrate) {
+    if (info.integrate && this.dim.weight_row != null) {
         range.offset(this.dim.weight_row - this.dim.data_row, 0, 1)
             .setValues([info.weights])
             .setFontSize(8);
@@ -1141,6 +1193,8 @@ StudyGroupBuilder.prototype.add_attendance = function() {
         this.dim.data_height + this.dim.data_row - this.dim.title_row
     )
         .setBorder(true, true, true, true, null, null);
+    this.sheet.getRange(this.dim.label_row, dim.end)
+        .setValue(".") // force column non-empty
     if (date_list != null) {
         this.format_attendance_data(data_range);
         data_range.offset(this.dim.label_row - this.dim.data_row, 0, 1)
@@ -1188,9 +1242,11 @@ StudyGroupBuilder.prototype.add_attendance = function() {
     var today_cfranges = [
         [this.dim.data_row,   dim.start, this.dim.data_height, dim.width],
         [this.dim.label_row,  dim.start, 1, dim.width],
-        [this.dim.max_row,    dim.start, 1, dim.width],
-        [this.dim.weight_row, dim.start, 1, dim.width],
-    ];
+        ...[
+            [this.dim.max_row,  dim.start, 1, dim.width],
+            [this.dim.weight_row,  dim.start, 1, dim.width],
+        ].filter(([r,]) => r != null)
+    ]
     this.cfrule_objs.push({ type: "boolean",
         condition: {
             type: SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA,
@@ -1247,33 +1303,38 @@ StudyGroupBuilder.prototype.add_attendance = function() {
         effect: {
             background: HSL.to_hex(initial.attendance.colors.present) },
     });
+    var ones_cfranges = [
+        [this.dim.data_row, dim.start, this.dim.data_height, dim.width],
+        ...[
+            [this.dim.max_row, dim.start, 1, dim.width],
+        ].filter(([r,]) => r != null)
+    ];
     this.cfrule_objs.push({ type: "boolean",
         condition: {
             type: SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN,
             values: [0] },
-        ranges: [
-            [this.dim.data_row, dim.start, this.dim.data_height, dim.width],
-            [this.dim.max_row, dim.start, 1, dim.width],
-        ],
+        ranges: ones_cfranges,
         effect: {
             background: HSL.to_hex(initial.attendance.colors.mark) },
     });
-    this.cfrule_objs.push({ type: "gradient",
-        condition: {
-            min_type: SpreadsheetApp.InterpolationType.NUMBER,
-            min_value: "0.5",
-            mid_type: SpreadsheetApp.InterpolationType.NUMBER,
-            mid_value: "10",
-            max_type: SpreadsheetApp.InterpolationType.NUMBER,
-            max_value: "25" },
-        ranges: [[total_row, dim.start, 1, dim.width]],
-        effect: {
-            min_color: "#ffffff",
-            mid_color: HSL.to_hex(initial.attendance.colors.mark),
-            max_color: HSL.to_hex(
-                HSL.deepen(initial.attendance.colors.mark, 4) ),
-        },
-    });
+    if (total_row != null) {
+        this.cfrule_objs.push({ type: "gradient",
+            condition: {
+                min_type: SpreadsheetApp.InterpolationType.NUMBER,
+                min_value: "0.5",
+                mid_type: SpreadsheetApp.InterpolationType.NUMBER,
+                mid_value: "10",
+                max_type: SpreadsheetApp.InterpolationType.NUMBER,
+                max_value: "25" }, // XXX make it depend on student count? or maybe just maximum
+            ranges: [[total_row, dim.start, 1, dim.width]],
+            effect: {
+                min_color: "#ffffff",
+                mid_color: HSL.to_hex(initial.attendance.colors.mark),
+                max_color: HSL.to_hex(
+                    HSL.deepen(initial.attendance.colors.mark, 4) ),
+            },
+        });
+    }
     return data_ext_range;
 } // }}}
 
@@ -1281,24 +1342,30 @@ StudyGroupBuilder.prototype.add_attendance = function() {
 StudyGroupBuilder.prototype.format_attendance_data = function(data_range) {
     const total_row = this.attendance_total_row;
     data_range.setFontFamily("Georgia");
-    for (let row of [total_row, this.dim.max_row]) {
+    const extra_rows = [total_row, this.dim.max_row].filter(r => r != null);
+    for (let row of extra_rows) {
         data_range.offset(row - this.dim.data_row, 0, 1)
             .setFontFamily("Georgia");
     }
     const data_column_R1C1 = "R" + this.dim.data_row + "C[0]:C[0]";
-    data_range.offset(total_row - this.dim.data_row, 0, 1)
-        .setFormulaR1C1('=sum(' + data_column_R1C1 + ')');
-    const total_R1C1 = 'R' + total_row + 'C[0]';
-    data_range.offset(this.dim.max_row - this.dim.data_row, 0, 1)
-        .setFormulaR1C1('=N(' + total_R1C1 + '>0)');
-    for (let row of [null, total_row, this.dim.max_row, this.dim.label_row]) {
+    var total_formula = 'sum(' + data_column_R1C1 + ')';
+    if (total_row != null) {
+        data_range.offset(total_row - this.dim.data_row, 0, 1)
+            .setFormulaR1C1('=' + total_formula);
+        total_formula = 'R' + total_row + 'C[0]';
+    }
+    if (this.dim.max_row != null) {
+        data_range.offset(this.dim.max_row - this.dim.data_row, 0, 1)
+            .setFormulaR1C1('=N(' + total_formula + '>0)');
+    }
+    for (let row of [null, this.dim.label_row, ...extra_rows]) {
         ( row == null ? data_range :
                 data_range.offset(row - this.dim.data_row, 0, 1) )
             .setBorder(true, true, true, true, null, null)
             .setBorder( null, null, null, null, true, null,
                 "black", SpreadsheetApp.BorderStyle.DOTTED );
     };
-    if (total_row - this.dim.max_row == -1)
+    if (total_row != null && this.dim.max_row != null && total_row - this.dim.max_row == -1)
         data_range.offset(total_row - this.dim.data_row, 0, 2)
             .setBorder( null, null, null, null, null, true,
                 "black", SpreadsheetApp.BorderStyle.DOTTED );
@@ -1307,6 +1374,7 @@ StudyGroupBuilder.prototype.format_attendance_data = function(data_range) {
 // StudyGroupBuilder().monthize_attendance (range, dates) {{{
 StudyGroupBuilder.prototype.monthize_attendance = function(title_range, dates) {
     const first_column = title_range.getColumn();
+    const extra_rows = [this.attendance_total_row, this.dim.max_row].filter(r => r != null);
     for (let {start, end, length, value} of
         group_by_(dates, function(date) {
             var month = new Date(date.getTime());
@@ -1325,6 +1393,12 @@ StudyGroupBuilder.prototype.monthize_attendance = function(title_range, dates) {
             this.dim.data_height + this.dim.data_row - this.dim.title_row
         )
             .setBorder(true, true, true, true, null, null);
+        for (let row of extra_rows) {
+            month_title_range.offset(
+                row - this.dim.title_row, 0, 1
+            )
+                .setBorder(null, true, null, true, null, null);
+        }
     };
 } // }}}
 
@@ -1365,30 +1439,37 @@ StudyGroupBuilder.prototype.set_attendance_sum_formulas = function() {
     var attendance_sum_formula_R1C1 = '=sum(' + attendance_R1C1 + ')';
     this.attendance_sum_range
         .setFormulaR1C1(attendance_sum_formula_R1C1);
-    this.attendance_sum_range.offset(
-        this.dim.max_row - this.dim.data_row, 0, 1
-    )
-        .setFormulaR1C1(attendance_sum_formula_R1C1);
+    if (this.dim.max_row != null) {
+        this.attendance_sum_range.offset(
+            this.dim.max_row - this.dim.data_row, 0, 1
+        )
+            .setFormulaR1C1(attendance_sum_formula_R1C1);
+    }
 } // }}}
 
 // StudyGroupBuilder().set_rating_direct_formulas {{{
 StudyGroupBuilder.prototype.set_rating_direct_formulas = function() {
     // XXX create intermediate column
     // so that rating will be in percent
+    const label_row = this.dim.mirror_row != null ? this.dim.mirror_row : this.dim.label_row;
     var rating_formula_R1C1 = ''.concat('=sum(iferror(filter( ',
         'arrayformula(',
-            this.get_worksheet_row_R1C1('R[0]'), '*',
-            this.get_worksheet_row_R1C1(this.dim.weight_row), '/',
-            this.get_worksheet_row_R1C1(this.dim.max_row),
+            this.get_worksheet_row_R1C1('R[0]'),
+            this.dim.weight_row == null ? '' : ('*' + this.get_worksheet_row_R1C1(this.dim.weight_row)),
+            this.dim.max_row    == null ? '' : ('/' + this.get_worksheet_row_R1C1(this.dim.max_row)),
         '), ',
-        this.get_worksheet_row_R1C1(this.dim.mirror_row), '="Σ"',
+        this.get_worksheet_row_R1C1(label_row), '="Σ"',
     ' )))');
+    var number_format = (this.dim.max_row != null || this.dim.weight_row != null) ?
+        "0.00;−0.00" : "0.#;−0.#"
     this.rating_range
         .setFormulaR1C1(rating_formula_R1C1)
-        .setNumberFormat("0.00;−0.00");
-    this.rating_range.offset(this.dim.max_row - this.dim.data_row, 0, 1)
-        .setFormulaR1C1(rating_formula_R1C1)
-        .setNumberFormat("0.00;−0.00");
+        .setNumberFormat(number_format);
+    if (this.dim.max_row != null) {
+        this.rating_range.offset(this.dim.max_row - this.dim.data_row, 0, 1)
+            .setFormulaR1C1(rating_formula_R1C1)
+            .setNumberFormat(number_format);
+    }
 } // }}}
 
 // StudyGroupBuilder().set_rating_category_formulas {{{
@@ -1400,34 +1481,67 @@ StudyGroupBuilder.prototype.set_rating_category_formulas = function() {
         return row_R1 + 'C' + category_rating_range.getColumn() +
             ':' + row_R1 + 'C' + category_rating_range.getLastColumn();
     }
-    var rating_formula_R1C1 = ''.concat(
-        '=average.weighted(',
+    var rating_formula_R1C1, number_format;
+    if (this.dim.max_row != null) {
+        var rating_arrayformula_R1C1 = ''.concat(
             'arrayformula(iferror(',
                 get_category_rating_row('R[0]'), "/",
                 get_category_rating_row(this.dim.max_row),
-            ',0)),',
-            get_category_rating_row(this.dim.weight_row),
-        ')' );
+            ',0))' );
+        if (this.dim.weight_row != null) {
+            rating_formula_R1C1 = ''.concat(
+                '=average.weighted(',
+                    rating_arrayformula_R1C1, ',',
+                    get_category_rating_row(this.dim.weight_row),
+                ')' );
+        } else {
+            rating_formula_R1C1 = ''.concat(
+                '=average(',
+                    rating_arrayformula_R1C1,
+                ')' );
+        }
+        number_format = "00%;−00%";
+    } else {
+        if (this.dim.weight_row != null) {
+            rating_formula_R1C1 = ''.concat(
+                '=sumproduct(',
+                    get_category_rating_row('R[0]'), ',',
+                    get_category_rating_row(this.dim.weight_row),
+                ')' );
+            number_format = "0.00;−0.00";
+        } else {
+            rating_formula_R1C1 = ''.concat(
+                '=sum(',
+                    get_category_rating_row('R[0]'),
+                ')' );
+            number_format = "0.#;−0.#";
+        }
+    }
     this.rating_range
         .setFormulaR1C1(rating_formula_R1C1)
-        .setNumberFormat("00%;−00%");
-    this.rating_range.offset(this.dim.max_row - this.dim.data_row, 0, 1)
-        .setFormulaR1C1(rating_formula_R1C1)
-        .setNumberFormat("00%;−00%");
+        .setNumberFormat(number_format);
+    if (this.dim.max_row != null) {
+        this.rating_range.offset(this.dim.max_row - this.dim.data_row, 0, 1)
+            .setFormulaR1C1(rating_formula_R1C1)
+            .setNumberFormat(number_format);
+    }
 } // }}}
 
 // StudyGroupBuilder().set_sum_direct_formulas {{{
 StudyGroupBuilder.prototype.set_sum_direct_formulas = function() {
+    const label_row = this.dim.mirror_row != null ? this.dim.mirror_row : this.dim.label_row;
     var sum_formula_R1C1 = ''.concat('=sum(iferror(filter( ',
         this.get_worksheet_row_R1C1('R[0]'), ', ',
-        this.get_worksheet_row_R1C1(this.dim.mirror_row), '="S"',
+        this.get_worksheet_row_R1C1(label_row), '="S"',
     ' )))');
     this.sum_range
         .setFormulaR1C1(sum_formula_R1C1)
         .setNumberFormat("0");
-    this.sum_range.offset(this.dim.max_row - this.dim.data_row, 0, 1)
-        .setFormulaR1C1(sum_formula_R1C1)
-        .setNumberFormat("0");
+    if (this.dim.max_row != null) {
+        this.sum_range.offset(this.dim.max_row - this.dim.data_row, 0, 1)
+            .setFormulaR1C1(sum_formula_R1C1)
+            .setNumberFormat("0");
+    }
 } // }}}
 
 // StudyGroupBuilder().set_sum_category_formulas {{{
@@ -1439,47 +1553,69 @@ StudyGroupBuilder.prototype.set_sum_category_formulas = function() {
         return row_R1 + 'C' + category_sum_range.getColumn() +
             ':' + row_R1 + 'C' + category_sum_range.getLastColumn();
     }
-    var sum_formula_R1C1 = ''.concat(
-        '=sumproduct(',
-            get_category_sum_row('R[0]'), ',',
-            get_category_sum_row(this.dim.weight_row),
-        ')' );
+    var sum_formula_R1C1;
+    if (this.dim.weight_row != null) {
+        sum_formula_R1C1 = ''.concat(
+            '=sumproduct(',
+                get_category_sum_row('R[0]'), ',',
+                get_category_sum_row(this.dim.weight_row),
+            ')' );
+    } else {
+        sum_formula_R1C1 = ''.concat(
+            '=sum(',
+                get_category_sum_row('R[0]'),
+            ')' );
+    }
     this.sum_range
         .setFormulaR1C1(sum_formula_R1C1)
         .setNumberFormat("0");
-    this.sum_range.offset(this.dim.max_row - this.dim.data_row, 0, 1)
-        .setFormulaR1C1(sum_formula_R1C1)
-        .setNumberFormat("0");
+    if (this.dim.max_row != null) {
+        this.sum_range.offset(this.dim.max_row - this.dim.data_row, 0, 1)
+            .setFormulaR1C1(sum_formula_R1C1)
+            .setNumberFormat("0");
+    }
 } // }}}
 
 // StudyGroupBuilder().set_category_rating_formulas {{{
 StudyGroupBuilder.prototype.set_category_rating_formulas = function() {
+    if (this.dim.category_row == null)
+        throw new StudyGroupInitError(
+            "add_category_ratinglike_range: internal error" );
+    const label_row = this.dim.mirror_row != null ? this.dim.mirror_row : this.dim.label_row;
     var category_rating_formula_R1C1 = ''.concat('=sum(iferror(filter( ',
         'arrayformula(',
-            this.get_worksheet_row_R1C1('R[0]'), '*',
-            this.get_worksheet_row_R1C1(this.dim.weight_row), '/',
-            this.get_worksheet_row_R1C1(this.dim.max_row),
+            this.get_worksheet_row_R1C1('R[0]'),
+            this.dim.weight_row == null ? '' : ('*' + this.get_worksheet_row_R1C1(this.dim.weight_row)),
+            this.dim.max_row    == null ? '' : ('/' + this.get_worksheet_row_R1C1(this.dim.max_row)),
         '), ',
-        this.get_worksheet_row_R1C1(this.dim.mirror_row), '="Σ", ',
+        this.get_worksheet_row_R1C1(label_row), '="Σ", ',
         'exact(',
             this.get_worksheet_row_R1C1(this.dim.category_row), ',',
             'R', this.dim.category_row, 'C[0])',
     ' )))');
+    var number_format = (this.dim.max_row != null || this.dim.weight_row != null) ?
+        "0.00;−0.00" : "0.#;−0.#"
     this.category_rating_range
         .setFormulaR1C1(category_rating_formula_R1C1)
-        .setNumberFormat("0.00;−0.00");
-    this.category_rating_range.offset(
-        this.dim.max_row - this.dim.data_row, 0, 1
-    )
-        .setFormulaR1C1(category_rating_formula_R1C1)
-        .setNumberFormat("0.00;−0.00");
+        .setNumberFormat(number_format);
+    if (this.dim.max_row != null) {
+        this.category_rating_range.offset(
+            this.dim.max_row - this.dim.data_row, 0, 1
+        )
+            .setFormulaR1C1(category_rating_formula_R1C1)
+            .setNumberFormat(number_format);
+    }
 } // }}}
 
 // StudyGroupBuilder().set_category_sum_formulas {{{
 StudyGroupBuilder.prototype.set_category_sum_formulas = function() {
+    if (this.dim.category_row == null)
+        throw new StudyGroupInitError(
+            "add_category_ratinglike_range: internal error" );
+    const label_row = this.dim.mirror_row != null ? this.dim.mirror_row : this.dim.label_row;
     var category_sum_formula_R1C1 = ''.concat('=sum(iferror(filter( ',
         this.get_worksheet_row_R1C1('R[0]'), ', ',
-        this.get_worksheet_row_R1C1(this.dim.mirror_row), '="S", ',
+        this.get_worksheet_row_R1C1(label_row), '="S", ',
         'exact(',
             this.get_worksheet_row_R1C1(this.dim.category_row), ',',
             'R', this.dim.category_row, 'C[0])',
@@ -1487,43 +1623,51 @@ StudyGroupBuilder.prototype.set_category_sum_formulas = function() {
     this.category_sum_range
         .setFormulaR1C1(category_sum_formula_R1C1)
         .setNumberFormat("0");
-    this.category_sum_range.offset(this.dim.max_row - this.dim.data_row, 0, 1)
-        .setFormulaR1C1(category_sum_formula_R1C1)
-        .setNumberFormat("0");
+    if (this.dim.max_row != null) {
+        this.category_sum_range.offset(this.dim.max_row - this.dim.data_row, 0, 1)
+            .setFormulaR1C1(category_sum_formula_R1C1)
+            .setNumberFormat("0");
+    }
 } // }}}
 
 // StudyGroupBuilder().push_worksheet_cfrules {{{
 StudyGroupBuilder.prototype.push_worksheet_cfrules = function() {
     const sheet = this.sheet;
-    var mirror_R1C1 = "R" + this.dim.mirror_row + "C[0]";
-    this.cfrule_error_objs.push({ type: "boolean",
-        condition: {
-            type: SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA,
-            values: ["".concat(
-                "=iserror(", mirror_R1C1, ")" )],
-        },
-        ranges: [[1, this.worksheet_start_column, this.dim.sheet_height, 1]],
-        effect: {background: "#ff0000"},
-    });
-    this.cfrule_error_objs.push({ type: "boolean",
-        condition: {
-            type: SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA,
-            values: ["".concat(
-                "=isblank(", mirror_R1C1, ")" )],
-        },
-        ranges: [
-            [ this.dim.data_row, this.worksheet_start_column,
-                this.dim.data_height ],
-            [this.dim.label_row,  this.worksheet_start_column],
-            [this.dim.weight_row, this.worksheet_start_column],
-            [this.dim.max_row,    this.worksheet_start_column],
-        ],
-        effect: {font_color: "#808080"},
-    });
+    if (this.dim.mirror_row != null) {
+        var mirror_R1C1 = "R" + this.dim.mirror_row + "C[0]";
+        this.cfrule_error_objs.push({ type: "boolean",
+            condition: {
+                type: SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA,
+                values: ["".concat(
+                    "=iserror(", mirror_R1C1, ")" )],
+            },
+            ranges: [[1, this.worksheet_start_column, this.dim.sheet_height, 1]],
+            effect: {background: "#ff0000"},
+        });
+        this.cfrule_error_objs.push({ type: "boolean",
+            condition: {
+                type: SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA,
+                values: ["".concat(
+                    "=isblank(", mirror_R1C1, ")" )],
+            },
+            ranges: [
+                [ this.dim.data_row, this.worksheet_start_column,
+                    this.dim.data_height ],
+                [this.dim.label_row,  this.worksheet_start_column],
+                ...[
+                    [this.dim.weight_row, this.worksheet_start_column],
+                    [this.dim.max_row,    this.worksheet_start_column],
+               ].filter(([r,]) => r != null)
+            ],
+            effect: {font_color: "#808080"},
+        });
+    }
 } // }}}
 
 // StudyGroupBuilder().push_category_cfrules {{{
 StudyGroupBuilder.prototype.push_category_cfrules = function() {
+    if (this.dim.category_row == null)
+        return;
     var ranges = [this.category_rating_range, this.category_sum_range];
     var cfranges = [];
     for (let range of ranges) {
@@ -1569,14 +1713,15 @@ StudyGroupBuilder.prototype.push_category_cfrules = function() {
         effect: {background: "#ff0000"},
     });
     if (this.options.category_musthave) {
-        var mirror_R1C1 = "R" + this.dim.mirror_row + "C[0]";
+        const label_row = this.dim.mirror_row != null ? this.dim.mirror_row : this.dim.label_row;
+        var label_R1C1 = "R" + label_row + "C[0]";
         this.cfrule_objs.push({ type: "boolean",
             condition: {
                 type: SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA,
                 values: ["".concat(
                     "=or(",
-                        "exact(\"Σ\"," + mirror_R1C1 + ")", ",",
-                        "exact(\"S\"," + mirror_R1C1 + ")",
+                        "exact(\"Σ\"," + label_R1C1 + ")", ",",
+                        "exact(\"S\"," + label_R1C1 + ")",
                     ")" )],
             },
             ranges: [worksheet_category_row],
@@ -1594,12 +1739,14 @@ StudyGroupBuilder.prototype.push_rating_cfrules = function() {
     for (let range of ranges) {
         if (range == null)
             continue;
-        cfranges.push(
-            [ this.dim.data_row, range.getColumn(),
-                this.dim.data_height, range.getWidth() ],
-            [ this.dim.max_row,  range.getColumn(),
-                1, range.getWidth() ],
-        );
+        cfranges.push([
+            this.dim.data_row, range.getColumn(),
+            this.dim.data_height, range.getWidth() ]);
+        if (this.dim.max_row) {
+            cfranges.push([
+                this.dim.max_row,  range.getColumn(),
+                1, range.getWidth() ]);
+        }
     }
     if (cfranges.length < 1)
       return;

@@ -59,19 +59,26 @@ return {
 }(); // end User namespace
 
 function user_admin_acquire() {
+    const password = "я хочу сломать ведомость";
     var user = Session.getActiveUser();
     var email = user.getEmail();
     if ( email == "" ||
         email != SpreadsheetApp.getActiveSpreadsheet().getOwner().getEmail()
     ) {
         const ui = SpreadsheetApp.getUi();
+        let response_btn = ui.alert( "Функции администратора",
+            "Пароль к функциям администратора: " +
+            "«" + password + "».",
+            ui.ButtonSet.OK_CANCEL );
+        if (response_btn != ui.Button.OK) {
+            return;
+        }
         let response = ui.prompt( "Функции администратора",
-            "Чтобы получить доступ к функциям администратора, " +
-            "введите «я хочу сломать ведомость»:",
+            "Введите пароль:",
             ui.ButtonSet.OK_CANCEL );
         if (
             response.getSelectedButton() != ui.Button.OK ||
-            response.getResponseText() != "я хочу сломать ведомость"
+            response.getResponseText() != password
         ) {
             return;
         }

@@ -633,7 +633,6 @@ class UploadDialog {
     var $resource_list = this.find_an_$element(
       ".upload_dialog--src_loader .resource_loader--resource_list" );
     if ($resource_list.find(".resource_list--item[data-resource-type=\"url\"]").length > 0) {
-      // XXX also remove file adding UI since it is effectively disabled
       window.alert("Нельзя добавить файлы, если уже добавлена ссылка");
       return;
     }

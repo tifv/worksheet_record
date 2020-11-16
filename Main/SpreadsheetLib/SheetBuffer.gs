@@ -56,6 +56,8 @@ MergedRangesBuffer.prototype.ensure_loaded = function() {
 MergedRangesBuffer.prototype.get_merge = function(row_name, column) {
     // return [start, end] or null
     this.ensure_loaded();
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     let indices = this._indices[row_name];
     let index = indices[column-1];
     if (index == 0) {
@@ -72,13 +74,18 @@ MergedRangesBuffer.prototype.is_overlapped = function(row_name, column) {
     // return true if the cell is part of a merge and not a start of it
     if (typeof column !== "number")
         throw new Error("MergedRangesBuffer().is_overlapped: internal error");
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     this.ensure_loaded();
-    return this._indices[row_name][column-1] < 0;
+    let indices = this._indices[row_name];
+    return indices[column-1] < 0;
 }
 
 MergedRangesBuffer.prototype.merge = function(row_name, start, end) {
     if (!this._loaded)
         return;
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     if (this.is_overlapped(row_name, start))
         throw new SheetBufferMergeOverlap(
             "an existing merge overlaps merge area boundary",
@@ -100,6 +107,8 @@ MergedRangesBuffer.prototype.merge = function(row_name, start, end) {
 MergedRangesBuffer.prototype.unmerge = function(row_name, start, end) {
     if (!this._loaded)
         return;
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     if (this.is_overlapped(row_name, start))
         throw new SheetBufferMergeOverlap(
             "an existing merge overlaps unmerge area boundary",
@@ -108,7 +117,8 @@ MergedRangesBuffer.prototype.unmerge = function(row_name, start, end) {
         throw new SheetBufferMergeOverlap(
             "an existing merge overlaps unmerge area boundary",
             this.sheet.getRange(this._row_map[row_name], end) );
-    this._indices[row_name].fill(0, start - 1, end);
+    let indices = this._indices[row_name];
+    indices.fill(0, start - 1, end);
 }
 
 MergedRangesBuffer.prototype.insert_columns = function(column, num_columns) {
@@ -314,8 +324,9 @@ function SheetBuffer_slice(value_type, row_name, start, end) {
     if (end < start)
         throw new SheetBufferError("slice: invalid indices");
     SheetBuffer_ensure_loaded.call(this, start, end);
-    var values_map = this._data[value_type];
-    return values_map[row_name].slice(
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
+    return this._data[value_type][row_name].slice(
         start - this._loaded_start, end - this._loaded_start + 1 );
 }
 
@@ -327,8 +338,9 @@ function SheetBuffer_get(value_type, row_name, column) {
     if (column < 1 || column > this.dim.sheet_width)
         throw new SheetBufferError("get: index out of bounds");
     SheetBuffer_ensure_loaded.call(this, column);
-    var values_map = this._data[value_type];
-    return values_map[row_name][column - this._loaded_start];
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
+    return this._data[value_type][row_name][column - this._loaded_start];
 }
 
 SheetBuffer.prototype.get_value = function(row_name, column) {
@@ -351,6 +363,8 @@ SheetBuffer.prototype.set_value = function(row_name, column, value) {
             "cannot set a formula value with this method".
             this.sheet.getRange(this._row_map[row_name], column) );
     }
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     if ( this._loaded_start != null &&
         column >= this._loaded_start && column <= this._loaded_end
     ) {
@@ -375,6 +389,8 @@ SheetBuffer.prototype.set_values = function(row_name, start, end, values) {
     } else if (values.length != width) {
         throw new SheetBufferError("set_values: invalid values array");
     }
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     var formulas = new Array(width);
     formulas.fill("");
     if ( this._loaded_start != null &&
@@ -395,6 +411,8 @@ SheetBuffer.prototype.set_formula = function( row_name, column, formula,
 ) {
     if (column < 1 || column > this.dim.sheet_width)
         throw new SheetBufferError("set_formula: index out of bounds");
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     if ( this._loaded_start != null &&
         column >= this._loaded_start && column <= this._loaded_end
     ) {
@@ -422,6 +440,8 @@ SheetBuffer.prototype.set_formulas = function( row_name, start, end, formulas,
     } else if (formulas.length != width) {
         throw new SheetBufferError("set_formulas: invalid formulas array");
     }
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     if (!(values_replace instanceof Array)) {
         let values_array = new Array(width);
         values_array.fill(values_replace);
@@ -445,6 +465,8 @@ SheetBuffer.prototype.set_formulas = function( row_name, start, end, formulas,
 SheetBuffer.prototype.set_note = function(row_name, column, note) {
     if (column < 1 || column > this.dim.sheet_width)
         throw new SheetBufferError("set_note: index out of bounds");
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     if ( this._loaded_start != null &&
         column >= this._loaded_start && column <= this._loaded_end
     ) {
@@ -460,6 +482,8 @@ SheetBuffer.prototype.merge = function(row_name, start, end) {
         throw new SheetBufferError("merge: index out of bounds");
     if (start > end)
         throw new SheetBufferError("merge: invalid indices");
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     this._merges.merge(row_name, start, end);
     if ( this._loaded_start &&
         start <= this._loaded_end && end >= this._loaded_start
@@ -494,6 +518,8 @@ SheetBuffer.prototype.unmerge = function(row_name, start, end) {
         throw new SheetBufferError("unmerge: index out of bounds");
     if (start > end)
         throw new SheetBufferError("unmerge: invalid indices");
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     this._merges.unmerge(row_name, start, end);
     this.sheet.getRange(
         this._row_map[row_name], start, 1, end - start + 1
@@ -607,6 +633,8 @@ SheetBuffer.prototype.find = function(
         end = this.dim.sheet_width;
     if (end < start)
         return null;
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     if (this._loaded_start == null) {
         if (end - start + 1 <= chunk_size) {
             SheetBuffer_ensure_loaded.call(this, start, end);
@@ -644,6 +672,8 @@ SheetBuffer.prototype.find_last = function(
         end = 1;
     if (end > start)
         return null;
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     if (this._loaded_start == null) {
         if (start - end + 1 <= chunk_size) {
             SheetBuffer_ensure_loaded.call(this, end, start);
@@ -682,6 +712,8 @@ SheetBuffer.prototype.find_closest = function(
         return this.find(value_type, row_name, value);
     if (center >= this.dim.sheet_width)
         return this.find_last(value_type, row_name, value);
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     SheetBuffer_ensure_loaded.call(this, center);
     var current_start = center;
     while (true) {
@@ -750,6 +782,8 @@ SheetBuffer.prototype.find_merge = function(
         end = this.dim.sheet_width;
     if (end < start)
         return null;
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     if (this._loaded_start == null) {
         if (end - start + 1 <= chunk_size) {
             SheetBuffer_ensure_loaded.call(this, start, end);
@@ -818,6 +852,8 @@ SheetBuffer.prototype.find_last_merge = function(
         end = this.dim.sheet_width;
     if (end > start)
         return null;
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
     if (this._loaded_start == null) {
         if (start - end + 1 <= chunk_size) {
             SheetBuffer_ensure_loaded.call(this, end, start);
