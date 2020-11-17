@@ -635,30 +635,32 @@ Worksheet.recolor_cf_rules = function( group, color_scheme,
         condition: this.get_cfcondition_data(),
         locations: [location_data, location_max].filter(l => l != null),
     }, this.get_cfeffect_data(color_scheme));
-    if (group.dim.weight_row != null) {
-        var data_limit_filter = ConditionalFormatting.RuleFilter.from_object({
-            type: "boolean",
-            condition: {
-                type: SpreadsheetApp.BooleanCriteria
-                    .NUMBER_GREATER_THAN_OR_EQUAL_TO,
-                values: [null] },
-            locations: [location_data, location_max].filter(l => l != null),
-        });
-        var data_limit_formula_regex = new RegExp(
-          "=R" + group.dim.weight_row + "C\d+" );
-        data_limit_filter.condition.match = (cfcondition) => {
-            return (
-                cfcondition instanceof ConditionalFormatting.BooleanCondition &&
-                cfcondition.type ==
-                    SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN_OR_EQUAL_TO &&
-                cfcondition.values.length == 1 &&
+    var data_limit_filter = ConditionalFormatting.RuleFilter.from_object({
+        type: "boolean",
+        condition: {
+            type: SpreadsheetApp.BooleanCriteria
+                .NUMBER_GREATER_THAN_OR_EQUAL_TO,
+            values: [null] },
+        locations: [location_data, location_max].filter(l => l != null),
+    });
+    var data_limit_formula_regex = new RegExp(
+        "=R" + group.dim.weight_row + "C\\d+" );
+    data_limit_filter.condition.match = (cfcondition) => {
+        return (
+            cfcondition instanceof ConditionalFormatting.BooleanCondition &&
+            cfcondition.type ==
+                SpreadsheetApp.BooleanCriteria.NUMBER_GREATER_THAN_OR_EQUAL_TO &&
+            cfcondition.values.length == 1 && (
                 typeof cfcondition.values[0] == "string" &&
                 data_limit_formula_regex.exec(cfcondition.values[0])
-            );
-        }
-        cfrules.replace( data_limit_filter,
-            this.get_cfeffect_data_limit(color_scheme) );
+            ||
+                typeof cfcondition.values[0] == "number" &&
+                cfcondition.values[0] > 1
+            )
+        );
     }
+    cfrules.replace( data_limit_filter,
+        this.get_cfeffect_data_limit(color_scheme) );
     if (group.dim.weight_row != null) {
         cfrules.replace({ type: "gradient",
             condition: this.get_cfcondition_weight(group),
@@ -715,18 +717,19 @@ Worksheet.get_cfeffect_data_limit = function(color_scheme) {
 } // }}}
 
 // Worksheet().new_cfrule_data_limit {{{
-Worksheet.prototype.new_cfrule_data_limit = function(color_scheme) {
-    if (this.group.dim.weight_row == null)
+Worksheet.prototype.new_cfrule_data_limit = function(color_scheme, limit = null) {
+    if (limit == null && this.group.dim.weight_row == null)
         throw new WorksheetError( "Worksheet().new_cfrule_data_limit: " +
             "impossible without weight_row" );
-    if (this.sum_column == null)
+    if (limit == null && this.sum_column == null)
         throw new WorksheetError( "Worksheet().new_cfrule_data_limit: " +
             "impossible without sum_column" );
     return { type: "boolean",
         condition: {
             type: SpreadsheetApp.BooleanCriteria
                 .NUMBER_GREATER_THAN_OR_EQUAL_TO ,
-            values: ["=R" + this.group.dim.weight_row + "C" + this.sum_column]
+            values: [ limit != null ? limit :
+                ("=R" + this.group.dim.weight_row + "C" + this.sum_column) ]
         },
         ranges: [
             [ this.group.dim.data_row, this.dim.data_start - 1,

@@ -75,7 +75,7 @@ function action_worksheet_recolor_finish(group_name, color_scheme, {scope, group
     var cfrules = ConditionalFormatting.RuleList.load(group.sheet);
     if (group_options.rating) {
       let end_col = (worksheet_start_col != null) ?
-        worksheet_start_col : this.sheetbuf.dim.sheet_width;
+        worksheet_start_col : group.sheetbuf.dim.sheet_width;
       cfrules.replace({ type: "gradient",
         condition: group.get_cfcondition_rating(),
         locations: [
@@ -221,6 +221,121 @@ function action_worksheet_planned_add(group_name) {
       WorksheetBuilder.build(group, sheet.getRange(1, last_column + 1), plan_item);
       last_column = sheet.getLastColumn();
     }
+    lock.releaseLock();
+  } catch (error) {
+    report_error(error);
+  }
+}
+
+function action_worksheet_convert_to_olympiad() {
+  if (!User.admin_is_acquired()) {
+        const ui = SpreadsheetApp.getUi();
+        let response_btn = ui.alert( "Конвертация в олимпиаду",
+            "Это труднообратимая операция.",
+            ui.ButtonSet.OK_CANCEL );
+        if (response_btn != ui.Button.OK) {
+            return;
+        }
+  }
+  try {
+    var lock = ActionHelpers.acquire_lock();
+    var worksheet = ActionHelpers.get_active_worksheet();
+    var group = worksheet.group;
+    var sheet = group.sheet;
+    if (group.dim.weight_row != null) {
+      group.sheetbuf.set_values( "weight_row",
+        worksheet.dim.data_start, worksheet.dim.data_end,
+        null );
+      worksheet.set_data_borders(
+        worksheet.dim.data_start, worksheet.dim.data_end, {
+          weight_row: false,
+          max_row: worksheet.has_max_row(),
+        } );
+    }
+    var limit_cell = null;
+    if (group.dim.weight_row != null && worksheet.sum_column != null) {
+      limit_cell = sheet.getRange(group.dim.weight_row, worksheet.sum_column);
+      limit_cell.setFontSize(8).setBorder(true, true, true, true, null, null);
+      group.sheetbuf.set_value( "weight_row", worksheet.sum_column,
+        4 );
+      group.sheetbuf.set_note( "weight_row", worksheet.sum_column,
+        "пороговый балл решённой задачи" );
+    }
+    if (worksheet.sum_column != null) {
+      var data_row_sum_R1C1 =
+        'R[0]C[' + (worksheet.dim.data_start - 1 - worksheet.sum_column) + ']:' +
+        'R[0]C[' + (worksheet.dim.data_end   + 1 - worksheet.sum_column) + ']';
+      var limit_R1C1;
+      if (limit_cell != null) {
+        limit_R1C1 = '">="&R' + group.dim.weight_row + 'C[0]';
+      } else {
+        limit_R1C1 = '">=4"';
+      }
+      var sum_formula_R1C1;
+      if (group.dim.max_row != null) {
+        var max_row_sum_R1C1 =
+          'R' + group.dim.max_row +
+          'C[' + (worksheet.dim.data_start - 1 - worksheet.sum_column) + ']:' +
+          'R' + group.dim.max_row +
+          'C[' + (worksheet.dim.data_end   + 1 - worksheet.sum_column) + ']';
+        sum_formula_R1C1 = ''.concat(
+          '=countifs(',
+            max_row_sum_R1C1,  ';' + limit_R1C1 + ';',
+            data_row_sum_R1C1, ';' + limit_R1C1 + '',
+          ')'
+        );
+      } else {
+          sum_formula_R1C1 = ''.concat(
+              '=countif(',
+                  data_row_sum_R1C1, ';' + limit_R1C1 + '',
+              ')'
+          );
+      }
+      sheet.getRange(group.dim.data_row, worksheet.sum_column, group.dim.data_height, 1)
+        .setFormulaR1C1(sum_formula_R1C1);
+      if (group.dim.max_row != null) {
+        group.sheetbuf.set_formula( "max_row",
+          worksheet.sum_column, sum_formula_R1C1 );
+      }
+    }
+    if (worksheet.rating_column != null) {
+      var data_row_rating_R1C1 =
+        'R[0]C[' + (worksheet.dim.data_start - 1 - worksheet.rating_column) + ']:' +
+        'R[0]C[' + (worksheet.dim.data_end   + 1 - worksheet.rating_column) + ']';
+      var rating_formula_R1C1 = ''.concat(
+        '=sum(',
+          data_row_rating_R1C1,
+        ')'
+      );
+      var number_format = "0.#;−0.#";
+      sheet.getRange(group.dim.data_row, worksheet.rating_column, group.dim.data_height, 1)
+        .setFormulaR1C1(rating_formula_R1C1)
+        .setNumberFormat(number_format);
+      if (group.dim.max_row != null) {
+          group.sheetbuf.set_formula( "max_row",
+            worksheet.rating_column, rating_formula_R1C1 );
+          sheet.getRange(group.dim.max_row, worksheet.rating_column)
+            .setNumberFormat(number_format);
+      }
+    }
+    var color_scheme = group.get_color_scheme();
+    var cfrules = ConditionalFormatting.RuleList.load(sheet);
+    var data_limit_cfrule;
+    if (limit_cell != null) {
+      data_limit_cfrule = worksheet.new_cfrule_data_limit(color_scheme);
+    } else {
+      data_limit_cfrule = worksheet.new_cfrule_data_limit(color_scheme, 4);
+    }
+    cfrules.insert( data_limit_cfrule,
+      { type: "boolean",
+        condition: Worksheet.get_cfcondition_data(this.group),
+        location: [
+          [group.dim.data_row, 1, group.dim.data_height, group.sheetbuf.dim.sheet_width],
+          [group.dim.max_row, 1, 1, group.sheetbuf.dim.sheet_width],
+        ].filter(([r,]) => r != null)
+      },
+    );
+    cfrules.save(sheet);
     lock.releaseLock();
   } catch (error) {
     report_error(error);

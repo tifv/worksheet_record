@@ -41,7 +41,7 @@ function test_add_study_group_antirow_clean() {
 }
 
 function test_add_study_group_antirow_(name, flags) {
-  if (!flags.mirror)
+  if (!flags.mirror || !flags.category)
     return;
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var color_schemes = ColorSchemes.get(spreadsheet);

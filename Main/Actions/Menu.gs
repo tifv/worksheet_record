@@ -72,6 +72,8 @@ function menu_create() {
                 "action_worksheet_add" )
             .addItem( "Перекрасить листочки…",
                 "action_worksheet_recolor" )
+            .addItem( "Конвертировать в олимпиаду",
+                "action_worksheet_convert_to_olympiad" )
             ;
         menu.addSubMenu(worksheets_menu);
     }
