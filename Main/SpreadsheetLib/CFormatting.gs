@@ -142,6 +142,21 @@ class CFRange {
         }
         return rest;
     }
+    compare_to(cfrange) {
+        if (cfrange.start_row > this.start_row) {
+            return -1;
+        }
+        if (cfrange.start_row < this.start_row) {
+            return +1;
+        }
+        if (cfrange.start_col > this.start_col) {
+            return -1;
+        }
+        if (cfrange.start_col < this.start_col) {
+            return +1;
+        }
+        return 0;
+    }
     *[Symbol.iterator]() {
         yield this.start_row;
         yield this.start_col;
@@ -196,6 +211,9 @@ class CFRangeList extends Array {
             return [null, split_cfranges];
         }
         return [cfranges, split_cfranges];
+    }
+    sort() {
+        Array.prototype.sort.call(this, (u, v) => u.compare_to(v));
     }
 }
 
@@ -387,6 +405,7 @@ class CFRule {
         if (this.ranges.length < 1)
             throw new ConditionalFormattingError(
               "CFRule object has no ranges" );
+        this.ranges.sort();
         const base_cell = [this.ranges[0].start_row, this.ranges[0].start_col];
         this.ranges.impose_on_rule_builder(builder, sheet);
         if (this.condition instanceof CFBooleanCondition) {

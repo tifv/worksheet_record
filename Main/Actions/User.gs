@@ -69,7 +69,7 @@ function user_admin_acquire() {
         let response_btn = ui.alert( "Функции администратора",
             "Пароль к функциям администратора: " +
             "«" + password + "».",
-            ui.ButtonSet.OK_CANCEL );
+            ui.ButtonSet.OK );
         if (response_btn != ui.Button.OK) {
             return;
         }

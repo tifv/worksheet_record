@@ -22,12 +22,16 @@ function decode(s) {
   return n;
 }
 
-return {encode: encode, decode: decode};
+function debug(n) {
+  return n + "(" + encode(n) + ")";
+}
+
+return {encode: encode, decode: decode, debug: debug};
 }(); // end ACodec namespace
 
 // Get unbounded row range
-function get_row_range_(sheet, row, last_row = row) {
-  return sheet.getRange(row.toString() + ":" + last_row.toString());
+function get_row_range_(sheet, row, height = 1) {
+  return sheet.getRange(row.toString() + ":" + (row + height - 1).toString());
 }
 
 // Get unbounded column range

@@ -87,6 +87,7 @@ function test_add_study_group_antirow_(name, flags) {
     color_scheme: named_scheme("lotus"),
   });
   var sheet = group.sheet;
+  sheet.collapseAllColumnGroups();
   group = new StudyGroup(sheet);
   sheet.getRange(group.dim.data_row + 1, 2, group.dim.data_height - 1, 1)
     .setValues(test_sample_names(20));
@@ -100,7 +101,6 @@ function test_add_study_group_antirow_(name, flags) {
     data_width: 20, title: "Комбинаторика", category: "c",
   });
 }
-
 
 function test_add_study_groups() {
   test_add_study_group_("test");
@@ -149,6 +149,7 @@ function test_add_study_group_(name) {
     color_scheme: named_scheme("lotus"),
   });
   var sheet = group.sheet;
+  sheet.collapseAllColumnGroups();
   group = new StudyGroup(sheet);
   sheet.getRange(group.dim.data_row + 1, 2, group.dim.data_height - 1, 1)
     .setValues(test_sample_names(20));
@@ -260,7 +261,8 @@ function test_worksheet_add_(group, options) {
     .setValues(test_sample_values(20, false));
   sheet.getRange(group.dim.label_row, worksheet.dim.data_start, 1, worksheet.dim.data_width)
     .setValues(test_sample_labels(20));
-  worksheet.check();
+  if (options.check)
+    worksheet.check();
 }
 
 function test_worksheet_add_random_(group, options) {
@@ -270,7 +272,8 @@ function test_worksheet_add_random_(group, options) {
     .setValues(test_sample_values(20, true));
   sheet.getRange(group.dim.label_row, worksheet.dim.data_start, 1, worksheet.dim.data_width)
     .setValues(test_sample_labels(20));
-  worksheet.check();
+  if (options.check)
+    worksheet.check();
 }
 
 function test_set_upload_config() {

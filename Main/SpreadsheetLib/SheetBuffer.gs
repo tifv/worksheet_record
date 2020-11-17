@@ -58,6 +58,9 @@ MergedRangesBuffer.prototype.get_merge = function(row_name, column) {
     this.ensure_loaded();
     if (this._row_map[row_name] == null)
         throw new SheetBufferError("unknown row: " + row_name)
+    if (typeof column != "number" || isNaN(column))
+        throw new Error( "MergedRangesBuffer().get_merge: " +
+            "internal type error (column)" );
     let indices = this._indices[row_name];
     let index = indices[column-1];
     if (index == 0) {
@@ -124,9 +127,19 @@ MergedRangesBuffer.prototype.unmerge = function(row_name, start, end) {
 MergedRangesBuffer.prototype.insert_columns = function(column, num_columns) {
     if (!this._loaded)
         return;
+    if (typeof column != "number" || isNaN(column))
+        throw new Error( "MergedRangesBuffer().insert_columns: " +
+            "internal type error (column)" );
+    if (typeof num_columns != "number" || isNaN(num_columns))
+        throw new Error( "MergedRangesBuffer().insert_columns: " +
+            "internal type error (num_columns)" );
     for (let row_name in this._row_map) {
         let indices = this._indices[row_name];
-        let index = indices[column-1];
+        if (column < 1 || column > indices.length + 1)
+            throw new Error( "MergedRangesBuffer().insert_columns: " +
+                "internal error (index out of bounds)" );
+        let index = column <= indices.length ?
+            indices[column-1] : 0;
         if (index >= 0) {
             let zeroes = new Array(num_columns);
             zeroes.fill(0);
@@ -142,8 +155,11 @@ MergedRangesBuffer.prototype.insert_columns = function(column, num_columns) {
             for (let i = 1; i < new_width; ++i) {
                 new_indices[i] = -i;
             }
-            indices.splice(start - 1, old_width, new_indices);
+            indices.splice(start - 1, old_width, ...new_indices);
         }
+        if (indices.length != this.dim.sheet_width)
+            throw new Error( "MergedRangesBuffer().insert_columns: " +
+                "internal error (incorrect array length)" );
     }
 }
 
@@ -257,7 +273,8 @@ function SheetBuffer_ensure_loaded(start, end) {
     const sheet_width = dim.sheet_width;
     if (start < 1 || end > sheet_width || isNaN(start) || isNaN(end))
         throw new SheetBufferError(
-            "ensure_loaded (internal): index out of bounds");
+            "ensure_loaded (internal): index out of bounds " +
+            "(1 < " + start + " < " + end + " < " + sheet_width + ")");
     if (this._loaded_start == null) {
         this._loaded_start = start +
             Math.ceil((end - start + 1 - chunk_size) / 2);
@@ -761,16 +778,17 @@ SheetBuffer.prototype.find_merge = function(
 ) {
     /* return
      *   * either [s, e] where s and e are boundary columns of the next merge
-     *     (from start)
-     *   * or [x, x] if cell in column x has nonempty value, formula or note
+     *     (from start);
+     *   * or [x, x] if cell in column x has nonempty value, formula or note;
      *   * or throw an error if a merge overlaps start column
-     *     (and not starts at it)
+     *     (and not starts at it);
      *   * or throw an error if the next merge overlaps end column
-     *     (and not ends at it)
+     *     (and not ends at it);
+     *   * or null.
      * if options.allow_start_overlap is true, then returned merge may
      * overlap start column
      * if options.allow_end_overlap is true, then returned merge may
-     * overlap start column
+     * overlap end column
      */   
     ({
         allow_overlap_start: options.allow_overlap_start = false,
@@ -849,7 +867,7 @@ SheetBuffer.prototype.find_last_merge = function(
     if (start == null || start > this.dim.sheet_width)
         start = this.dim.sheet_width;
     if (end == null || end < 1)
-        end = this.dim.sheet_width;
+        end = 1;
     if (end > start)
         return null;
     if (this._row_map[row_name] == null)

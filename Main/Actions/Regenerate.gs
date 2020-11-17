@@ -23,8 +23,10 @@ function action_regenerate_toc() {
     first_group = false;
     let name = group.name;
     let title_ref = "'" + name + "'!R" + group.dim.title_row + "C" + start_col + ":R" + group.dim.title_row;
-    let category_ref = "'" + name + "'!R" + group.dim.category_row + "C" + start_col + ":R" + group.dim.category_row;
     let void_ref = "arrayformula(" + title_ref + "+na())";
+    let category_ref = group.dim.category_row != null ?
+      ("'" + name + "'!R" + group.dim.category_row + "C" + start_col + ":R" + group.dim.category_row) :
+      void_ref;
     let data_ref = "iferror({" + void_ref + ";" + category_ref + ";" + title_ref + "})";
     formula_pieces.push(
       '"' + group.name + '","","";',
@@ -80,7 +82,7 @@ function action_regenerate_toc() {
   toc_sheet.protect().setWarningOnly(true);
 }
 
-function actions_regenerate_uploads() {
+function action_regenerate_uploads() {
   UploadRecord.create();
 }
 
