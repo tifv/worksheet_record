@@ -14,6 +14,7 @@
  * category = {color: [h,s,l], name: like "алгебра"}
  */
 
+const addendum_metadata_key = "worksheet_meta-addendums";
 
 var ColorSchemes = function() { // namespace
 

@@ -72,7 +72,7 @@ function upload_start_dialog_(section, options = {}) {
   var category_name = category_info.name ||
     (category != null ? "категория " + category : "mixture");
   var title = options.title || section.get_qualified_title();
-  var title_id = section.get_title_metadata_id({check: true});
+  var title_id = section.get_title_metadata_id({validate: true});
   var date = section.get_title_note_data().get("date");
   var author = UploadAuthor.get();
   var filename_base; {

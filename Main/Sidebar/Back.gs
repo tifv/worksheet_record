@@ -14,6 +14,8 @@ function sidebar_load_group_list() {
 }
 
 function sidebar_load_contents(group_name, {continuation = null, cached = []} = {}) {
+  // cached means that group_name is null, and contains a list of group names that
+  // are already loaded. If active group is in the list, no further loading is necessary.
   // XXX avoid modifying the spreadsheet at all (when getting location)
   // if it is unaviodable, return whatever contents is already scanned,
   // and set special parameter to the continuation token that will trigger
@@ -41,19 +43,40 @@ function sidebar_load_contents(group_name, {continuation = null, cached = []} = 
     return contents;
   }
   var start_column = 1;
+  var validate = false;
   if (continuation != null) {
-    ({start_column: start_column} = continuation);
+    ({
+      start_column: start_column,
+      validate: validate = false,
+    } = continuation);
   }
+  if (validate)
+    var lock = ActionHelpers.acquire_lock();
   var contents_count = 0;
+  iterate_worksheets:
   for (let worksheet of Worksheet.list(group, start_column)) {
-    for (let section of worksheet.list_sections()) {
-      contents.push(sidebar_load_contents_section_(section, false));
+    let worksheet_title_id = worksheet.get_title_metadata_id({
+      validate: validate });
+    if (!validate && worksheet_title_id == null) {
+      contents.push({continuation: {start_column: worksheet.dim.start, validate: true}});
+      break iterate_worksheets;
     }
-    if (contents.length >= 5 && execution_time() > 2500) {
+    for (let section of worksheet.list_sections()) {
+      let section_title_id = section.get_title_metadata_id({
+        validate: validate && section.dim.offset > 0});
+      if (!validate && section_title_id == null) {
+        contents.push({continuation: {start_column: worksheet.dim.start, validate: true}});
+        break iterate_worksheets;
+      }
+      contents.push(sidebar_load_contents_section_(section, validate));
+    }
+    if (validate || contents.length >= 5 && execution_time() > 2500) {
       contents.push({continuation: {start_column: worksheet.dim.end + 1}});
-      break;
+      break iterate_worksheets;
     }
   };
+  if (validate)
+    lock.releaseLock();
   return contents;
 }
 
@@ -64,22 +87,22 @@ function sidebar_load_contents_validate(contents_item) {
   var title_id = contents_item.id;
   var column = contents_item.column;
   var width = contents_item.width;
-  var checked_title_columns = new Set();
-  function was_checked(column) {
-    if (checked_title_columns.has(column))
+  var validated_title_columns = new Set();
+  function was_validated(column) {
+    if (validated_title_columns.has(column))
       return true;
-    checked_title_columns.add(column);
+    validated_title_columns.add(column);
     return false;
   }
-  function get_checked_id(entity) {
+  function get_validated_id(entity) {
     // entity is section or worksheet
-    return entity.get_title_metadata_id({check: !was_checked(entity.dim.title)});
+    return entity.get_title_metadata_id({validate: !was_validated(entity.dim.title)});
   }
-  function check_id(entity) {
+  function validate_id(entity) {
     // entity is section or worksheet
-   if (!was_checked(entity.dim.title)) {
-     entity.get_title_metadata_id({check: true});
-   }
+    if (!was_validated(entity.dim.title)) {
+      entity.get_title_metadata_id({validate: true});
+    }
   }
   var lock = ActionHelpers.acquire_lock();
   var section_by_note = null, section_by_id = null, sections = [];
@@ -90,7 +113,7 @@ function sidebar_load_contents_validate(contents_item) {
       group.sheet.getRange(1, column_by_note) );
     sections.push(section_by_note);
   }
-  if (section_by_note != null && title_id == get_checked_id(section_by_note)) {
+  if (section_by_note != null && title_id == get_validated_id(section_by_note)) {
     section_by_id = section_by_note;
     section_by_note = null;
   } else {
@@ -98,7 +121,7 @@ function sidebar_load_contents_validate(contents_item) {
     if (column_by_id != null) {
       section_by_id = Worksheet.Section.surrounding( group, null,
         group.sheet.getRange(1, column_by_id) );
-      if (title_id != get_checked_id(section_by_id)) {
+      if (title_id != get_validated_id(section_by_id)) {
         // metadatum seems to be misplaced, we better remove it
         group.sheet.createDeveloperMetadataFinder()
           .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.COLUMN)
@@ -109,7 +132,7 @@ function sidebar_load_contents_validate(contents_item) {
   }
   var contents = [];
   for (let section of sections) {
-    check_id(section.worksheet);
+    validate_id(section.worksheet);
     contents.push(sidebar_load_contents_section_(section, true));
   }
   lock.releaseLock();
@@ -117,11 +140,13 @@ function sidebar_load_contents_validate(contents_item) {
 }
 
 function sidebar_load_contents_section_(section, validated = false) {
+  // validated = true implies that section title id is already validated
+  // (not that we should validate it here)
   var worksheet = section.worksheet;
   var group = worksheet.group;
-  var worksheet_location = worksheet.get_location({check_id: false});
-  var section_location = section.get_location({check_id: false});
-  var title_id = section.get_title_metadata_id({check: false});
+  var worksheet_location = worksheet.get_location({validate: false});
+  var section_location = section.get_location({validate: false});
+  var title_id = section.get_title_metadata_id({validate: false});
   var title_note = section.get_title_note();
   var date = section.get_title_note_data().get("date");
   var contents_item = {
@@ -160,7 +185,6 @@ function sidebar_load_contents_section_(section, validated = false) {
       contents_item.title_link = {url: url};
     }
   }
-  // XXX also add some info about hyperlink
   return contents_item;
 }
 

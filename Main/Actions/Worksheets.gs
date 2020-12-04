@@ -162,19 +162,22 @@ function(original_section, addendum_section) {
   };
 }
 
-action_worksheet_upload_addendum.hints = function() {
-  return this({ type: "hints",
-    title: "подсказки", label: emoji.cookie })
-}
+menu_meta_setup_( action_worksheet_upload_addendum,
+  addendum_metadata_key );
 
-action_worksheet_upload_addendum.answers = function() {
-  return this({ type: "answers",
-    title: "ответы", label: emoji.cake })
-}
-
-action_worksheet_upload_addendum.solutions = function() {
-  return this({ type: "solutions",
-    title: "решения", label: emoji.pizza })
+function addendums_restore_hardcoded() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var menu_data = SpreadsheetMetadata.set_object( spreadsheet, addendum_metadata_key, [
+    ["theory",    "теория",    "nut"   ],
+    ["hints",     "подсказки", "cookie"],
+    ["answers",   "ответы",    "cake"  ],
+    ["solutions", "решения",   "pizza" ],
+  ].map( ([name, label, emoji_key]) =>
+    [ name,
+      { type: name, title: label,
+        label: (emoji_key != null && emoji_key in emoji) ? emoji[emoji_key] : null },
+      (emoji_key != null && emoji_key in emoji) ? emojipad[emoji_key] + label + "…" : label + "…",
+    ] ));
 }
 
 function action_worksheet_planned() {

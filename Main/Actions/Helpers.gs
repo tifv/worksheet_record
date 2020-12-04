@@ -79,9 +79,9 @@ function get_active_section(spreadsheet, sheet, range) {
 }
 
 // Lock policy:
-// Action that add or remove columns should definetly acquire lock.
+// Actions that add or remove columns should definetly acquire lock.
 // Actions that can modify spreadsheet in other ways should acquire lock.
-// (this does include all worksheet.get_location() calls with metadata check).
+// (this does include all worksheet.get_location() calls with validation).
 // In those cases, lock should be acquired before calls to sheetbuf.
 // Sidebar contents initial scan does not acquire lock, even though
 // it can, in some cases, modify spreadsheet (it runs too often to acquire lock).

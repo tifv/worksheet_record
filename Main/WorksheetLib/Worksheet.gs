@@ -104,6 +104,8 @@ WorksheetBase.NoteData = class NoteData extends Map { // {{{
 // WorksheetBase.NoteData.parse (note) {{{
 WorksheetBase.NoteData.parse = function(note) {
     var data = new this();
+    if (note == "")
+        return data;
     for (let line of note.split("\n")) {
         line_date: {
             let date = WorksheetDate.parse(line);
@@ -181,24 +183,21 @@ WorksheetBase.prototype.set_title_note_data = function(data) {
 // WorksheetBase().get_title_metadata_id (options?) {{{
 WorksheetBase.prototype.get_title_metadata_id = function(options = {}) {
     ({
-        check: options.check = true,
-            // check value from the title note agains actual metadata
-        write: options.write = true,
-            // write value to the title note if necessary
-            // if false, the method may return null
+        validate: options.validate = true,
+            // true
+            //   check value from the title note agains actual metadata
+            //   creating metadata if necessary
+            // false
+            //   metadata will never be checked
+            //   and method may return null
     } = options);
-    if (!options.check || options.write) {
-        var note_data = this.get_title_note_data();
-        var note_id = note_data.get("id");
-        if (!options.check && note_id != null)
-            return note_id;
-    }
-    var metadatum = this.get_title_metadata({
-        create: options.write ? null : false });
-    if (!options.write && metadatum == null)
-        return null;
+    var note_data = this.get_title_note_data();
+    var note_id = note_data.get("id");
+    if (!options.validate)
+        return note_id;
+    var metadatum = this.get_title_metadata();
     var metadatum_id = metadatum.getId();
-    if (options.write && note_id != metadatum_id) {
+    if (note_id != metadatum_id) {
         note_data.set("id", metadatum_id);
         this.set_title_note_data(note_data);
     }
@@ -213,7 +212,7 @@ WorksheetBase.prototype.get_title_metadata = function(options = {}) {
         // false: find metadatum and return it; otherwise return null;
         // null: find metadatum and return it; otherwise create, etc.
     } = options);
-    if (options.create) {
+    if (options.create === true) {
         this.title_column_range.addDeveloperMetadata(
             this.constructor.metadata_keys.title,
             SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT );
@@ -225,11 +224,11 @@ WorksheetBase.prototype.get_title_metadata = function(options = {}) {
         .find();
     if (metadata.length > 0)
         return metadata[0];
-    if (options.create)
+    if (options.create === true)
         throw new Error("WorksheetBase().get_title_metadata: internal error");
-    if (options.create == null)
+    if (options.create === null)
         return this.get_title_metadata({create: true});
-    if (options.create == false)
+    if (options.create === false)
         return null;
 } // }}}
 
@@ -1025,10 +1024,12 @@ Worksheet.surrounding = function(group, range) {
 // Worksheet().get_location (options?) {{{
 Worksheet.prototype.get_location = function(options = {}) {
     ({
-        check_id: options.check_id = true,
+        validate: options.validate = true,
             // check value from the title note agains actual metadata
     } = options);
-    var title_id = this.get_title_metadata_id({check: options.check_id});
+    var title_id = this.get_title_metadata_id({validate: options.validate});
+    if (!options.validate && title_id == null)
+        return null;
     return {
         title_id: title_id,
         column: this.dim.start,
@@ -1327,10 +1328,12 @@ WorksheetSection.surrounding = function(group, worksheet, range) {
 // WorksheetSection().get_location (options?) {{{
 WorksheetSection.prototype.get_location = function(options = {}) {
     ({
-        check_id: options.check_id = true,
+        validate: options.validate = true,
             // check value from the title note agains actual metadata
     } = options);
-    var title_id = this.get_title_metadata_id({check: options.check_id});
+    var title_id = this.get_title_metadata_id({validate: options.validate});
+    if (!options.validate && title_id == null)
+        return null;
     return {
         title_id: title_id,
         offset: this.dim.offset,

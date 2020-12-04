@@ -1,20 +1,21 @@
 const emoji = {
-    plus:    "\u2795",
-    minus:   "\u2796",
+    plus:    "\u{2795}",
+    minus:   "\u{2796}",
     koala:   "\uD83D\uDC28",
-    bat:     "\uD83E\uDD87", // U+1F987
+    bat:     "\u{1F987}",
     chicken: "\uD83D\uDC24",
-    sun:     "\uD83C\uDF1E", // U+1F31E
+    sun:     "\u{1F31E}",
     moon:    "\uD83C\uDF1D",
     devil:   "\uD83D\uDC7F",
-    pizza:   "\uD83C\uDF55", // U+1F355
-    cookie:  "\uD83C\uDF6A", // U+1F36A
-    cake:    "\uD83E\uDD67", // U+1F967
-    snake:   "\uD83D\uDC0D", // U+1F40D
+    nut:     "\u{1F330}",
+    cookie:  "\u{1F36A}",
+    cake:    "\u{1F967}",
+    pizza:   "\u{1F355}",
+    snake:   "\u{1F40D}",
 };
 
 const emojipad = Object.fromEntries(Object.entries(emoji)
-  .map(([name, value]) => ([name, value + " "])) );
+    .map(([name, value]) => ([name, value + " "])) );
 
 function onOpen() {
     if (User.menu_is_enabled()) {
@@ -43,8 +44,6 @@ function menu_create() {
         columns_menu
             .addItem( emojipad.plus    + "Добавить колонки…",
                 "action_add_columns" )
-            .addItem( emojipad.plus    + "Добавить раздел-добавку…",
-                "action_add_section" )
             .addItem( emojipad.minus   + "Удалить лишние колонки",
                 "action_remove_excess_columns" )
             .addSeparator()
@@ -66,10 +65,14 @@ function menu_create() {
     }
     { let worksheets_menu = ui.createMenu("Листочки");
         worksheets_menu
+            .addItem( emojipad.plus    + "Добавить раздел-добавку…",
+                "action_add_section" )
+            .addSeparator()
             .addItem( emoji.plus + " Вставить бланк рядом справа",
                 "action_worksheet_insert" )
             .addItem( emoji.plus + " Добавить бланк в конец",
                 "action_worksheet_add" )
+            .addSeparator()
             .addItem( "Перекрасить листочки…",
                 "action_worksheet_recolor" )
             .addItem( "Конвертировать в олимпиаду",
@@ -78,17 +81,12 @@ function menu_create() {
         menu.addSubMenu(worksheets_menu);
     }
     if (UploadConfig.is_configured()) {
-        menu.addItem( emojipad.sun   + "Выложить листочек…",
-            "action_worksheet_upload" );
-        let addendum_menu = ui.createMenu("Выложить другое");
-        addendum_menu
-            .addItem( emojipad.cookie + "подсказки…",
-                "action_worksheet_upload_addendum.hints" )
-            .addItem( emojipad.cake   + "ответы…",
-                "action_worksheet_upload_addendum.answers" )
-            .addItem( emojipad.pizza  + "решения…",
-                "action_worksheet_upload_addendum.solutions" );
-        menu.addSubMenu(addendum_menu);
+        let upload_menu = ui.createMenu("Выложить");
+        upload_menu
+            .addItem( emojipad.sun   + "листочек…",
+                "action_worksheet_upload" );
+        action_worksheet_upload_addendum.populate_menu(upload_menu, true);
+        menu.addSubMenu(upload_menu);
     }
     menu.addSeparator();
     if (User.admin_is_acquired()) {
@@ -112,6 +110,41 @@ function menu_add_admin_(menu) {
         .addItem( emojipad.snake + "Скрыть функции адм-ра",
             "user_admin_relinquish" )
         ;
+}
+
+function menu_meta_setup_(mainfunc, metadata_key) {
+    var mainname = mainfunc.name;
+    function load_list() {
+        var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+        var menu_data = SpreadsheetMetadata.get_object(spreadsheet, metadata_key);
+        if (menu_data == null)
+            return [];
+        return menu_data;
+    }
+    function load_object() {
+        return Object.fromEntries(load_list().map(
+            ([name, arg, label,]) => [name, [arg, label]] ));
+    }
+    mainfunc.populate_menu = function(menu, add_separator) {
+        var menu_data = load_list();
+        if (menu_data.length == 0)
+            return false;
+        if (add_separator)
+            menu.addSeparator();
+        for (let [name, arg, label,] of menu_data) {
+            menu.addItem(label, mainname + ".dispatch." + name);
+        }
+        return true;
+    }
+    mainfunc.dispatch = new Proxy(mainfunc, {get: function(mainfunc, name) {
+        var menu_data = load_object();
+        if (menu_data[name] == null) {
+            throw new Error("no such function: " + mainname + ".dispatch." + name);
+        }
+        let [arg,] = menu_data[name];
+        return () => { mainfunc(arg); }
+    }});
+    return mainfunc;
 }
 
 // XXX add function that sets hyperlink color of the spreadsheet to hsl(220, 75%, 40%)

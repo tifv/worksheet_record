@@ -459,7 +459,7 @@ GroupContents.prototype.iter_load_contents = async function*() {
         throw new Error("active sheet does not represent a group")
       } else {
         throw new Error("internal error");
-      } 
+      }
     }
     for (let contents_item of response) {
       if (contents_item.id != null) {
