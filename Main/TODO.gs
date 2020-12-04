@@ -1,18 +1,15 @@
 /*
 
 # Priority TODO
-• Timetable
-  • auto-expand worksheet column groups after a period
-• Worksheet plan
-  • actually use period option to generate worksheets with specific period;
-  • optimize worksheet generation to only load and save cfrules once;
-  • use timetable somehow.
+• develop Adminhelper
 
 # Second-priority TODO
 • make markers invisible in published mode (add a cf rule to whiten them).
 • make allow_subproblems operate on worksheets that surround every range of range list.
 • Add action: sort rows in name order
 • Convert worksheet to theory
+• Worksheet plan
+  • optimize worksheet generation to only load and save cfrules once.
 
 # TODO
 • presets of worksheets: game, theory, … (a list is saved in spreadsheet metadata);
