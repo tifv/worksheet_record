@@ -62,6 +62,21 @@ function import_timetable() {
     .getValues().map(([x]) => x);
   var values = sheet.getRange(frozen_rows + 1, frozen_cols + 1, max_rows - frozen_rows, max_cols - frozen_cols)
     .getValues();
+  var merges = sheet.getRange(frozen_rows + 1, frozen_cols + 1, max_rows - frozen_rows, max_cols - frozen_cols)
+    .getMergedRanges();
+  for (let merged_range of merges) {
+    let start_row = merged_range.getRow()    - (frozen_rows + 1);
+    let start_col = merged_range.getColumn() - (frozen_cols + 1);
+    let end_row = merged_range.getLastRow()    - (frozen_rows + 1);
+    let end_col = merged_range.getLastColumn() - (frozen_cols + 1);
+    if (start_row < 0 || end_row < 0)
+      continue;
+    for (let i = start_row; i <= end_row; ++i) {
+      for (let j = start_col; j <= end_col; ++j) {
+        values[i][j] = null;
+      }
+    }
+  }
   var date = null;
   var timetables = {};
   var worksheet_plans = {};
@@ -119,6 +134,8 @@ function import_timetable() {
       let today_worksheet_plan = get_list(group_worksheet_plan, date);
       today_timetable[period] = timetable_item;
       let value = values[i][j];
+      if (value == null)
+        continue;
       let category_codes = categories
         .filter(([code, name]) => value.toLowerCase().startsWith(name.toLowerCase()))
         .map(([code]) => code);
@@ -134,8 +151,8 @@ function import_timetable() {
       continue;
     group.set_timetable(timetables[group_name]);
     group.set_worksheet_plan(worksheet_plans[group_name]);
-    console.log(JSON.stringify(group.get_timetable()));
-    console.log(JSON.stringify(group.get_worksheet_plan()));
+    //console.log(JSON.stringify(group.get_timetable()));
+    //console.log(JSON.stringify(group.get_worksheet_plan()));
   }
 }
 

@@ -904,7 +904,7 @@ Worksheet.find_start_col = function(group) {
     if (marker_start == null)
         return null;
     var first_title = group.sheetbuf.find_last_merge( "title_row",
-        marker_start, {allow_overlap_start: true} );
+        marker_start, null, {allow_overlap_start: true} );
     if (first_title == null)
         return null;
     return first_title[0] - 1;

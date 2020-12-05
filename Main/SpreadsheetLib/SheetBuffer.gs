@@ -794,6 +794,10 @@ SheetBuffer.prototype.find_merge = function(
         allow_overlap_start: options.allow_overlap_start = false,
         allow_overlap_end:   options.allow_overlap_end   = false,
     } = options);
+    if (start != null && typeof start != "number")
+        throw new Error("SheetBuffer().find_merge: internal type error");
+    if (end != null && typeof end != "number")
+        throw new Error("SheetBuffer().find_merge: internal type error");
     if (start == null || start < 1)
         start = 1;
     if (end == null || end > this.dim.sheet_width)
@@ -864,6 +868,10 @@ SheetBuffer.prototype.find_last_merge = function(
         allow_overlap_start: options.allow_overlap_start = false,
         allow_overlap_end:   options.allow_overlap_end   = false,
     } = options);
+    if (start != null && typeof start != "number")
+        throw new Error("SheetBuffer().find_last_merge: internal type error");
+    if (end != null && typeof end != "number")
+        throw new Error("SheetBuffer().find_last_merge: internal type error");
     if (start == null || start > this.dim.sheet_width)
         start = this.dim.sheet_width;
     if (end == null || end < 1)

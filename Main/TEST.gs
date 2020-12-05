@@ -16,6 +16,22 @@ function test_whatever() {
 
 */
 
+function init_add_study_group_(name) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  //test_worksheet_clear_(spreadsheet, name);
+  var group = StudyGroupBuilder.build(spreadsheet, name, {
+    data_height: 20,
+    rating: true, sum: true,
+    categories: [
+      {code: "a"},
+      {code: "g"},
+      {code: "c"},
+      {code: "o", rating: false}
+    ],
+    category_musthave: true,
+  });
+}
+
 function test_add_study_group_antirow(iteratee) {
   for (var i = 0; i < 16; ++i) {
     let flags = {

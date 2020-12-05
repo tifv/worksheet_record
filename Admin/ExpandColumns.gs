@@ -87,5 +87,10 @@ function expand_columns_today() {
 }
 
 function expand_columns_forever() {
-  // XXX set up trigger for expand_columns_today() in early morning
+  ScriptApp.newTrigger("expand_columns_today")
+    .timeBased()
+      .everyDays(1)
+      .atHour(4)
+      .nearMinute(15)
+    .create();
 }

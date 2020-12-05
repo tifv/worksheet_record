@@ -79,3 +79,13 @@ function worksheet_planned_add_all_delay() {
     date.setMinutes(date.getMinutes() + plan.length);
   }
 }
+
+function worksheet_planned_add_forever() {
+  ScriptApp.newTrigger("worksheet_planned_add_all_delay")
+    .timeBased()
+      .everyDays(1)
+      .atHour(2)
+      .nearMinute(15)
+    .create();
+}
+
