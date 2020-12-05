@@ -2,10 +2,6 @@ class StudyGroupError extends SpreadsheetError {};
 class StudyGroupInitError extends StudyGroupError {};
 class StudyGroupDetectionError extends StudyGroupError {};
 
-// StudyGroupDim plan
-// * we need to load it from existing group
-// * we need to init it from given row indices (and set markers)
-//   * we want to avoid excessive loading of values
 // StudyGroupDim class
 // * load() constructor loads from sheet
 // * init(dim) constructor inits sheet, takes values from dim

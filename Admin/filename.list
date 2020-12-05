@@ -16,5 +16,7 @@ WorksheetLib/Worksheet
 Main
 Menu
 ExpandColumns
+WorksheetPlan
+WorksheetCleanup
 TEST
 TODO

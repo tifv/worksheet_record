@@ -47,9 +47,14 @@ function expand_columns_now() {
 }
 
 function expand_columns_today() {
-  // assume its early morning
-  // schedule expand_columns_timely() calls for the day
   const spreadsheet = MainSpreadsheet.get();
+  // assume it is early morning
+  // remove existing expand_columns_timely() triggers
+  for (let trigger of ScriptApp.getProjectTriggers()) {
+    if (trigger.getHandlerFunction() == "expand_columns_now")
+      ScriptApp.deleteTrigger(trigger);
+  }
+  // schedule expand_columns_timely() triggers for the day
   var times = new Set();
   var busy = false;
   for (let group of StudyGroup.list(spreadsheet)) {
@@ -66,11 +71,15 @@ function expand_columns_today() {
     }
   }
   var now = new Date();
+  now.setSeconds(0);
+  var date = new Date(now.valueOf());
   for (let time of times) {
-    now.setHours(0);
-    now.setMinutes(time);
+    date.setHours(0);
+    date.setMinutes(time);
+    if (date.valueOf() < now.valueOf())
+      continue;
     ScriptApp.newTrigger("expand_columns_now")
-      .timeBased().at(now)
+      .timeBased().at(date)
       .create();
   }
   if (!busy)
@@ -78,5 +87,5 @@ function expand_columns_today() {
 }
 
 function expand_columns_forever() {
-  // XXX set up trigger for expand_columns_today()
+  // XXX set up trigger for expand_columns_today() in early morning
 }

@@ -28,7 +28,7 @@ function action_worksheet_add() {
         last_column = frozen_columns;
     }
     if (last_column >= group.dim.sheet_width) {
-      throw ReportError("Последний столбец вкладки должен быть пустым.");
+      throw new ReportError("Последний столбец вкладки должен быть пустым.");
     }
     var date = WorksheetDate.today();
     date.period = group.get_current_period(7);
@@ -211,7 +211,7 @@ function action_worksheet_planned_add(group_name) {
     var sheet = group.sheet;
     var last_column = sheet.getLastColumn();
     if (last_column == group.dim.sheet_width) {
-      throw ReportError("Последний столбец вкладки должен быть пустым.");
+      throw new ReportError("Последний столбец вкладки должен быть пустым.");
     }
     for (let plan_item of plan) {
       plan_item.date = today;
