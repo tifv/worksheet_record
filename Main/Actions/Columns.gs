@@ -110,8 +110,21 @@ function action_remove_excess_columns() {
 function action_alloy_subproblems() {
   try {
     var lock = ActionHelpers.acquire_lock();
-    var worksheet = ActionHelpers.get_active_worksheet();
-    worksheet.alloy_subproblems();
+    var group = ActionHelpers.get_active_group();
+    var sheet = group.sheet;
+    var active_ranges = sheet.getActiveRangeList().getRanges();
+    var worksheet = null;
+    for (let range of active_ranges) {
+      if ( worksheet != null &&
+        range.getColumn() >= worksheet.dim.data_start &&
+        range.getLastColumn() <= worksheet.dim.data_end
+      ) {
+        continue;
+      }
+      worksheet = ActionHelpers.get_active_worksheet(null, sheet, range, group);
+      // XXX stash possible errors when finding worksheet
+      worksheet.alloy_subproblems();
+    }
     lock.releaseLock();
   } catch (error) {
     report_error(error);
@@ -125,7 +138,6 @@ function action_mark_columns(colours) {
     var sheet = group.sheet;
     var active_ranges = sheet.getActiveRangeList().getRanges();
     var worksheet = null;
-    var worksheet_has_weight_row = null;
     var label_ranges = [];
     var data_ranges = [];
     for (let range of active_ranges) {
@@ -135,24 +147,20 @@ function action_mark_columns(colours) {
       if ( worksheet == null ||
         start < worksheet.dim.data_start || end > worksheet.dim.data_end
       ) {
-        worksheet = Worksheet.surrounding(group, range);
-        // handle possible error when finding worksheet
-        worksheet_has_max_row = ( group.dim.max_row != null &&
-          worksheet.has_max_row() );
-        worksheet_has_weight_row = ( group.dim.weight_row != null &&
-          worksheet.has_weight_row() );
+        worksheet = ActionHelpers.get_active_worksheet(null, sheet, range, group);
+        // XXX stash possible errors when finding worksheet
         if (start < worksheet.dim.data_start || end > worksheet.dim.data_end) {
           throw new Error("XXX range invalid " + range.getA1Notation());
-          // XXX save all invalid ranges and report them at the end instead
+          // XXX stash all invalid ranges and report them at the end instead
         }
       }
       label_ranges.push(sheet.getRange(group.dim.label_row, start, 1, width));
       data_ranges.push(
         sheet.getRange(group.dim.data_row, start, group.dim.data_height, width) );
-      if (worksheet_has_max_row) {
+      if (worksheet.has_max_row()) {
         data_ranges.push(sheet.getRange(group.dim.max_row, start, 1, width));
       }
-      if (worksheet_has_weight_row) {
+      if (worksheet.has_weight_row()) {
         data_ranges.push(sheet.getRange(group.dim.weight_row, start, 1, width));
       }
     }

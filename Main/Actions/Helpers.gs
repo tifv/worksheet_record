@@ -44,9 +44,11 @@ function get_active_group(spreadsheet, sheet) {
   }
 }
 
-function get_active_worksheet(spreadsheet, sheet, range) {
-  [spreadsheet, sheet, range] = get_active_range(spreadsheet, sheet, range);
-  var group = get_active_group(spreadsheet, sheet);
+function get_active_worksheet(spreadsheet, sheet, range, group) {
+  if (group == null || range == null) {
+    [spreadsheet, sheet, range] = get_active_range(spreadsheet, sheet, range);
+    group = get_active_group(spreadsheet, sheet);
+  }
   try {
     var worksheet = Worksheet.surrounding(group, range);
     return worksheet;
@@ -61,9 +63,11 @@ function get_active_worksheet(spreadsheet, sheet, range) {
   }
 }
 
-function get_active_section(spreadsheet, sheet, range) {
-  [spreadsheet, sheet, range] = get_active_range(spreadsheet, sheet, range);
-  var worksheet = get_active_worksheet(spreadsheet, sheet, range);
+function get_active_section(spreadsheet, sheet, range, group, worksheet) {
+  if (worksheet == null || range == null) {
+    [spreadsheet, sheet, range] = get_active_range(spreadsheet, sheet, range);
+    var worksheet = get_active_worksheet(spreadsheet, sheet, range, group);
+  }
   try {
     var section = Worksheet.Section.surrounding(worksheet.group, worksheet, range);
     return section;
