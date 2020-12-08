@@ -16,6 +16,10 @@ function test_whatever() {
 
 */
 
+function init_add_study_groups() {
+  init_add_study_group_("X");
+}
+
 function init_add_study_group_(name) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   //test_worksheet_clear_(spreadsheet, name);
@@ -30,6 +34,13 @@ function init_add_study_group_(name) {
     ],
     category_musthave: true,
   });
+}
+
+function init_add_group_names() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  for (let group of StudyGroup.list(spreadsheet)) {
+    group.sheetbuf.set_value("mirror_row", 2, group.name)
+  }
 }
 
 function test_add_study_group_antirow(iteratee) {

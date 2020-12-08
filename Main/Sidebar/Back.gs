@@ -61,6 +61,10 @@ function sidebar_load_contents(group_name, {continuation = null, cached = []} = 
       contents.push({continuation: {start_column: worksheet.dim.start, validate: true}});
       break iterate_worksheets;
     }
+    if (worksheet.is_unused()) {
+      // XXX pass such worksheets, but instead ignore them in the Front
+      continue;
+    }
     for (let section of worksheet.list_sections()) {
       let section_title_id = section.get_title_metadata_id({
         validate: validate && section.dim.offset > 0});
@@ -157,7 +161,7 @@ function sidebar_load_contents_section_(section, validated = false) {
     section_location: section_location,
     column: section.dim.title,
     width: section.dim.width,
-    is_unused: worksheet.get_title().startsWith("{"),
+    is_unused: worksheet.is_unused(),
       // XXX hide such worksheets in the sidebar
     is_subsection: section.dim.offset > 0,
     title: section.get_title(),

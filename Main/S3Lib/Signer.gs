@@ -86,12 +86,12 @@ S3Signer.prototype.sign = function(method, path, query_string, pre_header_list) 
     canonical_headers + "\n" +
     signed_headers + "\n" +
     payload_hash;
-  console.log(canonical_request);
+  //console.log(canonical_request);
   var string_to_sign = "AWS4-HMAC-SHA256" + "\n" +
     amz_date + "\n" +
     signing_date + "/" + this.region + "/" + service + "/aws4_request\n" +
     bytes_to_hex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, canonical_request));
-  console.log(string_to_sign);
+  //console.log(string_to_sign);
   header_list.push([ "Authorization",
     "AWS4-HMAC-SHA256" + " " +
     "Credential=" + this.access_key + "/" + signing_date + "/" +

@@ -1,5 +1,5 @@
 function onOpen() {
-    if (MainSpreadsheet.get() != null) {
+    if (MainSpreadsheet.is_set()) {
         menu_create();
     } else {
         var ui = SpreadsheetApp.getUi();

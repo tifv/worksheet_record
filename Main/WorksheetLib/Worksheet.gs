@@ -7,6 +7,17 @@ class WorksheetSectionInitError extends WorksheetSectionError {};
 class WorksheetSectionDetectionError extends WorksheetSectionError {};
 
 
+function worksheet_blank_namer_(date) {
+    if (date == null)
+        return "{Бланк}";
+    let date_format = WorksheetDate.from_object(
+        Object.assign({}, date, {period: null})
+    ).format();
+    if (date.period != null)
+        date_format += ", пара " + date.period;
+    return "{Бланк " + date_format + "}";
+}
+
 var Worksheet = function() { // namespace {{{1
 
 class WorksheetBase {}; // {{{2
@@ -26,6 +37,9 @@ define_lazy_properties_(WorksheetBase.prototype, { // {{{
         return this.sheet.getRange(
             this.group.dim.title_row, this.dim.start,
             1, this.dim.width );
+    },
+    full_range: function() {
+        return get_column_range_(this.sheet, this.dim.start, this.dim.width);
     },
     data_range: function() {
         return this.sheet.getRange(
@@ -276,162 +290,6 @@ WorksheetBase.prototype.has_max_row = function() {
     return this.get_max_formula() != null;
 } // }}}
 
-// end WorksheetBase definition }}}2
-
-// Worksheet constructor (group, start, end, data_start, data_end) {{{
-class Worksheet extends WorksheetBase {
-    constructor(group, start, end, data_start, data_end) {
-        super();
-        if (!(group instanceof StudyGroup)) {
-            throw new Error("Worksheet.constructor: type error (group)");
-        }
-        Object.defineProperty(this, "group", { value: group,
-            configurable: true });
-        if (
-            typeof start != "number"      || isNaN(start) ||
-            typeof end != "number"        || isNaN(end)   ||
-            typeof data_start != "number" || isNaN(data_start) ||
-            typeof data_end != "number"   || isNaN(data_end)
-        ) {
-            throw new Error("Worksheet.constructor: type error (columns)");
-        }
-        Object.defineProperty(this, "dim", { value: {
-            start: start, end: end,
-            data_start: data_start, data_end: data_end,
-            marker_start: data_start - 1, marker_end: data_end + 1,
-            width: end - start + 1,
-            data_width: data_end - data_start + 1,
-            title: start,
-        }, configurable: true });
-    }
-} // }}}
-
-Worksheet.marker = {start: "‹", end: "›"};
-
-Worksheet.initial = { // {{{
-    data_width: 15,
-    title: "{Бланк}",
-}; // }}}
-
-define_lazy_properties_(Worksheet.prototype, { // {{{
-    mirror_range: function() {
-        if (this.group.dim.mirror_row == null)
-            return null;
-        return this.sheet.getRange(
-            this.group.dim.mirror_row, this.dim.start,
-            1, this.dim.width );
-    },
-    sum_column: function() {
-        return (
-            this.group.sheetbuf.find_value( "label_row", "S",
-                this.dim.start, this.dim.marker_start - 1 ) ||
-            this.group.sheetbuf.find_value( "label_row", "S",
-                this.dim.marker_end + 1, this.dim.end)
-        );
-    },
-    rating_column: function() {
-        return (
-            this.group.sheetbuf.find_value( "label_row", "Σ",
-                this.dim.start, this.dim.marker_start - 1 ) ||
-            this.group.sheetbuf.find_value( "label_row", "Σ",
-                this.dim.marker_end + 1, this.dim.end)
-        );
-    }
-}); // }}}
-
-// Worksheet().check (options?) {{{
-Worksheet.prototype.check = function(options = {}) {
-    ({
-        dimensions: options.dimensions = true,
-        markers:    options.markers    = true,
-        titles:     options.titles     = true,
-    } = options);
-    if (options.dimensions) {
-        if (
-            this.dim.start > this.dim.marker_start ||
-            this.dim.end < this.dim.marker_start ||
-            this.dim.data_start > this.dim.data_end ||
-            this.dim.start < 1
-        ) {
-            throw new WorksheetDetectionError(
-                "worksheet dimensions are invalid (" +
-                    "start=" + ACodec.debug(this.dim.start) + ", " +
-                    "end="   + ACodec.debug(this.dim.end)   + ", " +
-                    "data_start=" + ACodec.debug(this.dim.data_start) + ", " +
-                    "data_end="   + ACodec.debug(this.dim.data_end)   +
-                ")" );
-        }
-    }
-    if (options.markers) {
-        this.group.sheetbuf.ensure_loaded(this.dim.start, this.dim.end);
-        if (
-            this.dim.marker_start !=
-            this.group.sheetbuf.find_value( "label_row",
-                this.constructor.marker.start, this.dim.start, this.dim.end ) ||
-            this.dim.marker_start !=
-            this.group.sheetbuf.find_last_value( "label_row",
-                this.constructor.marker.start, this.dim.end, this.dim.start ) ||
-            this.dim.marker_end !=
-            this.group.sheetbuf.find_value( "label_row",
-                this.constructor.marker.end, this.dim.start, this.dim.end ) ||
-            this.dim.marker_end !=
-            this.group.sheetbuf.find_last_value( "label_row",
-                this.constructor.marker.end, this.dim.end, this.dim.start )
-        ) {
-            throw new WorksheetDetectionError(
-                "markers are missing or interwine",
-                this.sheet.getRange(
-                    this.group.dim.label_row, this.dim.marker_start,
-                    1, this.dim.marker_end - this.dim.marker_start + 1 )
-            );
-        }
-    }
-    if (options.titles) {
-        try {
-            let start_title_cols = this.group.sheetbuf.find_merge( "title_row",
-                this.dim.start, this.dim.end );
-            if (start_title_cols == null)
-                throw new WorksheetDetectionError(
-                    "no title at the start of the title range",
-                    this.title_range );
-            let [title_start, title_end] = start_title_cols;
-            if (
-                title_start != this.dim.start ||
-                title_end < this.dim.data_start &&
-                this.group.sheetbuf.find_merge( "title_row",
-                    title_end + 1, this.dim.data_start,
-                    {allow_overlap_end: true} ) != null
-            ) {
-                throw new WorksheetDetectionError(
-                    "misaligned title at the start of the title range",
-                    this.title_range );
-            }
-            let end_title_cols = this.group.sheetbuf.find_merge( "title_row",
-                this.dim.marker_end, this.dim.marker_end,
-                {allow_overlap_start: true, allow_overlap_end: true} );
-            if (end_title_cols != null && (
-                end_title_cols[0] > this.dim.data_end ||
-                end_title_cols[1] != this.dim.end
-            ) || end_title_cols == null && (
-                this.dim.marker_end < this.dim.end
-            )) {
-                throw new WorksheetDetectionError(
-                    "misaligned title at the end of the title range",
-                    this.title_range );
-            }
-        } catch (error) {
-            if (error instanceof SheetBufferMergeOverlap) {
-                throw new WorksheetDetectionError(
-                    "merged ranges overlap worksheet title range",
-                    this.title_range );
-            } else {
-                throw error;
-            }
-        }
-    }
-    return this;
-} // }}}
-
 // WorksheetBase().set_data_borders (start, end, options) {{{
 WorksheetBase.prototype.set_data_borders = function( start, end,
     options = {}
@@ -607,6 +465,165 @@ WorksheetBase.prototype.set_data_borders = function( start, end,
         } // }}}
     } // }}}
     SpreadsheetFlusher.reset();
+} // }}}
+
+// end WorksheetBase definition }}}2
+
+// Worksheet constructor (group, start, end, data_start, data_end) {{{
+class Worksheet extends WorksheetBase {
+    constructor(group, start, end, data_start, data_end) {
+        super();
+        if (!(group instanceof StudyGroup)) {
+            throw new Error("Worksheet.constructor: type error (group)");
+        }
+        Object.defineProperty(this, "group", { value: group,
+            configurable: true });
+        if (
+            typeof start != "number"      || isNaN(start) ||
+            typeof end != "number"        || isNaN(end)   ||
+            typeof data_start != "number" || isNaN(data_start) ||
+            typeof data_end != "number"   || isNaN(data_end)
+        ) {
+            throw new Error("Worksheet.constructor: type error (columns)");
+        }
+        Object.defineProperty(this, "dim", { value: {
+            start: start, end: end,
+            data_start: data_start, data_end: data_end,
+            marker_start: data_start - 1, marker_end: data_end + 1,
+            width: end - start + 1,
+            data_width: data_end - data_start + 1,
+            title: start,
+        }, configurable: true });
+    }
+} // }}}
+
+Worksheet.marker = {start: "‹", end: "›"};
+
+Worksheet.initial = { // {{{
+    data_width: 15,
+    title: worksheet_blank_namer_(),
+}; // }}}
+
+define_lazy_properties_(Worksheet.prototype, { // {{{
+    mirror_range: function() {
+        if (this.group.dim.mirror_row == null)
+            return null;
+        return this.sheet.getRange(
+            this.group.dim.mirror_row, this.dim.start,
+            1, this.dim.width );
+    },
+    sum_column: function() {
+        return (
+            this.group.sheetbuf.find_value( "label_row", "S",
+                this.dim.start, this.dim.marker_start - 1 ) ||
+            this.group.sheetbuf.find_value( "label_row", "S",
+                this.dim.marker_end + 1, this.dim.end)
+        );
+    },
+    rating_column: function() {
+        return (
+            this.group.sheetbuf.find_value( "label_row", "Σ",
+                this.dim.start, this.dim.marker_start - 1 ) ||
+            this.group.sheetbuf.find_value( "label_row", "Σ",
+                this.dim.marker_end + 1, this.dim.end)
+        );
+    },
+    separator_column_range: function() {
+        return get_column_range_(this.sheet, this.dim.end + 1);
+    },
+}); // }}}
+
+// Worksheet().check (options?) {{{
+Worksheet.prototype.check = function(options = {}) {
+    ({
+        dimensions: options.dimensions = true,
+        markers:    options.markers    = true,
+        titles:     options.titles     = true,
+    } = options);
+    if (options.dimensions) {
+        if (
+            this.dim.start > this.dim.marker_start ||
+            this.dim.end < this.dim.marker_start ||
+            this.dim.data_start > this.dim.data_end ||
+            this.dim.start < 1
+        ) {
+            throw new WorksheetDetectionError(
+                "worksheet dimensions are invalid (" +
+                    "start=" + ACodec.debug(this.dim.start) + ", " +
+                    "end="   + ACodec.debug(this.dim.end)   + ", " +
+                    "data_start=" + ACodec.debug(this.dim.data_start) + ", " +
+                    "data_end="   + ACodec.debug(this.dim.data_end)   +
+                ")" );
+        }
+    }
+    if (options.markers) {
+        this.group.sheetbuf.ensure_loaded(this.dim.start, this.dim.end);
+        if (
+            this.dim.marker_start !=
+            this.group.sheetbuf.find_value( "label_row",
+                this.constructor.marker.start, this.dim.start, this.dim.end ) ||
+            this.dim.marker_start !=
+            this.group.sheetbuf.find_last_value( "label_row",
+                this.constructor.marker.start, this.dim.end, this.dim.start ) ||
+            this.dim.marker_end !=
+            this.group.sheetbuf.find_value( "label_row",
+                this.constructor.marker.end, this.dim.start, this.dim.end ) ||
+            this.dim.marker_end !=
+            this.group.sheetbuf.find_last_value( "label_row",
+                this.constructor.marker.end, this.dim.end, this.dim.start )
+        ) {
+            throw new WorksheetDetectionError(
+                "markers are missing or interwine",
+                this.sheet.getRange(
+                    this.group.dim.label_row, this.dim.marker_start,
+                    1, this.dim.marker_end - this.dim.marker_start + 1 )
+            );
+        }
+    }
+    if (options.titles) {
+        try {
+            let start_title_cols = this.group.sheetbuf.find_merge( "title_row",
+                this.dim.start, this.dim.end );
+            if (start_title_cols == null)
+                throw new WorksheetDetectionError(
+                    "no title at the start of the title range",
+                    this.title_range );
+            let [title_start, title_end] = start_title_cols;
+            if (
+                title_start != this.dim.start ||
+                title_end < this.dim.data_start &&
+                this.group.sheetbuf.find_merge( "title_row",
+                    title_end + 1, this.dim.data_start,
+                    {allow_overlap_end: true} ) != null
+            ) {
+                throw new WorksheetDetectionError(
+                    "misaligned title at the start of the title range",
+                    this.title_range );
+            }
+            let end_title_cols = this.group.sheetbuf.find_merge( "title_row",
+                this.dim.marker_end, this.dim.marker_end,
+                {allow_overlap_start: true, allow_overlap_end: true} );
+            if (end_title_cols != null && (
+                end_title_cols[0] > this.dim.data_end ||
+                end_title_cols[1] != this.dim.end
+            ) || end_title_cols == null && (
+                this.dim.marker_end < this.dim.end
+            )) {
+                throw new WorksheetDetectionError(
+                    "misaligned title at the end of the title range",
+                    this.title_range );
+            }
+        } catch (error) {
+            if (error instanceof SheetBufferMergeOverlap) {
+                throw new WorksheetDetectionError(
+                    "merged ranges overlap worksheet title range",
+                    this.title_range );
+            } else {
+                throw error;
+            }
+        }
+    }
+    return this;
 } // }}}
 
 // Worksheet().add_column_group {{{
@@ -877,6 +894,14 @@ Worksheet.prototype.set_metaweight = function(value, options = {}) {
     }
     this.group.sheetbuf.set_value( "weight_row",
         this.rating_column, metaweight );
+} // }}}
+
+// Worksheet().is_unused () {{{
+Worksheet.prototype.is_unused = function() {
+    let title = this.get_title();
+    return (typeof title == "string" && (
+        title.startsWith("{") && title.endsWith("}") ||
+        title == "" ));
 } // }}}
 
 // Worksheet.find_title_column_by_id (group, title_id) {{{
@@ -1805,8 +1830,6 @@ WorksheetBuilder.build = function(group, range, options) {
         group.sheetbuf.insert_columns_after(
             range.getColumn(), full_width + 2 - range_width );
     }
-    var full_range = get_column_range_( sheet,
-        range.getColumn() + 1, full_width );
     var start = range.getColumn() + 1, end = start + full_width - 1;
     return (new this(group, start, end, options)).worksheet;
 } // }}}

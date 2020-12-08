@@ -23,5 +23,15 @@ function set(spreadsheet) {
   PropertiesService.getDocumentProperties().setProperty(property_key, main_spreadsheet.getId());
 }
 
-return {get: get, set: set};
+function is_set() {
+  if (main_spreadsheet != null)
+    return true;
+  var id = PropertiesService.getDocumentProperties().getProperty(property_key);
+  if (id == null)
+    return false;
+  return true;
+}
+
+
+return {get: get, set: set, is_set: is_set};
 }();

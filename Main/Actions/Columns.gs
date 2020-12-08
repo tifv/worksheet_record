@@ -118,12 +118,7 @@ function action_alloy_subproblems() {
   }
 }
 
-const finished_colours = {
-  label: {h:  60, s: 0.70, l: 0.75},
-  data:  {h:  60, s: 0.70, l: 0.85},
-};
-
-function action_mark_columns_finished() {
+function action_mark_columns(colours) {
   try {
     var lock = ActionHelpers.acquire_lock();
     var group = ActionHelpers.get_active_group();
@@ -161,11 +156,11 @@ function action_mark_columns_finished() {
         data_ranges.push(sheet.getRange(group.dim.weight_row, start, 1, width));
       }
     }
-    const label_colour = HSL.to_hex(finished_colours.label);
+    const label_colour = HSL.to_hex(colours.label);
     for (let range of label_ranges) {
       range.setBackground(label_colour);
     }
-    const data_colour = HSL.to_hex(finished_colours.data);
+    const data_colour = HSL.to_hex(colours.data);
     for (let range of data_ranges) {
       range.setBackground(data_colour);
     }
@@ -173,4 +168,18 @@ function action_mark_columns_finished() {
   } catch (error) {
     report_error(error);
   }
+}
+
+function action_mark_columns_finished() {
+  action_mark_columns({
+    label: {h:  60, s: 0.70, l: 0.75},
+    data:  {h:  60, s: 0.70, l: 0.85},
+  });
+}
+
+function action_mark_columns_burning() {
+  action_mark_columns({
+    label: {h: -20, s: 0.70, l: 0.80},
+    data:  {h: -20, s: 0.70, l: 0.88},
+  });
 }

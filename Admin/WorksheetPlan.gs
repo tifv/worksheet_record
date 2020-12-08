@@ -1,4 +1,4 @@
-function worksheet_planned_add_single(group, today = WorksheetDate.today()) {
+function worksheet_planned_add_single(group, {today = WorksheetDate.today(), errors: super_errors}) {
   var plan = group.get_today_worksheet_plan(today);
   if (plan == null)
     return;
@@ -13,7 +13,7 @@ function worksheet_planned_add_single(group, today = WorksheetDate.today()) {
       plan_item.date.period = parseInt(plan_item.period, "10");
     }
     if (plan_item.title == null) {
-      plan_item.title = "{Бланк " + plan_item.date.format() + "}";
+      plan_item.title = worksheet_blank_namer_(plan_item.date);
     }
     WorksheetBuilder.build(group, sheet.getRange(1, last_column + 1), plan_item);
     last_column = sheet.getLastColumn();
@@ -26,7 +26,7 @@ function worksheet_planned_add_all() {
   var errors = [];
   for (let group of StudyGroup.list(spreadsheet)) {
     try {
-      worksheet_planned_add_single(group, today);
+      worksheet_planned_add_single(group, {today: today, errors: errors});
     } catch (error) {
       console.error(error);
       errors.push(error);
@@ -61,6 +61,8 @@ var worksheet_planned_add = new Proxy({}, {get: function(obj, name) {
 
 function worksheet_planned_add_all_delay() {
   const spreadsheet = MainSpreadsheet.get();
+  if (spreadsheet == null)
+    throw new Error("Main spreadsheet was not configured");
   var today = WorksheetDate.today();
   for (let trigger of ScriptApp.getProjectTriggers()) {
     if (trigger.getHandlerFunction().startsWith("worksheet_planned_add."))
@@ -76,6 +78,7 @@ function worksheet_planned_add_all_delay() {
     ScriptApp.newTrigger("worksheet_planned_add.gid$" + group.sheet.getSheetId())
       .timeBased().at(date)
       .create();
+    console.log("scheduling worksheet planned adding for group “" + group.name + "”");
     date.setMinutes(date.getMinutes() + plan.length);
   }
 }
@@ -89,3 +92,35 @@ function worksheet_planned_add_forever() {
     .create();
 }
 
+function worksheet_planned_add_forever_all() {
+  const spreadsheet = MainSpreadsheet.get();
+  if (spreadsheet == null)
+    throw new Error("Main spreadsheet was not configured");
+  var today = WorksheetDate.today();
+  for (let trigger of ScriptApp.getProjectTriggers()) {
+    if (trigger.getHandlerFunction().startsWith("worksheet_planned_add."))
+      ScriptApp.deleteTrigger(trigger);
+  }
+  var hour = 2, minute = 15;
+  for (let group of StudyGroup.list(spreadsheet)) {
+    ScriptApp.newTrigger("worksheet_planned_add.gid$" + group.sheet.getSheetId())
+      .timeBased()
+        .everyDays(1)
+        .atHour(hour)
+        .nearMinute(minute)
+      .create();
+    console.log("scheduling worksheet planned adding for group “" + group.name + "”");
+    minute += 3;
+    if (minute >= 60) {
+      hour += 1;
+      minute -= 60;
+    }
+  }
+}
+
+function worksheet_planned_add_never() {
+  for (let trigger of ScriptApp.getProjectTriggers()) {
+    if (trigger.getHandlerFunction().startsWith("worksheet_planned_add"))
+      ScriptApp.deleteTrigger(trigger);
+  }
+}

@@ -49,8 +49,10 @@ function menu_create() {
             .addSeparator()
             .addItem( "Размыть границы подпунктов",
                 "action_alloy_subproblems" )
-            .addItem( "Отметить задачи как разобр.",
+            .addItem( "Отметить как разобранные",
                 "action_mark_columns_finished" )
+            .addItem( "Отметить как разбираемые",
+                "action_mark_columns_burning" )
             ;
         menu.addSubMenu(columns_menu);
     }

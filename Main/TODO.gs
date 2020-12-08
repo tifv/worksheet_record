@@ -1,7 +1,12 @@
 /*
 
 # Priority TODO
-• develop Adminhelper
+• detect duplicate uploads
+• detect duplicate upload names
+• detect obsoleted uploads
+• various uploads tools (renaming, stabilization) in Adminhelper
+• detect that sheet is probably a copy of proper StudyGroup and suggest to restore metadata
+• detect that frozen rows were probably unfrozen, and suggest to restore them
 
 # Second-priority TODO
 • make markers invisible in published mode (add a cf rule to whiten them).
@@ -12,6 +17,7 @@
   • optimize worksheet generation to only load and save cfrules once.
 
 # TODO
+• mark “burning” problems with fire emoji — requires a lot of workarounds, though.
 • presets of worksheets: game, theory, … (a list is saved in spreadsheet metadata);
 • upload process must explicitly fail if the file is not found or is a directory;
 • Upload solutions:

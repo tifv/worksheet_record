@@ -633,7 +633,7 @@ SheetBuffer.prototype.delete_columns = function(column, num_columns) {
     if (typeof num_columns !== "number" || num_columns < 1)
         throw new SheetBufferError( "delete_columns: " +
             "invalid argument" );
-    if (column < 1 || column + num_columns - 1 >= this.dim.sheet_width)
+    if (column < 1 || column + num_columns - 1 > this.dim.sheet_width)
         throw new SheetBufferError( "delete_columns: " +
             "index out of bounds" );
     SheetBuffer_delete_columns.call(this, column, num_columns);

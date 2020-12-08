@@ -109,6 +109,9 @@ function action_worksheet_upload() {
     }
     var lock = ActionHelpers.acquire_lock();
     var section = ActionHelpers.get_active_section();
+    if (section.worksheet.is_unused()) {
+      throw new ReportError("У листочка нет заголовка.")
+    }
     if (!section.is_addendum()) {
       upload_start_dialog_(section);
     } else {
@@ -219,7 +222,7 @@ function action_worksheet_planned_add(group_name) {
         plan_item.date.period = parseInt(plan_item.period, "10");
       }
       if (plan_item.title == null) {
-        plan_item.title = "{Бланк " + plan_item.date.format() + "}";
+        plan_item.title = worksheet_blank_namer_(plan_item.date);
       }
       WorksheetBuilder.build(group, sheet.getRange(1, last_column + 1), plan_item);
       last_column = sheet.getLastColumn();

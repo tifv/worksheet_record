@@ -75,7 +75,7 @@ function expand_columns_today() {
   var date = new Date(now.valueOf());
   for (let time of times) {
     date.setHours(0);
-    date.setMinutes(time);
+    date.setMinutes(time + 5);
     if (date.valueOf() < now.valueOf())
       continue;
     ScriptApp.newTrigger("expand_columns_now")
