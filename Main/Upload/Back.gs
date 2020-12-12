@@ -205,8 +205,7 @@ function upload_finish({
 }
 
 function decode_hyperlink_formula_(formula) {
-  console.log(formula);
-  var hyperlink_filter_match = /^=hyperlink\(filter\((?:uploads|'uploads')!R\d+C\d+:C\d+[,;](?:uploads|'uploads')!R\d+C\d+:C\d+="([^"]*)"\)[,;]"([^"]*)"\)$/
+  var hyperlink_filter_match = /^=(?:hyperlink|HYPERLINK)\((?:filter|FILTER)\((?:uploads|'uploads')!R\d+C\d+:C\d+[,;](?:uploads|'uploads')!R\d+C\d+:C\d+="([^"]*)"\)[,;]"([^"]*)"\)$/
     .exec(formula);
   if (hyperlink_filter_match != null) {
     return [{filter: hyperlink_filter_match[1]}, hyperlink_filter_match[2]];
@@ -313,10 +312,6 @@ const key_format = {
 function exists() {
   var uploads_sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheet_name);
   return (uploads_sheet != null);
-}
-
-function get_sheet_name() {
-  return sheet_name;
 }
 
 function get(mode = "full") {

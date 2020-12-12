@@ -25,16 +25,6 @@ function test_set_worksheet_plan_for_today() {
   }
 }
 
-function test_stupid_trigger() {
-  var now = new Date();
-  now.setSeconds(now.getSeconds() + 15);
-  //ScriptApp.newTrigger("worksheet_planned_add.sheet$test_04_ZCmw")
-  ScriptApp.newTrigger("worksheet_planned_add.gid$1544770151")
-    .timeBased()
-    .at(now)
-    .create();
-}
-
 function import_timetable() {
   const ui = SpreadsheetApp.getUi();
   let response = ui.prompt( "Импорт из расписания",

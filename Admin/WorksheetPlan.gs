@@ -1,4 +1,4 @@
-function worksheet_planned_add_single(group, {today = WorksheetDate.today(), errors: super_errors}) {
+function worksheet_planned_add_single(group, {today = WorksheetDate.today(), errors: super_errors} = {}) {
   var plan = group.get_today_worksheet_plan(today);
   if (plan == null)
     return;
@@ -101,7 +101,7 @@ function worksheet_planned_add_forever_all() {
     if (trigger.getHandlerFunction().startsWith("worksheet_planned_add."))
       ScriptApp.deleteTrigger(trigger);
   }
-  var hour = 2, minute = 15;
+  var hour = 3, minute = 15;
   for (let group of StudyGroup.list(spreadsheet)) {
     ScriptApp.newTrigger("worksheet_planned_add.gid$" + group.sheet.getSheetId())
       .timeBased()

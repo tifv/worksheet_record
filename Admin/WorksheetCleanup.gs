@@ -63,3 +63,12 @@ function worksheet_cleanup_all() {
   }
 }
 
+function worksheet_cleanup_forever() {
+  ScriptApp.newTrigger("worksheet_cleanup_all")
+    .timeBased()
+      .everyDays(1)
+      .atHour(2)
+      .nearMinute(15)
+    .create();
+}
+

@@ -351,6 +351,10 @@ SheetBuffer.prototype.slice_values = function(row_name, start, end) {
     return SheetBuffer_slice.call(this, "values", row_name, start, end);
 }
 
+SheetBuffer.prototype.slice_formulas = function(row_name, start, end) {
+    return SheetBuffer_slice.call(this, "formulas", row_name, start, end);
+}
+
 function SheetBuffer_get(value_type, row_name, column) {
     if (column < 1 || column > this.dim.sheet_width)
         throw new SheetBufferError("get: index out of bounds");
