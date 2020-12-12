@@ -124,6 +124,8 @@ function action_alloy_subproblems() {
       worksheet = ActionHelpers.get_active_worksheet(null, sheet, range, group);
       // XXX stash possible errors when finding worksheet
       worksheet.alloy_subproblems();
+      // XXX optimize to only collect ranges, and then set borders all at once;
+      // factor it out of border_data_set
     }
     lock.releaseLock();
   } catch (error) {

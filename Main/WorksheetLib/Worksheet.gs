@@ -301,6 +301,7 @@ WorksheetBase.prototype.set_data_borders = function( start, end,
         left: options.left = {},
         right: options.right = {},
         alloy_columns: options.alloy_columns = null,
+            // if alloy_subproblems is non-null, all other borders are ignored
     } = options);
     if (!options.left.open) {
         ({
@@ -363,6 +364,18 @@ WorksheetBase.prototype.set_data_borders = function( start, end,
         }
     }
     const sheet = this.group.sheet;
+    if (options.alloy_columns != null) { // {{{
+        let ranges_R1C1 = [];
+        for (let [a_row, b_row] of solid_rows) {
+            for (let [a_col, b_col] of options.alloy_columns)
+                ranges_R1C1.push(get_R1C1(a_row, b_row, a_col, b_col));
+        }
+        if (ranges_R1C1.length > 0)
+            sheet.getRangeList(ranges_R1C1)
+                .setBorder( null, null, null, null, true, null,
+                    "#cccccc", SpreadsheetApp.BorderStyle.DOTTED );
+        return;
+    } // }}}
     if (options.horizontal) { // remove borders that should not be there {{{
         let ranges_R1C1 = [];
         if (options.max_row === false)
@@ -394,17 +407,6 @@ WorksheetBase.prototype.set_data_borders = function( start, end,
                 null, options.right.open ? true : null,
                 true, null,
                 'black', SpreadsheetApp.BorderStyle.DOTTED );
-    } // }}}
-    if (options.alloy_columns != null) { // {{{
-        let ranges_R1C1 = [];
-        for (let [a_row, b_row] of solid_rows) {
-            for (let [a_col, b_col] of options.alloy_columns)
-                ranges_R1C1.push(get_R1C1(a_row, b_row, a_col, b_col));
-        }
-        if (ranges_R1C1.length > 0)
-            sheet.getRangeList(ranges_R1C1)
-                .setBorder( null, null, null, null, true, null,
-                    "#cccccc", SpreadsheetApp.BorderStyle.DOTTED );
     } // }}}
     if (!options.left.open) { // vertical left {{{
         let ranges_R1C1 = [
