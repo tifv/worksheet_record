@@ -17,6 +17,8 @@
   • optimize worksheet generation to only load and save cfrules once.
 
 # TODO
+• make sidebar validation not acquire the lock unless necessary
+• make a notice to link insertion (in file upload) that only file links and Drive links are ok, not Overleaf links.
 • mark “burning” problems with fire emoji — requires a lot of workarounds, though.
 • presets of worksheets: game, theory, … (a list is saved in spreadsheet metadata);
 • upload process must explicitly fail if the file is not found or is a directory;

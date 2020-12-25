@@ -31,6 +31,8 @@ Actions/StudyGroups
 Actions/StudyGroups-Add
 Actions/Regenerate
 S3Lib/Signer
+Upload/Record
+Upload/Hyperlink
 Upload/Back
 Upload/Dialog
 Sidebar/Back

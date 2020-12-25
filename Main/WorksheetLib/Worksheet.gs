@@ -15,7 +15,7 @@ function worksheet_blank_namer_(date) {
     ).format();
     if (date.period != null)
         date_format += ", пара " + date.period;
-    return "{Бланк " + date_format + "}";
+    return "{" + date_format + "}";
 }
 
 var Worksheet = function() { // namespace {{{1

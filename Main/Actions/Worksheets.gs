@@ -27,7 +27,7 @@ function action_worksheet_add() {
       if (frozen_columns > last_column)
         last_column = frozen_columns;
     }
-    if (last_column >= group.dim.sheet_width) {
+    if (last_column >= group.sheetbuf.dim.sheet_width) {
       throw new ReportError("Последний столбец вкладки должен быть пустым.");
     }
     var date = WorksheetDate.today();
