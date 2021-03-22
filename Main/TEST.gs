@@ -39,6 +39,8 @@ function init_add_study_group_(name) {
 function init_add_group_names() {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   for (let group of StudyGroup.list(spreadsheet)) {
+    group.sheet.getRange(group.dim.mirror_row, 2)
+      .setNumberFormat("@STRING@");
     group.sheetbuf.set_value("mirror_row", 2, group.name)
   }
 }

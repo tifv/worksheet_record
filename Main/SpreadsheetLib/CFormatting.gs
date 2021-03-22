@@ -475,15 +475,23 @@ class CFRuleFilter {
         if (ranges != null)
             cfranges = CFRangeList.from_dimensions(ranges);
         if (rule_type == "boolean") {
-            cfcondition = new CFBooleanCondition(condition);
+            if (condition instanceof CFBooleanCondition || condition.match != null) {
+                cfcondition = condition;
+            } else {
+                cfcondition = new CFBooleanCondition(condition);
+            }
             if (effect != null)
                 cfeffect = new CFBooleanEffect(effect);
         } else if (rule_type == "gradient") {
-            cfcondition = new CFGradientCondition(condition);
+            if (condition instanceof CFGradientCondition || condition.match != null) {
+                cfcondition = condition;
+            } else {
+                cfcondition = new CFGradientCondition(condition);
+            }
             if (effect != null)
                 cfeffect = new CFGradientEffect(effect);
         } else {
-            throw new Error("invalid rule type");
+            throw new Error("invalid rule type (must be boolean or gradient)");
         }
         if (locations != null)
             cflocations = CFLocationList.from_dimensions(locations);
@@ -498,10 +506,13 @@ class CFRuleFilter {
     }
     match(cfrule) {
         var {
+            type: rule_type,
             condition: cfcondition,
             ranges: cfranges,
             effect: cfeffect
         } = cfrule;
+        if (rule_type != this.type)
+            return false;
         var filter_ranges = this.ranges || this.locations;
         return ( this.condition.match(cfcondition) &&
             (filter_ranges == null || filter_ranges.match(cfranges)) &&
@@ -515,11 +526,12 @@ class CFRuleFilter {
         //         (or if there is match and we do not specify ranges);
         //     [rest, split] if some ranges match;
         var {
+            type: rule_type,
             condition: cfcondition,
             ranges: cfranges,
             effect: cfeffect
         } = cfrule;
-        if (!this.condition.match(cfcondition))
+        if (rule_type != this.type || !this.condition.match(cfcondition))
             return [cfrule, null];
         if (this.effect != null && !this.effect.match(cfeffect))
             return [cfrule, null];
@@ -581,7 +593,7 @@ class CFRuleList extends Array {
             if (cfrule != null) {
                 this[i] = cfrule;
             } else {
-                this.splice(i, 1);
+                this.splice(i--, 1);
             }
         }
     }

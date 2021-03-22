@@ -53,7 +53,7 @@ function create(spreadsheet) {
   if (spreadsheet == null)
     spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var uploads_sheet = spreadsheet.insertSheet(sheet_name);
-  DataTable.init(uploads_sheet, required_keys, 3);
+  var uploads = DataTable.init(uploads_sheet, required_keys, 3);
   uploads_sheet.getRange(1, 1, uploads_sheet.getMaxRows(), uploads_sheet.getMaxColumns())
     .setVerticalAlignment("middle")
     .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
@@ -89,11 +89,137 @@ function create(spreadsheet) {
       frozen_columns = frozen_columns > column ? frozen_columns : column;
   }
   uploads_sheet.setFrozenColumns(frozen_columns);
-  // XXX add more formatting
-  // XXX color categories
-  // XXX color titles when pairs group+date coincide
-  // XXX color filenames when they coincide
-  // XXX color groups
+  var cfrules = ConditionalFormatting.RuleList.load(uploads_sheet);
+  add_helper_cf(uploads, cfrules);
+  cfrules.save(uploads_sheet);
+}
+
+function add_helper_cf(uploads, cfrules) {
+  var first_R1 = "R" + uploads.first_row;
+  var id_C1 = "C" + uploads.key_columns.get("id");
+  var group_C1 = "C" + uploads.key_columns.get("group");
+  var date_C1 = "C" + uploads.key_columns.get("date");
+  var request_C1 = "C" + uploads.key_columns.get("request");
+  var stable_C1 = "C" + uploads.key_columns.get("stable_pdf");
+  var pdf_C1 = "C" + uploads.key_columns.get("initial_pdf");
+  var src_C1 = "C" + uploads.key_columns.get("initial_src");
+  var filename_C1 = "C" + uploads.key_columns.get("filename");
+  var title_cfrange = ConditionalFormatting.Range
+    .from_range(uploads.get_range("max", "title"));
+  var pdf_cfrange = ConditionalFormatting.Range
+    .from_range(uploads.get_range("max", "initial_pdf"));
+  var filename_cfrange = ConditionalFormatting.Range
+    .from_range(uploads.get_range("max", "filename"));
+  cfrules.insert({
+    type: "boolean",
+    condition: {
+      type: SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA,
+      values: ["".concat(
+        "=and(not(isblank(", "R[0]", id_C1, ")),countifs(",
+          "R[0]", group_C1, ":", group_C1, ",", "R[0]", group_C1, ",",
+          "R[0]",  date_C1, ":",  date_C1, ",", "R[0]",  date_C1,
+        ")>1)"
+      )],
+    },
+    effect: {background: "#ffaaaa"},
+    ranges: [title_cfrange],
+  });
+  cfrules.insert({
+    type: "boolean",
+    condition: {
+      type: SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA,
+      values: ["".concat(
+        "=and(not(isblank(", "R[0]", id_C1, ")),countifs(",
+          first_R1, group_C1, ":", "R[0]", group_C1, ",", "R[0]", group_C1, ",",
+          first_R1,  date_C1, ":", "R[0]",  date_C1, ",", "R[0]",  date_C1,
+        ")>1)"
+      )],
+    },
+    effect: {background: "#aaffaa"},
+    ranges: [title_cfrange],
+  });
+  cfrules.insert({
+    type: "boolean",
+    condition: {
+      type: SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA,
+      values: ["".concat(
+        "=or(", "R[0]", request_C1, "=\"stabilize\",not(isblank(", "R[0]", stable_C1, ")))"
+      )],
+    },
+    effect: {background: "#aaaaff"},
+    ranges: [title_cfrange],
+  });
+  cfrules.insert({
+    type: "boolean",
+    condition: {
+      type: SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA,
+      values: ["".concat(
+        "=and(",
+          "not(isblank(", "R[0]", pdf_C1, ")),",
+          "or(",
+            "isblank(", "R[0]", src_C1, "),",
+            "iferror(find(\"overleaf.com\",", "R[0]", src_C1, ")>=0,FALSE)",
+          ")",
+        ")"
+      )],
+    },
+    effect: {background: "#ffaaaa"},
+    ranges: [pdf_cfrange],
+  });
+  cfrules.insert({
+    type: "boolean",
+    condition: {
+      type: SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA,
+      values: ["".concat(
+        "=and(not(isblank(", "R[0]", filename_C1, ")),",
+          "countif(", first_R1, filename_C1, ":", filename_C1, ",", "R[0]", filename_C1, ")>1",
+        ")"
+      )],
+    },
+    effect: {background: "#ffaaaa"},
+    ranges: [filename_cfrange],
+  });
+}
+
+function recreate_category_cf(spreadsheet) {
+  if (spreadsheet == null)
+    spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var uploads = get(spreadsheet);
+  var uploads_sheet = uploads.sheet;
+  var cfrules = ConditionalFormatting.RuleList.load(uploads_sheet);
+  var cfrange = ConditionalFormatting.Range
+    .from_range(uploads.get_range("max", "category"));
+  cfrules.remove({
+    type: "boolean",
+    condition: {
+      match: (cfcondition) => (
+        cfcondition.type == SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA &&
+        cfcondition.values[0].startsWith("=exact")
+      ) },
+    locations: [cfrange],
+  });
+  var categories = Categories.get(spreadsheet);
+  var category_R1C1 = "R[0]C" + uploads.key_columns.get("category");
+  for (let code in categories) {
+    var category = categories[code];
+    if (category.color == null)
+      continue;
+    var color = HSL.to_hex(category.color);
+    cfrules.insert({
+      type: "boolean",
+      condition: {
+        type: SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA,
+        values: ["".concat(
+          "=exact(",
+            "\"", code.replace('"', '""'), "\",",
+            category_R1C1,
+          ")" )],
+      },
+      effect: {background: color},
+      ranges: [cfrange],
+    });
+  }
+  cfrules.save(uploads_sheet);
 }
 
 function recreate_group_cf(spreadsheet) {
@@ -101,29 +227,45 @@ function recreate_group_cf(spreadsheet) {
     spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var uploads = get(spreadsheet);
   var uploads_sheet = uploads.sheet;
-  // XXX remove any cf rules that were in this range before.
-  // XXX switch to CFormatting
-  // XXX if the color is too dark, switch to white text
-  var cf_rules = uploads_sheet.getConditionalFormatRules();
-  var group_range = uploads.get_range(null, "group");
+  var cfrules = ConditionalFormatting.RuleList.load(uploads_sheet);
+  var cfrange = ConditionalFormatting.Range
+    .from_range(uploads.get_range("max", "group"));
+  cfrules.remove({
+    type: "boolean",
+    condition: {
+      match: (cfcondition) => (
+        cfcondition.type == SpreadsheetApp.BooleanCriteria.TEXT_EQUAL_TO
+      ) },
+    locations: [cfrange],
+  });
   for (let group of StudyGroup.list(spreadsheet)) {
     var name = group.name;
     var color = group.sheet.getTabColor();
     if (color == null)
       continue;
-    cf_rules.push(SpreadsheetApp.newConditionalFormatRule()
-      .setRanges([group_range])
-      .whenTextEqualTo(name)
-      .setBackground(color)
-      .build());
+    // XXX if the color is too dark, switch to white text
+    cfrules.insert({
+      type: "boolean",
+      condition: {
+        type: SpreadsheetApp.BooleanCriteria.TEXT_EQUAL_TO,
+        values: [name] },
+      effect: {background: color},
+      ranges: [cfrange],
+    });
   }
-  uploads_sheet.setConditionalFormatRules(cf_rules)
+  cfrules.save(uploads_sheet);
 }
 
 return {
   exists: exists, get: get,
   create: create,
-  recreate_group_cf: recreate_group_cf, };
+  recreate_group_cf: recreate_group_cf,
+  recreate_category_cf: recreate_category_cf,
+};
 }(); // end UploadRecord namespace
 
+function upload_record_recreate_cf() {
+  UploadRecord.recreate_group_cf(SpreadsheetApp.getActiveSpreadsheet());
+  UploadRecord.recreate_category_cf(SpreadsheetApp.getActiveSpreadsheet());
+}
 

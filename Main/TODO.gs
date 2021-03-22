@@ -1,6 +1,7 @@
 /*
 
 # Priority TODO
+• Remake sidebar UI to emphasize source links
 • detect duplicate uploads
 • detect duplicate upload names
 • detect obsoleted uploads

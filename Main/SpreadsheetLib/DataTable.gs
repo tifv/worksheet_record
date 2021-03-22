@@ -12,7 +12,6 @@
 var DataTable = function() { // begin namespace
 
 // "minimal" mode is sufficient to append data and to search
-// in "full" mode, search is not getting more efficient
 
 function DataTable(sheet, {required_keys = [], name = null, mode = "full"} = {}) {
   // mode = "full" or "minimal"
@@ -66,7 +65,7 @@ define_lazy_property_(DataTable.prototype, "last_row", function() {
     last_row = this.first_row - 1;
   return last_row;
 });
-define_lazy_property_(DataTable.prototype, "very_last_row", function() {
+define_lazy_property_(DataTable.prototype, "max_row", function() {
   return this.sheet.getMaxRows();
 });
 define_lazy_property_(DataTable.prototype, "row_count", function() {
@@ -77,6 +76,9 @@ DataTable.prototype.get_range = function(index = null, key = null) {
   if (index == null) {
     row = this.first_row;
     row_count = this.row_count;
+  } else if (index === "max"){
+    row = this.first_row;
+    row_count = this.max_row - row + 1;
   } else {
     row = this.first_row + index;
     row_count = 1;
@@ -124,7 +126,7 @@ DataTable.prototype[Symbol.iterator] = function() {
 DataTable.prototype.find = function*(key, value, finder_mod = null) {
   var
     start_row = this.first_row,
-    row_count = this.very_last_row -  start_row + 1;
+    row_count = this.max_row -  start_row + 1;
   var search_range;
   if (key == null) {
     search_range = this.sheet.getRange(start_row, 1, row_count, this.column_count);
@@ -175,7 +177,16 @@ DataTable.init = function(sheet, keys, frozen_rows = 1) {
   sheet.getRange(1, 1, 1, keys.length)
     .setValues([keys]);
   sheet.setFrozenRows(frozen_rows);
+  keys = keys.map(key => (key != "") ? key : null);
+  return Object.create(DataTable.prototype, {
+    sheet: {value: sheet},
+    mode:  {value: "minimal"},
+    column_count: {value: keys.length},
+    keys:  {value: keys},
+    key_columns:  {value : revert_keys(keys)},
+  });
 }
 
 return DataTable;
 }(); // end DataTable namespace
+
