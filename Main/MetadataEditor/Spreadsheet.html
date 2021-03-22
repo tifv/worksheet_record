@@ -2,7 +2,8 @@
 <html>
 <head>
   <base target="_blank">
-</head>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
+</script>
 <?!= include_html_("UI/Common") ?>
 <?!= include_html_("UI/ColorScheme") ?>
 <script>
@@ -53,6 +54,7 @@
     border-color: transparent;
   }
 </style>
+</head>
 <body>
   <h3>Список цветовых схем</h3>
   <div class="block">
@@ -79,7 +81,6 @@
   <div id="color_schemes--control" class="block block__flex"
    ><button id="color_schemes--save_button" class="action" onclick="color_schemes_save()" disabled>Сохранить список</button
  ></div>
-</body>
 <script>
 $(function() {
   for (let name of Object.keys(color_schemes_init).sort()) {
@@ -112,7 +113,7 @@ function add_color_scheme_row(name, color_scheme) {
       })
     )
   );
-  let editor = new ColorSchemeEditor(color_scheme, $cell_colors);
+  let editor = new ColorSchemeEditor(color_scheme, $cell_colors.get()[0]);
   editor.on_change(color_schemes_on_change);
   $row.data("scheme_editor", editor);
 }
@@ -139,14 +140,14 @@ async function color_schemes_save() {
     var $name = $row.find(".color_schemes--scheme_name");
     var name = $name.val();
     if (name == "") {
-      animate_warning($name);
+      animate_warning($name.get()[0]);
       name_error = true;
       return;
     }
     if ($name_by_name[name] != null) {
       if ($name_by_name[name] != true)
-        animate_warning($name_by_name[name]);
-      animate_warning($name);
+        animate_warning($name_by_name[name].get()[0]);
+      animate_warning($name.get()[0]);
       $name_by_name[name] = true;
       name_error = true;
       return;
@@ -181,4 +182,5 @@ async function color_schemes_save() {
 }
 
 </script>
+</body>
 </html>

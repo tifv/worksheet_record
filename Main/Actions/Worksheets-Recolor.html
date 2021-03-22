@@ -2,7 +2,8 @@
 <html>
 <head>
   <base target="_blank">
-</head>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
+</script>
 <?!= include_html_("UI/Common") ?>
 <?!= include_html_("UI/ColorScheme") ?>
 <script>
@@ -33,6 +34,7 @@
     font-style: italic;
   }
 </style>
+</head>
 <body>
 <!--<h3>Перекрасить листочек</h3>-->
 <div class="block block__flex">
@@ -65,7 +67,6 @@
     </div>
   </div>
 </div>
-</body>
 <script>
 
 var $scheme_select = $("#color_scheme--select");
@@ -149,7 +150,7 @@ function show_color_scheme(color_scheme) {
   $color_container.empty();
   let editor = (
     new ColorScheme<? if (editable) { ?>Editor<? } else { ?>Viewer<? } ?>
-      (color_scheme, $color_container) );
+      (color_scheme, $color_container.get()[0]) );
   editor.on_change(() =>
     $scheme_select
       .val("custom")
@@ -206,4 +207,5 @@ async function worksheet_recolor() {
 }
 
 </script>
+</body>
 </html>

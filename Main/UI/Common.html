@@ -1,5 +1,3 @@
-<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
-</script>
 <link rel="stylesheet" href="//ssl.gstatic.com/docs/script/css/add-ons1.css">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <style>
@@ -53,18 +51,57 @@
 
 <script>
 
-  function animate_warning($element) {
-    $element
-      .addClass("warning_animation");
-    let cancel_warning = () => {
-      cancel_warning = () => null;
-      $element
-        .removeClass("warning_animation")
-        .off("animationend.warning");
+  function animate_warning(element) {
+    element.classList.add("warning_animation");
+    let cancel = () => {
+      element.classList.remove("warning_animation");
+      element.removeEventListener("animationend", handle_cancel);
+      cancel = null;
     }
-    $element
-      .on("animationend.warning", () => cancel_warning());
-    window.setTimeout(() => cancel_warning(), 300);
+    let handle_cancel = () => (cancel != null ? cancel() : null);
+    element.addEventListener("animationend", handle_cancel);
+    window.setTimeout(handle_cancel, 300);
+  }
+
+</script>
+
+<script>
+
+  function makehtml(tag, {
+    classes = [],
+    attributes = {},
+    style = {},
+    text = null,
+    children = [],
+    parent = null,
+    namespace = null,
+  } = {}) {
+    var element = ( namespace == null ?
+      document.createElement(tag) :
+      document.createElementNS(namespace, tag) );
+    if (classes) {
+      element.classList.add(...classes);
+    }
+    for (let name in attributes) {
+      element.setAttribute(name, attributes[name]);
+    }
+    for (let name in style) {
+      element.style[name] = style[name];
+    }
+    if (text != null) {
+      element.textContent = text;
+    }
+    for (let child of children) {
+      element.appendChild(child);
+    }
+    if (parent != null) {
+      parent.appendChild(element);
+    }
+    return element;
+  }
+
+  function makesvg(tag, options) {
+    return makehtml(tag, Object.assign(options, {namespace: "http://www.w3.org/2000/svg"}));
   }
 
 </script>

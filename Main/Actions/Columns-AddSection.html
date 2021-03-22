@@ -2,12 +2,12 @@
 <html>
 <head>
   <base target="_blank">
-</head>
 <?!= include_html_("UI/Common") ?>
 <script>
   var group_name = <?!= JSON.stringify(group_name) ?>;
   var worksheet_location = <?!= JSON.stringify(worksheet_location) ?>;
 </script>
+</head>
 <body>
 <label class="block form-group"
  >Название раздела<br/>
@@ -35,27 +35,25 @@
     >Отмена</button
 ></div>
 <script>
-$(function() {
-  $("#edit_date--input").val(format_date(<?!= JSON.stringify(date) ?>));
-});
+
 function add_section() {
-  var data_width = parseInt($("#edit_data_width--input").val(), 10);
-  var title = $("#edit_title--input").val();
-  var weight = parseFloat($("#edit_weight--input").val());
-  var date_s = $("#edit_date--input").val();
+  var data_width = parseInt(document.getElementById("edit_data_width--input").value, 10);
+  var title = document.getElementById("edit_title--input").value;
+  var weight = parseFloat(document.getElementById("edit_weight--input").value);
+  var date_s = document.getElementById("edit_date--input").value;
   var date = parse_date(date_s);
+  document.getElementById("edit_date").querySelectorAll(".secondary.error").forEach(
+    (element) => { element.remove(); } );
   if (date == null && date_s != "") {
-    $("#edit_date")
-      .append(
-        $("<div/>")
-          .addClass("secondary error")
-          .text("YYYY-MM-DD pP или YYYY-MM-DD или ничего")
-      );
+    document.getElementById("edit_date").appendChild(
+      makehtml('div', {
+        classes: ["secondary", "error"],
+        text: "YYYY-MM-DD pP или YYYY-MM-DD или ничего",
+      })
+    );
     return;
-  } else {
-    $("#edit_date").children(".secondary.error").remove();
   }
-  $("#add_section_button").prop('disabled', true);
+  document.getElementById("add_section_button").disabled = true;
   google.script.run
     .withSuccessHandler(function() {
       google.script.host.close();
@@ -108,4 +106,8 @@ function display_error(error) {
 }
 
 </script>
+<script>
+  document.getElementById("edit_date--input").value = format_date(<?!= JSON.stringify(date) ?>);
+</script>
 </body>
+</html>

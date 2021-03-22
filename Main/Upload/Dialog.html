@@ -10,8 +10,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <base target="_blank">
-</head>
+  <base target="_blank">
+<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
+</script>
 <?!= include_html_("UI/Common") ?>
 <?!= category_css ?>
 <? } /* end if standalone */ ?>
@@ -324,7 +325,6 @@
     overflow-y: auto;
   }
 </style>
-<body>
 <? } /* end if standalone */ else if (sidebar) {  ?>
 <style>
   .upload_dialog--edit_container {
@@ -349,6 +349,10 @@
 </style>
 <? } /* end if sidebar */ ?>
 <? } /* end if style */  ?>
+<? if (standalone) { ?>
+</head>
+<body>
+<? } /* end if standalone */ ?>
 <? if (standalone || partial == "html") { ?>
 <div class="upload_dialog">
   <div class="upload_dialog--phase upload_dialog--phase__data_input">
@@ -773,7 +777,7 @@ class UploadTextAdder {
   add() {
     var filename = this.$filename.val();
     if (filename == "") {
-      animate_warning(this.$filename);
+      animate_warning(this.$filename.get()[0]);
       return;
     }
     var content = this.$content.val();
@@ -823,7 +827,7 @@ class UploadURLAdder {
   add() {
     var url = this.$content.val();
     if (url == "") {
-      animate_warning(this.$content);
+      animate_warning(this.$content.get()[0]);
       return;
     }
     this.add_callback(url);
@@ -893,7 +897,7 @@ UploadDialog.prototype.upload_prepare_title = function(flag_incomplete) {
   var title = this.find_an_$element(".upload_dialog--title_input").val();
   if (title === "") {
     flag_incomplete();
-    animate_warning(this.find_an_$element(".upload_dialog--title_edit"));
+    animate_warning(this.find_an_$element(".upload_dialog--title_edit").get()[0]);
     return null;
   }
   return title;
@@ -903,7 +907,7 @@ UploadDialog.prototype.upload_prepare_author = function(flag_incomplete) {
   var author = this.find_an_$element(".upload_dialog--author_input").val();
   if (author === "") {
     flag_incomplete();
-    animate_warning(this.find_an_$element(".upload_dialog--author_edit"));
+    animate_warning(this.find_an_$element(".upload_dialog--author_edit").get()[0]);
     return null;
   }
   return author;
@@ -917,7 +921,7 @@ UploadDialog.prototype.upload_prepare_pdf = function(flag_incomplete) {
   }
   if ($pdf_files.length < 1) {
     flag_incomplete();
-    animate_warning($pdf_loader);
+    animate_warning($pdf_loader.get()[0]);
     return null;
   }
   if ($pdf_files.filter("[data-resource-type=\"url\"]").length > 0) {
@@ -932,7 +936,7 @@ UploadDialog.prototype.upload_prepare_src = function(flag_incomplete) {
   if ($src_files.length == 0) {
     if (!this.upload_without_src) {
       flag_incomplete();
-      animate_warning($src_loader);
+      animate_warning($src_loader.get()[0]);
     }
     return null;
   }

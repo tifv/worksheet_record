@@ -107,6 +107,7 @@ function menu_add_admin_(menu) {
         .addItem("(WIP) Листочки по плану…", "action_worksheet_planned")
         .addItem("Воссоздать toc", "action_regenerate_toc")
         .addItem("Воссоздать uploads", "action_regenerate_uploads")
+        .addItem("(WIP) Настр. загрузку файлов", "action_config_uploads")
         .addItem("Обновить меню", "menu_create")
         .addSeparator()
         .addItem( emojipad.snake + "Скрыть функции адм-ра",

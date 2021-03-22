@@ -2,7 +2,8 @@
 <html>
 <head>
   <base target="_blank">
-</head>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
+</script>
 <?!= include_html_("UI/Common") ?>
 <script>
   var group_name = <?!= JSON.stringify(group_name) ?>;
@@ -43,6 +44,7 @@
     width: 45px;
   }
 </style>
+</head>
 <body>
 <h3><?= title ?></h3>
 <div class="block form-group">
@@ -157,3 +159,4 @@ function display_error(error) {
 
 </script>
 </body>
+</html>
