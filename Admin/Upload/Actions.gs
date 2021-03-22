@@ -27,6 +27,8 @@ function uploads_mark_dead() {
   }
   var backgrounds = record.get_range(null, "id").getBackgrounds().map(([c]) => c);
   for (let datum of record) {
+    if (datum.get("id") == "")
+      continue;
     if (ids.has(datum.get("id"))) {
       if (backgrounds[datum.index] != "#ffffff") {
         record.get_range(datum.index, "id").setBackground(null);
