@@ -1,4 +1,4 @@
-const expand_columns_property_key = "last_expand_columns"
+const expand_columns_property_key = "last_expand_columns";
 
 function expand_columns_now() {
   const spreadsheet = MainSpreadsheet.get();
@@ -94,3 +94,47 @@ function expand_columns_forever() {
       .nearMinute(15)
     .create();
 }
+
+function expand_columns_forever_optimistic() {
+  // optimistic: use tomorrow's timetable as if it will continue forever
+  const spreadsheet = MainSpreadsheet.get();
+  // assume it is early morning
+  // remove existing expand_columns_timely() triggers
+  for (let trigger of ScriptApp.getProjectTriggers()) {
+    if (trigger.getHandlerFunction() == "expand_columns_now")
+      ScriptApp.deleteTrigger(trigger);
+  }
+  // schedule expand_columns_timely() triggers for the day
+  var times = new Set();
+  var busy = false;
+  for (let group of StudyGroup.list(spreadsheet)) {
+    let timetable = group.get_today_timetable(WorksheetDate.today(+1));
+    if (timetable == null)
+      continue;
+    busy = true;
+    for (let [period, {time, duration}] of Object.entries(timetable)) {
+      if (time == null)
+        continue;
+      if (duration != null)
+        time += duration;
+      times.add(time);
+    }
+  }
+  var now = new Date();
+  now.setSeconds(0);
+  var date = new Date(now.valueOf());
+  console.log(times);
+  for (let time of times) {
+    date.setHours(0);
+    date.setMinutes(time + 5);
+    console.log(date.getHours(), date.getMinutes());
+    ScriptApp.newTrigger("expand_columns_now")
+      .timeBased().everyDays(1)
+      .atHour(date.getHours())
+      .nearMinute(date.getMinutes())
+      .create();
+  }
+  if (!busy)
+    throw new Error("no group defines a timetable for today");
+}
+
