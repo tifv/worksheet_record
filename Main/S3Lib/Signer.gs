@@ -14,33 +14,23 @@ function S3Signer({region, bucket_url, access_key, secret_key}) {
     query: bucket_query,
     fragment: bucket_fragment
   } = split_url(bucket_url);
-  if (!bucket_path.endsWith("/")) {
-    throw "S3Signer: bucket URL must end with slash";
+  if (bucket_query != null) {
+    throw new Error("S3Signer: bucket URL must not contain query");
   }
-  if (bucket_query != "") {
-    throw "S3Signer: bucket URL must not contain query";
+  if (bucket_fragment != null) {
+    throw new Error("S3Signer: bucket URL must not contain fragment");
   }
-  if (bucket_fragment != "") {
-    throw "S3Signer: bucket URL must not contain fragment";
+  if (bucket_path == null || !bucket_path.startsWith('/')) {
+    throw new Error("S3Signer: bucket URL must contain path (at least “/”)");
+  }
+  if (bucket_protocol == null || (bucket_protocol != "https" && bucket_protocol != "http")) {
+    throw new Error("S3Signer: bucket URL must start with “https://” or “http://”");
   }
   this.bucket_protocol = bucket_protocol;
   this.bucket_host = bucket_host;
   this.bucket_path = bucket_path;
   this.access_key = access_key;
   this.secret_key = secret_key;
-}
-
-const url_regex = new RegExp( "^" +
-  "(https?):\\/\\/((?:[0-9a-z](?:[0-9a-z-]*[0-9a-z]|))(?:\\.(?:[0-9a-z](?:[0-9a-z-]*[0-9a-z]|)))*(?::\\d+)?)" +
-  "(\\/[!*'();:@&=+$,\\/\\[\\]%A-Za-z0-9\-_.~]*)" +
-  "(?:\\?([!*'();:@&=+$,\\/\\?\\[\\]%A-Za-z0-9\\-_.~]*))?(?:#(.*))?" +
-  "$" );
-
-function split_url(url) {
-  var [, scheme, host, path, query = "", fragment = ""] = url_regex.exec(url);
-  return {
-    scheme: scheme, host: host, path: path,
-    query: query, fragment: fragment };
 }
 
 S3Signer.prototype.get_url = function(path) {

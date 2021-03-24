@@ -265,34 +265,6 @@
     .url_adder--controls > * + * {
       margin-left: 12px;
     }
-  .status_line {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-  }
-  .status_line__complete {
-  }
-  .status_line__error {
-    color: #dd4b39;
-  }
-    .status_line--progress {
-      flex: 0 0 40px;
-    }
-    .status_line--progress__material_icon {
-      font-family: 'Material Icons';
-      font-size: 16px;
-    }
-    .status_line__complete > .status_line--text {
-      color: #777;
-    }
-    .status_line--text {
-      flex: 1;
-      overflow-x: hidden;
-      text-overflow: ellipsis;
-    }
-    .status_line--error_message {
-      color: #dd4b39;
-    }
 </style>
 <? if (standalone) { ?>
 <style>
@@ -1164,7 +1136,7 @@ UploadDialog.prototype.upload = async function(title, author, pdf_resource, src_
       .text("link");
     $status.append($progress);
     $status.append( $("<span/>")
-      .addClass("status_line--text")
+      .addClass("status_line--content")
       .append( $("<a/>")
         .attr('href', pdf_resource.get_url())
         .text(pdf_resource.get_url())
@@ -1187,7 +1159,7 @@ UploadDialog.prototype.upload = async function(title, author, pdf_resource, src_
       .text("link");
     $status.append($progress);
     $status.append( $("<span/>")
-      .addClass("status_line--text")
+      .addClass("status_line--content")
       .append( $("<a/>")
         .attr('href', src_resource.get_url())
         .text(src_resource.get_url())
@@ -1200,7 +1172,7 @@ UploadDialog.prototype.upload = async function(title, author, pdf_resource, src_
   }
   if (resource_blobs.length > 0) {
     await this.upload_status_task(
-      "Вычислиение хешей и определение названий файлов",
+      "Вычисление хешей и определение названий файлов",
       async ($status) => {
         let filename_pieces = [
           await this.upload_info.filename_base,
@@ -1258,7 +1230,7 @@ UploadDialog.prototype.upload_status_task = async function(text, task) {
   $status.append($progress);
   $status.$progress = $progress;
   $status.append( $("<span/>")
-    .addClass("status_line--text")
+    .addClass("status_line--content")
     .text(text) );
   this.find_an_$element(".upload_dialog--phase__upload").append($status);
   try {
@@ -1299,7 +1271,7 @@ UploadDialog.prototype.upload_resource_blob = async function(resource_blob) {
       await resource_blob.upload((progress) => {
         this.upload_status_progress($status, progress);
       });
-      $status.children(".status_line--text")
+      $status.children(".status_line--content")
         .empty()
         .append( $("<a/>")
           .attr("href", resource_blob.get_url())

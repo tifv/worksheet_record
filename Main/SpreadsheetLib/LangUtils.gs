@@ -94,3 +94,21 @@ function include_html_(filename) {
         .getContent();
 }
 
+// copied to Upload/ConfigDialog
+function split_url(url) {
+  var match = split_url.regex.exec(url);
+  if (match == null)
+    return null;
+  var [, scheme, host, path = null, query = null, fragment = null] = match;
+  return {
+    scheme: scheme, host: host, path: path,
+    query: query, fragment: fragment };
+}
+Object.defineProperty(split_url, "regex", {value: new RegExp( "^" +
+  "(?:(https?):\\/\\/)" +
+  "((?:[0-9a-z](?:[0-9a-z-]*[0-9a-z]|))(?:\\.(?:[0-9a-z](?:[0-9a-z-]*[0-9a-z]|)))*(?::\\d+)?)" +
+  "(\\/[!*'();:@&=+$,\\/\\[\\]%A-Za-z0-9\-_.~]*)" +
+  "(?:\\?([!*'();:@&=+$,\\/\\?\\[\\]%A-Za-z0-9\\-_.~]*))?" +
+  "(?:#(.*))?" +
+  "$" )})
+

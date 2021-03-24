@@ -3,90 +3,428 @@
 <head>
   <base target="_blank">
 <?!= include_html_("UI/Common") ?>
+<style>
+  .code__multiline {
+    display: block;
+    background: #eeeeee;
+    white-space: pre;
+    user-select: all;
+    overflow-x: auto;
+  }
+  input[type="text"].input_password__hidden:not(:focus) {
+    background: #dddddd;
+  }
+</style>
 </head>
 <body>
-  <p>Чтобы редакторы ведомости могли загружать файлы в ведомость, необходимо создать реестр загрузок и ввести параметры файлового хранилища.</p>
-  <div>
+  <p>Чтобы редакторы ведомости могли загружать файлы в ведомость, необходимо создать реестр загрузок и ввести параметры файлового хранилища.</p>
+  <div id="uploads_record--section">
     <h3>Реестр загрузок</h3>
-    <p>Это просто вкладка <code>uploads</code> ведомости.</p>
+    <p>Это вкладка <code>uploads</code> ведомости.</p>
   </div>
+<script>
+
+var UploadsRecord = function() { // namespace
+
+var status = null;
+var button = null;
+
+function make_status() {
+  if (status == null)
+    status = new StatusLine({
+      parent: document.getElementById("uploads_record--section") });
+  return status;
+}
+
+function status_complete() {
+  make_status();
+  status.set_done();
+  status.content.innerHTML = ( "Реестр загрузок создан. " +
+    "Чтобы пересоздать его, удалите или переименуйте вкладку <code>uploads</code> " +
+    "и перезапустите этот диалог." );
+}
+
+if (<?!= (upload_record_exists ? "true" : "false") ?>) {
+  status_complete();
+} else {
+  button = makehtml('button', {
+    classes: ["action"],
+    attributes: {type: "button"},
+    text: "Создать реестр",
+  })
+  let button_container = makehtml('div', {
+    parent: document.getElementById("uploads_record--section"),
+    classes: ["block"],
+    children: [button],
+  });
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    make_status();
+    status.set_text("Создание реестра…");
+    try {
+      await new Promise( async (resolve, reject) =>
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject)
+          .upload_record_create() );
+    } catch (error) {
+      status.set_error(error);
+      throw error;
+    }
+    button_container.remove();
+    status_complete();
+  });
+}
+
+return {};
+}(); // end UploadsRecord namespace
+
+</script>
   <div>
     <h3>Параметры хранилища</h3>
-    <p class="block">Подойдёт любое S3-совместимое хранилище. Подробнее читайте ниже.</p>
+    <p class="block">Подойдёт любое S3-совместимое хранилище. Подробнее о том, как создать и настроить такое хранилище, читайте ниже.</p>
     <label class="block form-group">
       Ключ доступа / Access key<br/>
-      <input type="text"/>
+      <input type="text" id="edit_access_key--input" style="width: 90%"/>
     </label>
     <label class="block form-group">
       Секретный ключ / Secret key<br/>
-      <input type="text"/>
+      <input type="text" id="edit_secret_key--input" style="width: 90%"/>
     </label>
     <label class="block form-group">
       Регион / Region<br/>
-      <input type="text"/>
+      <input type="text" id="edit_region--input" style="width: 90%"/>
     </label>
     <label class="block form-group">
       Адрес хранилища / Bucket URL<br/>
-      <input type="text"/>
-      <!-- XXX примечания:
-      - адрес должен использовать HTTPS
-      - после доменного имени должен идти слеш
-      - адрес не должен вызывать перенаправлений (например, для Amazon адрес должен включать регион)
-      - адрес может содержать префикс названий (внутри хранилища)
-      -->
+      <input type="text" id="edit_bucket_url--input" style="width: 90%"/>
+      <ul id="edit_bucket_url--warnings" class="secondary">
+      <li hidden class="error" id="edit_bucket_url--warning_url">адрес должен быть корректным URL;</li>
+      <li hidden class="error" id="edit_bucket_url--warning_protocol">адрес должен использовать HTTPS;</li>
+      <li hidden class="error" id="edit_bucket_url--warning_path">адрес должен содержать путь после доменного имени (как минимум «/»);</li>
+      <li hidden class="error" id="edit_bucket_url--warning_query">адрес не должен содержать <code>?query</code>;</li>
+      <li hidden class="error" id="edit_bucket_url--warning_fragment">адрес не должен содержать <code>#fragment</code>;</li>
+      <li>адрес не должен вызывать перенаправлений;</li>
+      <li>адрес может включать префикс названий объектов внутри хранилища.</li>
+      </ul>
     </label>
+    <div id="edit_config--save_container" class="block"
+     ><button disabled id="edit_config--save_button" type="button" class="action"
+       >Сохранить</button
+     ></div>
   </div>
+<script>
+
+// copied from SpreadsheetLib/LangUtils
+function split_url(url) {
+  var match = split_url.regex.exec(url);
+  if (match == null)
+    return null;
+  var [, scheme, host, path = null, query = null, fragment = null] = match;
+  return {
+    scheme: scheme, host: host, path: path,
+    query: query, fragment: fragment };
+}
+Object.defineProperty(split_url, "regex", {value: new RegExp( "^" +
+  "(?:(https?):\\/\\/)?" +
+  "((?:[0-9a-z](?:[0-9a-z-]*[0-9a-z]|))(?:\\.(?:[0-9a-z](?:[0-9a-z-]*[0-9a-z]|)))*(?::\\d+)?)" +
+  "(?:" +
+    "(\\/[!*'();:@&=+$,\\/\\[\\]%A-Za-z0-9\-_.~]*)" +
+    "(?:\\?([!*'();:@&=+$,\\/\\?\\[\\]%A-Za-z0-9\\-_.~]*))?" +
+    "(?:#(.*))?" +
+  ")?$" )});
+
+var UploadConfig = function() { // namespace
+
+var button = document.getElementById("edit_config--save_button");
+var access_key_input = document.getElementById("edit_access_key--input");
+var secret_key_input = document.getElementById("edit_secret_key--input");
+var region_input     = document.getElementById("edit_region--input");
+var bucket_url_input = document.getElementById("edit_bucket_url--input");
+
+async function set_config() {
+  var access_key = access_key_input.value;
+  var secret_key = secret_key_input.value;
+  var secret_key_changed = !secret_key_input.classList.contains("input_password__hidden");
+  var region     = region_input.value;
+  var bucket_url = bucket_url_input.value;
+  var bucket_url_split = split_url(bucket_url);
+  if (bucket_url_split == null) {
+    throw new Error("bucket URL is invalid");
+  }
+  var {
+    scheme: bucket_protocol,
+    host: bucket_host,
+    path: bucket_path,
+    query: bucket_query,
+    fragment: bucket_fragment
+  } = bucket_url_split;
+  if (bucket_query != null) {
+    throw new Error("bucket URL must not contain query");
+  }
+  if (bucket_fragment != null) {
+    throw new Error("bucket URL must not contain fragment");
+  }
+  if (bucket_path == null || !bucket_path.startsWith('/')) {
+    throw new Error("bucket URL must contain path (at least “/”)");
+  }
+  if (bucket_protocol == null || bucket_protocol != "https") {
+    throw new Error("bucket URL must start with “https://”");
+  }
+  await new Promise( async (resolve, reject) =>
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .upload_config_set({
+        access_key: access_key,
+        secret_key: secret_key,
+        region:     region,
+        bucket_url: bucket_url,
+      }, !secret_key_changed) );
+}
+
+button.addEventListener('click', async () => {
+  valid.changed = false;
+  enable_button();
+  { // remove errors
+    let next;
+    while ((next = button.nextElementSibling) != null && (
+      next.classList.contains("error") ||
+      next.classList.contains("secondary")
+    )) {
+      next.remove();
+    }
+  }
+  try {
+    await set_config();
+  } catch(error) {
+    button.insertAdjacentElement('afterend', makehtml('div', {
+      classes: ["error"],
+      text: error,
+    }));
+    throw error;
+  }
+  button.insertAdjacentElement('afterend', makehtml('div', {
+    classes: ["secondary"],
+    text: "Сохранено.",
+  }));
+});
+
+var valid = {changed: false};
+
+function enable_button() {
+  button.disabled = !(
+    valid.access_key && valid.secret_key &&
+    valid.region && valid.bucket_url &&
+    valid.changed
+  );
+}
+
+function validate_access_key() {
+  valid.access_key = access_key_input.value != "";
+}
+
+access_key_input.addEventListener('input', () => {
+  valid.changed = true;
+  validate_access_key();
+  enable_button();
+});
+
+function validate_secret_key() {
+  valid.secret_key = ( secret_key_input.value != "" ||
+    secret_key_input.classList.contains("input_password__hidden") );
+}
+
+secret_key_input.addEventListener('input', () => {
+  valid.changed = true;
+  validate_secret_key();
+  enable_button();
+});
+
+function validate_region() {
+  valid.region = true;
+}
+
+region_input.addEventListener('input', () => {
+  valid.changed = true;
+  validate_region();
+  enable_button();
+});
+
+function validate_bucket_url() {
+  for (let child of document.getElementById("edit_bucket_url--warnings").children) {
+    if (child.classList.contains("error")) {
+      child.hidden = true;
+    }
+  }
+  var url = bucket_url_input.value;
+  var bucket_url = bucket_url_input.value;
+  var bucket_url_split = split_url(bucket_url);
+  if (bucket_url_split == null) {
+    document.getElementById("edit_bucket_url--warning_url").hidden = false;
+    valid.bucket_url = false;
+    return;
+  }
+  var {
+    scheme: bucket_protocol,
+    host: bucket_host,
+    path: bucket_path,
+    query: bucket_query,
+    fragment: bucket_fragment
+  } = bucket_url_split;
+  var error = false;
+  if (bucket_query != null) {
+    document.getElementById("edit_bucket_url--warning_query").hidden = false;
+    error = true;
+  }
+  if (bucket_fragment != null) {
+    document.getElementById("edit_bucket_url--warning_fragment").hidden = false;
+    error = true;
+  }
+  if (bucket_path == null || !bucket_path.startsWith('/')) {
+    document.getElementById("edit_bucket_url--warning_path").hidden = false;
+    error = true;
+  }
+  if (bucket_protocol == null || bucket_protocol != "https") {
+    document.getElementById("edit_bucket_url--warning_protocol").hidden = false;
+    error = true;
+  }
+  valid.bucket_url = !error;
+}
+
+bucket_url_input.addEventListener('input', () => {
+  valid.changed = true;
+  validate_bucket_url();
+  enable_button();
+});
+
+<? if (upload_config != null) { ?>
+access_key_input.value = <?= upload_config.access_key ?>;
+region_input.value = <?= upload_config.region ?>;
+bucket_url_input.value = <?= upload_config.bucket_url ?>;
+{
+  secret_key_input.classList.add("input_password__hidden");
+  let secret_key_unhide = () => {
+    secret_key_input.classList.remove("input_password__hidden");
+    secret_key_input.removeEventListener('input', secret_key_unhide);
+    secret_key_input.removeEventListener('focus', secret_key_focus);
+    secret_key_input.removeEventListener('blur',  secret_key_blur);
+  };
+  let secret_key_focus = () => {
+    secret_key_input.value = "";
+  }
+  let secret_key_blur = () => {
+    secret_key_input.value = "(сохранено в настройках скрипта)";
+  }
+  secret_key_blur();
+  secret_key_input.addEventListener('input', secret_key_unhide);
+  secret_key_input.addEventListener('focus', secret_key_focus);
+  secret_key_input.addEventListener('blur',  secret_key_blur);
+}
+<? } /* end if upload_config */ ?>
+
+validate_access_key();
+validate_secret_key();
+validate_region();
+validate_bucket_url();
+enable_button();
+
+return {};
+}(); // end UploadConfig namespace
+
+
+</script>
   <div>
-    <h3>Найстройка хранилища</h3>
-    <p>Сервис S3-совместимых облачных хранилищ предоставляют многие компании, например,
+    <h3>Настройка хранилища</h3>
+    <p class="block">Сервис S3-совместимых облачных хранилищ предоставляют многие компании, например,
       <a href="https://aws.amazon.com/s3/">Amazon</a>,
-      <a href="https://cloud.google.com/storage/">Google</a> или
-      <a href="https://cloud.yandex.com/services/storage">Yandex</a>.</p>
-    <p>Чтобы хранилище можно было использовать для загрузки файлов в ведомость, необходимо настроить к нему доступ:
+      <a href="https://cloud.google.com/storage/">Google</a>
+      и <a href="https://cloud.yandex.ru/services/storage">Яндекс</a>
+      (на перечисленных сервисах данный скрипт тестировался).</p>
+    <p class="block">Чтобы хранилище можно было использовать для загрузки файлов в ведомость, необходимо настроить к нему доступ:
     <ul>
-      <li>GET: разрешение на скачивание файлов из хранилища для всех пользователей;</li>
-      <li>PUT: право загрузки файлов в хранилище для сервисного аккаунта;</li>
-      <li>CORS (PUT): возможность для скрипта обращаться к хранилищу из браузера.</li>
+      <li>GET: разрешение на скачивание файлов из хранилища — для всех пользователей;</li>
+      <li>PUT: разрешение на загрузку файлов в хранилище — для сервисного аккаунта;</li>
+      <li>CORS (PUT): возможность для скрипта загружать файлы в хранилище напрямую из браузера.</li>
     </ul>
     </p>
-    <h3>GET</h3>
-    <p>Необходимо явно разрешить доступ на чтение (GET/READ) со стороны любых пользователей.</p>
-    <h3>PUT</h3>
-    <p>Необходимо создать сервисный аккаунт и выдать ему разрешение на загрузку файлов в хранилище. Для сервисного аккаунта нужно сгенерировать ключ доступа и секретный ключ, которые и следует ввести в поля выше. Эти ключи будут храниться в настройках скрипта и, технически, будут доступны любым редакторам таблицы.</p>
-    <h3>CORS (PUT)</h3>
-    <p>Так как загрузка файлов производится непосредственно из браузера, хранилище должно корректно принимать CORS-запросы из источника <code>https://*-script.googleusercontent.com</code>.</p>
-    <p>Например, в Amazon соответствующая конфигурация хранилища выглядит как-то так:
-<code style="display: block; white-space: pre; overflow-x: scroll;"><?= ((
-`<CORSConfiguration>
-  <CORSRule>
-    <AllowedOrigin>https://*-script.googleusercontent.com</AllowedOrigin>
-    <AllowedMethod>PUT</AllowedMethod>
-    <AllowedHeader>Content-Type</AllowedHeader>
-    <AllowedHeader>Content-Length</AllowedHeader>
-    <AllowedHeader>Authorization</AllowedHeader>
-    <AllowedHeader>X-Amz-Content-Sha256</AllowedHeader>
-    <AllowedHeader>X-Amz-Date</AllowedHeader>
-    <MaxAgeSeconds>3600</MaxAgeSeconds>
-  </CORSRule>
-</CORSConfiguration>`).replace(/\n  /g, "\n")) ?></code></p>
-    <p>В Google настройки CORS можно внести только через терминал; проще всего открыть <a href="https://shell.cloud.google.com/?show=terminal">Google Cloud Shell</a> и вставить <code style="display: block; white-space: pre; overflow-x: scroll;"><?= ((
-`echo -n "Your bucket name: " && read YOURBUCKETNAME && \\
-gsutil cors set /proc/self/fd/0 gs://\${YOURBUCKETNAME} <<EOF
-[
-  {
-    "origin": [
-      "https://*-script.googleusercontent.com"
-    ],
-    "responseHeader": [
-      "Content-Type", "Content-Length", "Authorization",
-      "x-amz-content-sha256", "x-amz-date"
-    ],
-    "method": ["PUT"],
-    "maxAgeSeconds": 3600
-  }
-]
-EOF`).replace(/\n  /g, "\n")) ?></code>
-ввести название хранилища и нажать <code>Enter</code>.</p>
+    <h4>GET</h4>
+    <p class="block">Необходимо явно разрешить доступ на чтение (в разных системах может называться GET, READ или View) со стороны любых пользователей.
+      Например, в Amazon конфигурация прав доступа к хранилищу (Bucket policy) выглядит как-то так:
+    <code class="code__multiline"><?= [
+    '{',
+    '  "Version": "2012-10-17",',
+    '  "Statement": [{',
+    '    "Effect": "Allow",',
+    '    "Principal": "*",',
+    '    "Action": "s3:GetObject",',
+    '    "Resource": "arn:aws:s3:::YOURBUCKETNAME/*"',
+    '  }]',
+    '}',
+    ].join('\n') ?></code>
+    где вместо <code>YOURBUCKETNAME</code> должно быть название вашего хранилища.
+    </p>
+    <h4>PUT</h4>
+    <p class="block"
+     >Необходимо создать сервисный аккаунт и выдать ему разрешение на загрузку (PUT, WRITE или Create) файлов в хранилище.
+      Для сервисного аккаунта нужно сгенерировать ключ доступа и секретный ключ, которые и следует ввести в поля выше.
+      Эти ключи будут храниться в настройках скрипта и, технически, будут доступны любым редакторам таблицы.</p>
+    <p class="block">Например, в Amazon настройки доступа аккаунта могут выглядеть как-то так:
+    <code class="code__multiline"><?= [
+    '{',
+    '  "Version": "2012-10-17",',
+    '  "Statement": [{',
+    '    "Effect": "Allow",',
+    '    "Action": "s3:PutObject",',
+    '    "Resource": "arn:aws:s3:::YOURBUCKETNAME/*"',
+    '  }]',
+    '}',
+    ].join('\n') ?></code></p>
+    <p class="block">Чтобы сгенерировать ключи для сервисного аккаунта в Google, необходимо в <a href="https://console.cloud.google.com/storage/settings">настройках облачного хранилища</a> выбрать вкладку «Interoperability»; S3-совместимые ключи генерируются в разделе «Service account HMAC».
+    <h4>CORS (PUT)</h4>
+    <p class="block"
+     >Так как загрузка файлов производится непосредственно из браузера, хранилище должно корректно принимать CORS-запросы
+      из источника <code>https://*-script.googleusercontent.com</code>.</p>
+    <p class="block">Например, в Amazon соответствующая конфигурация хранилища (Cross-origin resource sharing) выглядит как-то так:
+    <code class="code__multiline"><?= [
+    '[{',
+    '  "AllowedHeaders": [',
+    '    "Content-Type",',
+    '    "Content-Length",',
+    '    "Authorization",',
+    '    "X-Amz-Content-Sha256",',
+    '    "X-Amz-Date"',
+    '  ],',
+    '  "AllowedMethods": ["PUT"],',
+    '  "AllowedOrigins": [',
+    '    "https://*-script.googleusercontent.com"',
+    '  ],',
+    '  "ExposeHeaders": [],',
+    '  "MaxAgeSeconds": 3600',
+    '}]',
+    ].join('\n') ?></code>
+    </p>
+    <p class="block"
+     >В Google настройки CORS можно внести только через терминал;
+      проще всего открыть <a href="https://shell.cloud.google.com/?show=terminal">Google Cloud Shell</a>
+      и вставить и запустить следующий код
+    <code class="code__multiline"><?= [
+    'echo -n "Your bucket name: " && read bucketname && \\',
+    'gsutil cors set /proc/self/fd/0 gs://\${bucketname} <<EOF',
+    '[{',
+    '  "origin": [',
+    '    "https://*-script.googleusercontent.com"',
+    '  ],',
+    '  "responseHeader": [',
+    '    "Content-Type", "Content-Length", "Authorization",',
+    '    "X-Amz-Content-Sha256", "X-Amz-Date"',
+    '  ],',
+    '  "method": ["PUT"],',
+    '  "maxAgeSeconds": 3600',
+    '}]',
+    'EOF',
+    ].join('\n') ?></code>
+    (Он запросит название хранилища, которое нужно будет ввести, после чего нажать <code>Enter</code>.).</p>
   </div>
 <script>
 </script>

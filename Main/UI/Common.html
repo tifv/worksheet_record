@@ -1,5 +1,8 @@
 <link rel="stylesheet" href="//ssl.gstatic.com/docs/script/css/add-ons1.css">
+
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+
 <style>
 
   .form-group label {
@@ -21,6 +24,52 @@
     max-height: 29px;
     padding: 0 2px;
   }
+
+</style>
+
+<script>
+
+  function makehtml(tag, {
+    classes = [],
+    attributes = {},
+    style = {},
+    text = null,
+    children = [],
+    parent = null,
+    namespace = null,
+  } = {}) {
+    var element = ( namespace == null ?
+      document.createElement(tag) :
+      document.createElementNS(namespace, tag) );
+    if (classes) {
+      element.classList.add(...classes);
+    }
+    for (let name in attributes) {
+      element.setAttribute(name, attributes[name]);
+    }
+    for (let name in style) {
+      element.style[name] = style[name];
+    }
+    if (text != null) {
+      element.textContent = text;
+    }
+    for (let child of children) {
+      element.appendChild(child);
+    }
+    if (parent != null) {
+      parent.appendChild(element);
+    }
+    return element;
+  }
+
+  function makesvg(tag, options) {
+    return makehtml(tag, Object.assign(options, {namespace: "http://www.w3.org/2000/svg"}));
+  }
+
+</script>
+
+
+<style>
 
   .loading_animation {
     animation-duration: 0.7s;
@@ -65,43 +114,97 @@
 
 </script>
 
+
+<style>
+
+  .status_line {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+  .status_line__complete {
+  }
+  .status_line__error {
+    color: #dd4b39;
+  }
+    .status_line--progress {
+      flex: 0 0 40px;
+    }
+    .status_line--progress__material_icon {
+      font-family: 'Material Icons';
+      font-size: 16px;
+    }
+    .status_line__complete > .status_line--content {
+      color: #777;
+    }
+    .status_line--content {
+      flex: 1;
+    }
+    .status_line--error_message {
+      color: #dd4b39;
+    }
+
+</style>
+
 <script>
 
-  function makehtml(tag, {
-    classes = [],
-    attributes = {},
-    style = {},
-    text = null,
-    children = [],
-    parent = null,
-    namespace = null,
-  } = {}) {
-    var element = ( namespace == null ?
-      document.createElement(tag) :
-      document.createElementNS(namespace, tag) );
-    if (classes) {
-      element.classList.add(...classes);
+  class StatusLine {
+    constructor ({parent = null}) {
+      this.element = makehtml('div', {
+        classes: ["block", "status_line"],
+        children: [
+          this.progress = makehtml('span', {
+            classes: ["status_line--progress"],
+          }),
+          this.content = makehtml('span', {
+            classes: ["status_line--content"],
+          }),
+        ],
+      });
+      if (parent != null) {
+        parent.appendChild(this.element);
+      }
     }
-    for (let name in attributes) {
-      element.setAttribute(name, attributes[name]);
+    clear_content() {
+      while (this.content.firstChild) {
+        this.content.firstChild.remove();
+      }
     }
-    for (let name in style) {
-      element.style[name] = style[name];
+    set_text(text) {
+      this.content.innerText = text;
     }
-    if (text != null) {
-      element.textContent = text;
+    set_link(href, text) {
+      this.clear_content()
+      this.content.appendChild(makehtml('a', {
+        attributes: {href: href, target: "_blank"},
+        text: text,
+      }))
     }
-    for (let child of children) {
-      element.appendChild(child);
+    set_icon(name) {
+      this.progress.classList.add("status_line--progress__material_icon");
+      this.progress.innerText = name;
     }
-    if (parent != null) {
-      parent.appendChild(element);
+    set_done() {
+      this.set_icon("done");
+      this.element.classList.add("status_line__complete");
     }
-    return element;
-  }
-
-  function makesvg(tag, options) {
-    return makehtml(tag, Object.assign(options, {namespace: "http://www.w3.org/2000/svg"}));
+    set_progress(progress) {
+      if (typeof progress == "number") {
+        this.progress.innerText = (progress * 100).toFixed() + "%";
+      } else {
+        this.progress.innerText = progress;
+      }
+    }
+    set_error(error_message) {
+      this.set_icon("error");
+      this.element.classList.add("status_line__error");
+      this.element.insertAdjacentElement('afterend',
+        makehtml('code', {
+          classes: ["status_line--error_message"],
+          text: error_message
+        }) );
+    }
   }
 
 </script>
+

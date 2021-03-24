@@ -264,6 +264,10 @@ return {
 };
 }(); // end UploadRecord namespace
 
+function upload_record_create() {
+  UploadRecord.create();
+}
+
 function upload_record_recreate_cf() {
   UploadRecord.recreate_group_cf(SpreadsheetApp.getActiveSpreadsheet());
   UploadRecord.recreate_category_cf(SpreadsheetApp.getActiveSpreadsheet());

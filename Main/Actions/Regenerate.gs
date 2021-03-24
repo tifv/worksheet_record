@@ -82,15 +82,3 @@ function action_regenerate_toc() {
   toc_sheet.protect().setWarningOnly(true);
 }
 
-function action_regenerate_uploads() {
-  UploadRecord.create();
-}
-
-function action_config_uploads() {
-  var template = HtmlService.createTemplateFromFile(
-    "Upload/ConfigDialog" );
-  var output = template.evaluate();
-  output.setWidth(500).setHeight(475);
-  SpreadsheetApp.getUi().showModelessDialog(output, "Настройка загрузки файлов");
-}
-

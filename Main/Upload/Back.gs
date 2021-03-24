@@ -251,7 +251,10 @@ function get_signer() {
 
 function set({
   region, bucket_url, access_key, secret_key,
-}) {
+}, preserve_secret_key = false) {
+  if (preserve_secret_key) {
+    secret_key = load().secret_key;
+  }
   save({
     configured: true,
     region: region, bucket_url: bucket_url,
@@ -262,7 +265,7 @@ function set({
 return {
   is_configured: is_configured,
   get_signer: get_signer,
-  set: set,
+  get: load, set: set,
 };
 }(); // end UploadConfig namespace
 
