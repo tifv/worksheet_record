@@ -46,6 +46,7 @@
 • Multiadd worksheets: add several worksheets or add a worksheet to several groups at once
 • All formulas in WorksheetLig/Worksheet and WorksheetLib/StudyGroup should use SpreadsheetLib/Formula to guarantee locale compatibility.
 • Function to reorder section in worksheet?
+• Rename S3Lib/Signer to Upload/S3Signer
 
 # Metadata
 (either JSON or string)

@@ -298,7 +298,7 @@ bucket_url_input.addEventListener('input', () => {
   enable_button();
 });
 
-<? if (upload_config != null) { ?>
+<? if (upload_config.configured) { ?>
 access_key_input.value = <?= upload_config.access_key ?>;
 region_input.value = <?= upload_config.region ?>;
 bucket_url_input.value = <?= upload_config.bucket_url ?>;
@@ -321,7 +321,7 @@ bucket_url_input.value = <?= upload_config.bucket_url ?>;
   secret_key_input.addEventListener('focus', secret_key_focus);
   secret_key_input.addEventListener('blur',  secret_key_blur);
 }
-<? } /* end if upload_config */ ?>
+<? } /* end if upload_config.configured */ ?>
 
 validate_access_key();
 validate_secret_key();

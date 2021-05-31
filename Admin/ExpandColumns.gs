@@ -126,7 +126,7 @@ function expand_columns_forever_optimistic() {
   console.log(times);
   for (let time of times) {
     date.setHours(0);
-    date.setMinutes(time + 5);
+    date.setMinutes(time + 20);
     console.log(date.getHours(), date.getMinutes());
     ScriptApp.newTrigger("expand_columns_now")
       .timeBased().everyDays(1)
