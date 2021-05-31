@@ -2,8 +2,6 @@
 <html>
 <head>
   <base target="_blank">
-<script src="//ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js">
-</script>
 <?!= include_html_("UI/Common") ?>
 <script>
   var group_name = <?!= JSON.stringify(group_name) ?>;
@@ -17,12 +15,12 @@
   }
   #select_index--container {
   }
-  #select_index--container > * {
+  #select_index--container > :not([hidden]) {
     vertical-align: top;
     box-sizing: border-box;
     height: 30px;
   }
-  #select_index--container > div {
+  #select_index--container > div:not([hidden]) {
     display: inline-flex;
     width: 30px;
     font-size: 12px;
@@ -32,7 +30,7 @@
     border-radius: 2px;
     overflow: hidden;
   }
-  #select_index--container > #select_index--selector {
+  #select_index--container > #select_index--selector:not([hidden]) {
     width: 45px;
     background: #4a88f4;
     border: 1px solid #3079ed;
@@ -40,7 +38,7 @@
   #select_index--container > #select_index--selector::after {
     content: "+";
   }
-  #select_index--container > input {
+  #select_index--container > input:not([hidden]) {
     width: 45px;
   }
 </style>
@@ -51,111 +49,108 @@
   <label>
   <span id="select_index--caption_index">
     Выберите позицию для вставки колонок.</span>
-  <span id="select_index--caption_data_width" class="swapped_out">
+  <span id="select_index--caption_data_width" hidden>
     Укажите количество вставляемых колонок.</span>
   </label>
   <div id="select_index--container">
   </div>
 </div>
 <div class="block"
- ><button id="add_columns_button" type="button" class="action" onclick="add_columns()"
+ ><button id="add_columns_button" type="button" class="action"
       disabled
     >Добавить колонки</button
  ><button type="button" class="abort" onclick="google.script.host.close()"
     >Отмена</button
 ></div>
 <script>
-$(function() {
-  var $select_index_container = $("#select_index--container");
-  for (let i = 0; i < labels.length; ++i) {
-    $select_index_container.append(
-      $('<div/>')
-        .text(labels[i])
-        .data("index", i)
-    );
-  }
-  var $selector = $('<div/>')
-    .attr("id", "select_index--selector")
-    .data("index", labels.length)
-    .on("click", function() {
-      $selector.off("click");
-      select_index($selector.data("index"));
-    });
-  $select_index_container.children()
-    .mouseenter(function() {
-      var $this = $(this);
-      var index = $this.data("index");
-      if ($selector.data("index") > index) {
-        $this.before($selector.detach());
-        $selector.data("index", index);
-      } else {
-        $this.after($selector.detach());
-        $selector.data("index", index + 1);
-      }
-    });
-  $select_index_container.append($selector);
-  add_columns.enabled = false;
-  // XXX enable key controls:
-  // right-left should move selector
-  // enter should call select_index()
-  // also, for that purpose, maybe make container focusable
-});
 
-function select_index(index) {
-  var $selector = $("#select_index--selector");
-  $selector.after(
-    $("<input/>")
-      .attr("id", "edit_data_width--input")
-      .attr("type", "number")
-      .attr("min", "1")
-      .data("index", $selector.data("index"))
-      .val(1)
-      .select()
-      .keyup(function(event) {
-        if (event.keyCode == 13) // Enter
-          add_columns();
-      })
-  );
-  add_columns.enabled = true;
-  $selector.remove();
-  $("#select_index--container").children().off("mouseenter");
-  $("#select_index--caption_index").addClass("swapped_out");
-  $("#select_index--caption_data_width").removeClass("swapped_out");
-  $("#add_columns_button").prop("disabled", false);
-  $("#edit_data_width--input").focus();
+document.addEventListener('DOMContentLoaded', async function() { // main procedure
+
+var container = document.getElementById("select_index--container");
+var contents = document.createDocumentFragment();
+var indices = new Map();
+var selector = makehtml('div', {
+  attributes: {
+    id: "select_index--selector"
+  },
+});
+var insertion_index = labels.length;
+var input = makehtml('input', {
+  attributes: {
+    id: "edit_data_width--input",
+    type: "number", min: 1,
+  },
+});
+input.value = 1;
+
+function move_selector() {
+  let i = indices.get(this);
+  if (insertion_index > i) {
+    this.insertAdjacentElement('beforebegin', selector);
+    insertion_index = i;
+  } else {
+    this.insertAdjacentElement('afterend', selector);
+    insertion_index = i + 1;
+  }
 }
 
-function add_columns() {
-  if (!add_columns.enabled)
-    return;
-  add_columns.enabled = false;
-  $("#add_columns_button").prop('disabled', true);
-  var $input = $("#edit_data_width--input");
-  var data_index = $input.data("index");
-  var data_width = parseInt($input.val(), 10);
+for (let i = 0; i < labels.length; ++i) {
+  let element = makehtml('div', {
+    parent: contents,
+    text: labels[i],
+  });
+  indices.set(element, i);
+  element.addEventListener('mouseenter', move_selector);
+}
+
+contents.appendChild(selector);
+container.appendChild(contents);
+// XXX enable key controls:
+// right-left should move selector
+// enter should call select_index()
+// also, for that purpose, maybe make container focusable
+
+await new Promise((resolve, reject) => {
+  selector.addEventListener('click', resolve);
+});
+
+selector.insertAdjacentElement('afterend', input);
+selector.remove();
+for (let element of container.children) {
+  element.removeEventListener('mouseenter', move_selector);
+}
+document.getElementById("select_index--caption_index").hidden = true;
+document.getElementById("select_index--caption_data_width").hidden = false;
+document.getElementById("add_columns_button").disabled = false;
+input.focus();
+input.select();
+
+await new Promise((resolve, reject) => {
+  input.addEventListener('keyup', (event) => {
+    if (event.keyCode == 13) // Enter
+      resolve();
+  })
+  document.getElementById("add_columns_button")
+    .addEventListener('click', resolve);
+});
+
+document.getElementById("add_columns_button").disabled = true;
+var data_width = parseInt(input.value, 10);
+
+await new Promise((resolve, reject) => {
   google.script.run
-    .withSuccessHandler(function() {
-      google.script.host.close();
-    })
-    .withFailureHandler(function(error) {
-      display_error(error);
-    })
+    .withSuccessHandler(resolve)
+    .withFailureHandler(display_error)
     .action_add_columns_finish(
       group_name,
       worksheet_location,
       section_location,
-      data_index, data_width );
-}
+      insertion_index, data_width );
+});
 
-// Promise
-function display_error(error) {
-  return new Promise(function(resolve, reject) {
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(reject)
-      .display_error(error.toString());
-  });
-}
+google.script.host.close();
+
+}); // end main procedure
 
 </script>
 </body>

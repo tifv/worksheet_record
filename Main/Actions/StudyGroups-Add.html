@@ -287,16 +287,6 @@ function add_group() {
     .action_add_group_new(group_name, options);
 }
 
-// Promise
-function display_error(error) {
-  return new Promise(function(resolve, reject) {
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(reject)
-      .display_error(error.toString());
-  });
-}
-
 </script>
 </body>
 </html>

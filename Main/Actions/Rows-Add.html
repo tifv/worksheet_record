@@ -156,16 +156,6 @@ function add_rows() {
     // maybe align variable names with backend
 }
 
-// Promise
-function display_error(error) {
-  return new Promise(function(resolve, reject) {
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(reject)
-      .display_error(error.toString());
-  });
-}
-
 </script>
 </body>
 </html>

@@ -66,6 +66,16 @@
     return makehtml(tag, Object.assign(options, {namespace: "http://www.w3.org/2000/svg"}));
   }
 
+// Promise
+function display_error(error) {
+  return new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .display_error(error.toString());
+  });
+}
+
 </script>
 
 

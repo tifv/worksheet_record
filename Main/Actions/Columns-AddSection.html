@@ -71,6 +71,7 @@ function add_section() {
         date: date }
     );
 }
+
 function format_date(date) {
   var string =
     date.year.toString().padStart(4, "0") + '-' +
@@ -93,16 +94,6 @@ function parse_date(string) {
     day = parseInt(match[3], 10),
     period = parseInt(match[4], 10);
   return {year: year, month: month, day: day, period: period};
-}
-
-// Promise
-function display_error(error) {
-  return new Promise(function(resolve, reject) {
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(reject)
-      .display_error(error.toString());
-  });
 }
 
 </script>
