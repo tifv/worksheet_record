@@ -1,6 +1,6 @@
 const expand_columns_property_key = "last_expand_columns";
 
-function expand_columns_now() {
+function expand_columns_now(fuzzy=0) {
   const spreadsheet = MainSpreadsheet.get();
   var now = new Date();
   var current_time = now.getHours() * 60 + now.getMinutes();
@@ -34,7 +34,7 @@ function expand_columns_now() {
         time += duration;
       if (last_expanded != null && time < last_expanded)
         continue;
-      if (time > current_time)
+      if (time > current_time + fuzzy)
         continue;
       eligible = true;
       break;
@@ -46,15 +46,27 @@ function expand_columns_now() {
     .setProperty(expand_columns_property_key, now.toISOString());
 }
 
+var expand_columns_fuzzy = new Proxy({}, {get: function(obj, name) {
+  if (name.startsWith("fuzzy$")) {
+    let fuzzy = parseInt(name.substring(6));
+    return () => {
+      expand_columns_now(fuzzy);
+    };
+  } else {
+    throw new Error("invalid parameter");
+  }
+}});
+
 function expand_columns_today() {
   const spreadsheet = MainSpreadsheet.get();
   // assume it is early morning
-  // remove existing expand_columns_timely() triggers
+  // remove existing expand_columns_now() triggers
   for (let trigger of ScriptApp.getProjectTriggers()) {
-    if (trigger.getHandlerFunction() == "expand_columns_now")
+    if ( trigger.getHandlerFunction() == "expand_columns_now" ||
+        trigger.getHandlerFunction().startsWith("expand_columns_fuzzy.") )
       ScriptApp.deleteTrigger(trigger);
   }
-  // schedule expand_columns_timely() triggers for the day
+  // schedule expand_columns_now() triggers for the day
   var times = new Set();
   var busy = false;
   for (let group of StudyGroup.list(spreadsheet)) {
@@ -99,12 +111,13 @@ function expand_columns_forever_optimistic() {
   // optimistic: use tomorrow's timetable as if it will continue forever
   const spreadsheet = MainSpreadsheet.get();
   // assume it is early morning
-  // remove existing expand_columns_timely() triggers
+  // remove existing expand_columns_now() triggers
   for (let trigger of ScriptApp.getProjectTriggers()) {
-    if (trigger.getHandlerFunction() == "expand_columns_now")
+    if ( trigger.getHandlerFunction() == "expand_columns_now" ||
+        trigger.getHandlerFunction().startsWith("expand_columns_fuzzy.") )
       ScriptApp.deleteTrigger(trigger);
   }
-  // schedule expand_columns_timely() triggers for the day
+  // schedule expand_columns_now() triggers for the rest of the eternity
   var times = new Set();
   var busy = false;
   for (let group of StudyGroup.list(spreadsheet)) {
@@ -126,9 +139,9 @@ function expand_columns_forever_optimistic() {
   console.log(times);
   for (let time of times) {
     date.setHours(0);
-    date.setMinutes(time + 20);
+    date.setMinutes(time + 5);
     console.log(date.getHours(), date.getMinutes());
-    ScriptApp.newTrigger("expand_columns_now")
+    ScriptApp.newTrigger("expand_columns_fuzzy.fuzzy$15")
       .timeBased().everyDays(1)
       .atHour(date.getHours())
       .nearMinute(date.getMinutes())

@@ -56,6 +56,8 @@ var worksheet_planned_add = new Proxy({}, {get: function(obj, name) {
       group.check();
       worksheet_planned_add_single(group);
     }
+  } else {
+    throw new Error("invalid parameter");
   }
 }});
 
