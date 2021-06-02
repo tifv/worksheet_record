@@ -1,7 +1,6 @@
 function action_worksheet_insert() {
   try {
-    var lock = ActionHelpers.acquire_lock();
-    var worksheet = ActionHelpers.get_active_worksheet();
+    var [worksheet, lock] = ActionHelpers.get_active_worksheet({lock: "acquire"});
     var note_data = worksheet.get_title_note_data();
     // XXX check that the next column exists and is empty
     WorksheetBuilder.build(
@@ -18,8 +17,7 @@ function action_worksheet_insert() {
 
 function action_worksheet_add() {
   try {
-    var lock = ActionHelpers.acquire_lock();
-    var group = ActionHelpers.get_active_group();
+    var [group, lock] = ActionHelpers.get_active_group({lock: "acquire"});
     var sheet = group.sheet;
     var last_column = sheet.getLastColumn();
     {
@@ -66,7 +64,7 @@ function action_worksheet_recolor() {
 function action_worksheet_recolor_finish(group_name, color_scheme, {scope, group: group_options}) {
   var lock = ActionHelpers.acquire_lock();
   if (scope == "worksheet") {
-    var worksheet = ActionHelpers.get_active_worksheet();
+    var worksheet = ActionHelpers.get_active_worksheet({lock: "preserve"});
     worksheet.recolor_cf_rules(color_scheme);
   } else if (scope == "group") {
     const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -107,8 +105,7 @@ function action_worksheet_upload() {
     if (!upload_enabled_()) {
       throw new ReportError("Загрузка файлов не настроена");
     }
-    var lock = ActionHelpers.acquire_lock();
-    var section = ActionHelpers.get_active_section();
+    var [section, lock] = ActionHelpers.get_active_section({lock: "acquire"});
     if (section.worksheet.is_unused()) {
       throw new ReportError("У листочка нет заголовка.")
     }
@@ -134,8 +131,7 @@ function action_worksheet_upload_addendum(options) {
     if (!upload_enabled_()) {
       throw new ReportError("Загрузка файлов не настроена");
     }
-    var lock = ActionHelpers.acquire_lock();
-    var section = ActionHelpers.get_active_section();
+    var [section, lock] = ActionHelpers.get_active_section({lock: "acquire"});
     var addendum_section;
     if (section.is_addendum()) {
       if (section.get_addendum_type() == options.type) {
@@ -244,8 +240,7 @@ function action_worksheet_convert_to_olympiad() {
         }
   }
   try {
-    var lock = ActionHelpers.acquire_lock();
-    var worksheet = ActionHelpers.get_active_worksheet();
+    var [worksheet, lock] = ActionHelpers.get_active_worksheet({lock: "acquire"});
     var group = worksheet.group;
     var sheet = group.sheet;
     if (group.dim.weight_row != null) {

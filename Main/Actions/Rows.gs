@@ -87,10 +87,10 @@ function action_remove_excess_rows() {
       excess_rows.push(i);
     }
     if (excess_rows.length == 0) {
-      throw "Отсутствуют строки, которые можно было бы удалить автоматически.";
+      throw new Error("Отсутствуют строки, которые можно было бы удалить автоматически.");
     }
     if (excess_rows.length == names.length) {
-      throw "Нельзя просто взять и удалить все строки.";
+      throw new Error("Нельзя просто взять и удалить все строки.");
     }
     var backgrounds = name_range.getBackgrounds();
     for (let i of excess_rows) {

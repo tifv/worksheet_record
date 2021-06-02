@@ -1,7 +1,6 @@
 function action_add_columns() {
   try {
-    var lock = ActionHelpers.acquire_lock();
-    var section = ActionHelpers.get_active_section();
+    var [section, lock] = ActionHelpers.get_active_section({lock: "acquire"});
     var worksheet = section.worksheet;
     var group = worksheet.group;
     var template = HtmlService.createTemplateFromFile(
@@ -34,13 +33,13 @@ function action_add_columns_finish(
   var worksheet = Worksheet.find_by_location(group, worksheet_location);
   var section = worksheet.find_section_by_location(section_location);
   section.add_columns(data_index, data_width);
+  lock.releaseLock();
   //group.sheetbuf.test();
 }
 
 function action_add_section() {
   try {
-    var lock = ActionHelpers.acquire_lock();
-    var worksheet = ActionHelpers.get_active_worksheet();
+    var [worksheet, lock] = ActionHelpers.get_active_worksheet({lock: "acquire"});
     var template = HtmlService.createTemplateFromFile(
       "Actions/Columns-AddSection" );
     template.standalone = true;
@@ -88,13 +87,10 @@ function action_add_section_finish(
 
 function action_remove_excess_columns() {
   try {
-    var lock = ActionHelpers.acquire_lock();
-    var section = ActionHelpers.get_active_section();
+    var [section, lock] = ActionHelpers.get_active_section({lock: "acquire"});
     var worksheet = section.worksheet;
-    var group = worksheet.group;
     var remove_count = section.remove_excess_columns();
     lock.releaseLock();
-    //section.group.sheetbuf.test();
     if (remove_count == 0) {
       throw "Колонки не удалены. " +
         "Автоматически удаляются только пустые колонки без номера задачи.";
@@ -109,19 +105,19 @@ function action_remove_excess_columns() {
 
 function action_alloy_subproblems() {
   try {
-    var lock = ActionHelpers.acquire_lock();
-    var group = ActionHelpers.get_active_group();
+    var [group, lock] = ActionHelpers.get_active_group({lock: "acquire"});
     var sheet = group.sheet;
     var active_ranges = sheet.getActiveRangeList().getRanges();
     var worksheet = null;
     for (let range of active_ranges) {
       if ( worksheet != null &&
-        range.getColumn() >= worksheet.dim.data_start &&
-        range.getLastColumn() <= worksheet.dim.data_end
+        range.getColumn() >= worksheet.dim.start &&
+        range.getLastColumn() <= worksheet.dim.end
       ) {
         continue;
       }
-      worksheet = ActionHelpers.get_active_worksheet(null, sheet, range, group);
+      worksheet = ActionHelpers.get_active_worksheet({ sheet, range, group,
+        lock: "preserve" });
       // XXX stash possible errors when finding worksheet
       worksheet.alloy_subproblems();
       // XXX optimize to only collect ranges, and then set borders all at once;
@@ -135,8 +131,7 @@ function action_alloy_subproblems() {
 
 function action_mark_columns(colours) {
   try {
-    var lock = ActionHelpers.acquire_lock();
-    var group = ActionHelpers.get_active_group();
+    var [group, lock] = ActionHelpers.get_active_group({lock: "acquire"});
     var sheet = group.sheet;
     var active_ranges = sheet.getActiveRangeList().getRanges();
     var worksheet = null;
@@ -149,7 +144,8 @@ function action_mark_columns(colours) {
       if ( worksheet == null ||
         start < worksheet.dim.data_start || end > worksheet.dim.data_end
       ) {
-        worksheet = ActionHelpers.get_active_worksheet(null, sheet, range, group);
+        worksheet = ActionHelpers.get_active_worksheet({ sheet, range, group,
+          lock: "preserve" });
         // XXX stash possible errors when finding worksheet
         if (start < worksheet.dim.data_start || end > worksheet.dim.data_end) {
           throw new Error("XXX range invalid " + range.getA1Notation());

@@ -280,6 +280,7 @@ StudyGroup.prototype.set_student_count_cell = function(range) {
 StudyGroup.prototype.check = function(options = {}) {
     ({
         metadata: options.metadata = true,
+        dim: options.dim = true,
     } = options);
     if (options.metadata) {
         var metadata = this.sheet.createDeveloperMetadataFinder()
@@ -293,6 +294,9 @@ StudyGroup.prototype.check = function(options = {}) {
             throw new StudyGroupDetectionError(
                 "sheet " + this.name + " " +
                 "is not marked as group by metadata" );
+    }
+    if (options.dim) {
+      StudyGroupDim.load(this.sheet);
     }
 } // }}}
 
