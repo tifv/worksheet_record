@@ -2,11 +2,7 @@
 
 # Priority TODO
 • Remake sidebar UI to emphasize source links
-• detect duplicate uploads
-• detect duplicate upload names
-• detect obsoleted uploads
 • various uploads tools (renaming, stabilization) in Adminhelper
-• detect that sheet is probably a copy of proper StudyGroup and suggest to restore metadata
 • detect that frozen rows were probably unfrozen, and suggest to restore them
 
 # Second-priority TODO

@@ -16,7 +16,7 @@ const key_format = {
   "date"     : {width: 100, name: "дата", frozen: true},
   "uploader" : {width: 150, hidden: true},
   "author"   : {width: 150, name: "автор", frozen: true},
-  "id"             : {width: 175, hidden: true},
+  "id"             : {width: 175},
   "pdf"            : {width: 175},
   "src"            : {width: 175, hidden: true},
   "initial_pdf"    : {width: 175},

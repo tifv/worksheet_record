@@ -52,7 +52,6 @@ function sidebar_load_contents(group_name, {continuation = null, cached = []} = 
   }
   if (validate)
     var lock = ActionHelpers.acquire_lock();
-  var contents_count = 0;
   iterate_worksheets:
   for (let worksheet of Worksheet.list(group, start_column)) {
     let worksheet_title_id = worksheet.get_title_metadata_id({
