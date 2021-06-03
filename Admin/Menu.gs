@@ -32,7 +32,9 @@ function menu_create() {
     const ui = SpreadsheetApp.getUi();
     const menu = ui.createMenu("Ведомость");
     menu
+        .addItem("Найти ненужные загрузки", "uploads_mark_dead")
         .addItem("Обновить меню", "menu_create")
+    ;
     menu.addToUi();
 };
 
