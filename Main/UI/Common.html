@@ -218,3 +218,192 @@ function display_error(error) {
 
 </script>
 
+
+<script>
+
+var Animator = function() { // begin namespace
+
+function get_outer_dim(element) {
+  // output must have 'top', 'left', width' properties
+  return element.getBoundingClientRect();
+}
+
+function get_inner_dim(element) {
+  var outer_dim = element.getBoundingClientRect();
+  var style = window.getComputedStyle(element);
+  function diff(dir) {
+    return parseFloat(style['border-' + dir + '-width']) +
+      parseFloat(style['padding-' + dir]);
+  }
+  var diff = {
+    top:   diff('top'),
+    left:  diff('left'),
+    right: diff('right'),
+  }
+  return {
+    top:   outer_dim.top   + diff.top,
+    left:  outer_dim.left  + diff.left,
+    width: outer_dim.width - diff.left - diff.right,
+  };
+}
+
+async function animate( element,
+    initial_style, intermediate_style, final_style,
+    slowest_duration, slowest_properties
+) {
+  var endcallback = null;
+  function inframe(callback) {
+    return new Promise((resolve, reject) => {
+      window.requestAnimationFrame(() => {
+        try {
+          callback();
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      })
+    });
+  }
+  try {
+    await Promise.race([new Promise((resolve, reject) => {
+      window.setTimeout(resolve, slowest_duration + 0.05);
+    }), (async () => {
+      await inframe(() => {
+        Object.assign(element.style, initial_style);
+      });
+      await inframe(() => {
+        Object.assign(element.style, intermediate_style);
+      });
+      await new Promise((resolve, reject) => {
+        endcallback = (event) => {
+          if (slowest_properties.includes(event.propertyName))
+            resolve();
+        };
+        element.addEventListener('transitionend', endcallback);
+      });
+    })()]);
+  } finally {
+    Object.assign(element.style, final_style);
+    if (endcallback != null)
+      element.removeEventListener('transitionend', endcallback);
+  }
+}
+
+async function move_from(element, original, durations = {}) {
+  ({
+    x: durations.x = 1000,
+    y: durations.y = 1000,
+  } = durations);
+  var original_dim = get_outer_dim(original);
+  var container_dim = get_inner_dim(element.offsetParent);
+  var style_transition = "top " + durations.y + "ms" + ", " +
+    "left " + durations.x + "ms" + ", " +
+    "width " + durations.x + "ms";
+  var initial_style = {
+    'position': "relative",
+    'box-sizing': "border-box",
+    'min-width': "0" };
+  var intermediate_style = Object.assign(
+    {'transition': style_transition},
+    initial_style );
+  initial_style['top'] = (original_dim.top - container_dim.top) + "px";
+  initial_style['left'] = (original_dim.left - container_dim.left) + "px";
+  intermediate_style['top'] = intermediate_style['left'] = "0";
+  initial_style['width'] = original_dim.width + "px";
+  intermediate_style['width'] = container_dim.width + "px";
+  var final_style = {};
+  for (let property_name in intermediate_style)
+    final_style[property_name] = null;
+  var slowest_dims = [], slowest_duration = 0;
+  if (durations.x > durations.y) {
+    slowest_dims = ["left", "width"];
+    slowest_duration = durations.x;
+  } else {
+    slowest_dims = ["top"];
+    slowest_duration = durations.y;
+  }
+  await animate( element,
+    initial_style, intermediate_style, final_style,
+    slowest_duration, slowest_dims );
+}
+
+async function move_to(element, original, durations = {}) {
+  ({
+    x: durations.x = 1000,
+    y: durations.y = 1000,
+  } = durations);
+  var original_dim = get_outer_dim(original);
+  var container_dim = get_inner_dim(element.offsetParent);
+  var style_transition = "top " + durations.y + "ms" + ", " +
+    "left " + durations.x + "ms" + ", " +
+    "width " + durations.x + "ms";
+  var initial_style = {
+    'position': "relative",
+    'box-sizing': "border-box",
+    'min-width': "0" };
+  var intermediate_style = Object.assign(
+    {transition: style_transition},
+    initial_style );
+  initial_style['top'] = initial_style['left'] = "0";
+  intermediate_style['top'] = (original_dim.top - container_dim.top) + "px";
+  intermediate_style['left'] = (original_dim.left - container_dim.left) + "px";
+  initial_style['width'] = container_dim.width + "px";
+  intermediate_style.width = original_dim.width + "px";
+  var final_style = {transition: null};
+  var slowest_dims = [], slowest_duration = 0;
+  if (durations.x > durations.y) {
+    slowest_dims = ["left", "width"];
+    slowest_duration = durations.x;
+  } else {
+    slowest_dims = ["top"];
+    slowest_duration = durations.y;
+  }
+  await animate( element,
+    initial_style, intermediate_style, final_style,
+    slowest_duration, slowest_dims );
+}
+
+async function fade_in(element, duration) {
+  element.style.visibility = null;
+  var style_transition = "opacity " + duration + "ms";
+  var initial_style = {};
+  var intermediate_style = Object.assign(
+    {transition: style_transition},
+    initial_style );
+  initial_style.opacity = "0";
+  intermediate_style.opacity = "1";
+  var final_style = {};
+  for (let value_name in intermediate_style)
+    final_style[value_name] = null;
+  await animate( element,
+    initial_style, intermediate_style, final_style,
+    duration, ['opacity'] );
+}
+
+async function fade_out(element, duration) {
+  var style_transition = "opacity " + duration + "ms";
+  var initial_style = {};
+  var intermediate_style = Object.assign(
+    {transition: style_transition},
+    initial_style );
+  initial_style.opacity = "1";
+  intermediate_style.opacity = "0";
+  var final_style = {};
+  for (let value_name in intermediate_style)
+    final_style[value_name] = null;
+  final_style.visibility = "hidden";
+  await animate( element,
+    initial_style, intermediate_style, final_style,
+    duration, ['opacity'] );
+}
+
+return {
+  move_from: move_from,
+  move_to: move_to,
+  fade_in: fade_in,
+  fade_out: fade_out,
+};
+}(); // end Animator namespace
+
+
+</script>

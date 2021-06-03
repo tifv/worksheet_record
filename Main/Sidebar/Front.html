@@ -1353,8 +1353,8 @@ async function upload($title, upload_info) {
     $dialog_container.append($dialog_title);
     $sidebar.css({'z-index': -1});
     $title.css({'visibility': "hidden"});
-    var sidebar_fade_out_promise = Animator.fade_out($sidebar, 400);
-    await Animator.move_from($dialog_title, $title, {y: 400, x: 200});
+    var sidebar_fade_out_promise = Animator.fade_out($sidebar[0], 300);
+    await Animator.move_from($dialog_title[0], $title[0], {y: 300, x: 200});
     await sidebar_fade_out_promise;
     var $loading_status = $("<div/>")
       .addClass("loading_message loading_animation")
@@ -1372,15 +1372,15 @@ async function upload($title, upload_info) {
         upload_author = dialog.find_an_$element(".upload_dialog--author_input").val();
         resolve();
       }) );
-    var dialog_fade_in_promise = Animator.fade_in($dialog, 400);
+    var dialog_fade_in_promise = Animator.fade_in($dialog[0], 300);
     await dialog_fade_in_promise;
 
     await upload_complete_promise;
-    await Animator.fade_out($dialog, 400);
-    Animator.fade_in($sidebar, 400)
+    await Animator.fade_out($dialog[0], 300);
+    Animator.fade_in($sidebar[0], 300)
       .finally( () =>
         $sidebar.css({'z-index': "", 'visibility': ""}) );
-    Animator.move_to($dialog_title, $title, {y: 400, x: 200})
+    Animator.move_to($dialog_title[0], $title[0], {y: 300, x: 200})
       .finally(() => {
         $title.css({'visibility': ""});
         $dialog_container.remove();
@@ -1469,243 +1469,6 @@ function get_group_filename_promise(group_name) {
 
 return {upload: upload};
 }(); // end SidebarUpload namespace
-
-
-////////////////////
-
-
-var Animator = function() { // begin namespace
-
-function get_outer_dim($element, {top = true, left = true, width = true} = {}) {
-  var outer_dim = $element.offset();
-  if (width)
-    outer_dim.width = $element.outerWidth();
-  return outer_dim;
-}
-
-function get_inner_dim($element, {top = true, left = true, width = true} = {}) {
-  var outer_dim = get_outer_dim( $element,
-    {top: top, left: left, width: width} );
-  var inner_dim = {};
-  var dim_diff = {};
-  const get_diff = ( (dir) =>
-    parseFloat($element.css('border-' + dir + '-width')) +
-      parseFloat($element.css('padding-' + dir)) );
-  if (top)
-    dim_diff.top = get_diff('top');
-  if (left || width)
-    dim_diff.left = get_diff('left');
-  if (width)
-    dim_diff.right = get_diff('right');
-  if (top)
-    inner_dim.top = outer_dim.top + dim_diff.top;
-  if (left)
-    inner_dim.left = outer_dim.left + dim_diff.left;
-  if (width)
-    inner_dim.width = outer_dim.width - dim_diff.left - dim_diff.right;
-  return inner_dim;
-}
-
-async function move_from($element, $original, durations = {}) {
-  ({
-    x: durations.x = 1000,
-    y: durations.y = 1000,
-  } = durations);
-  var original_dim = get_outer_dim($original);
-  var container_dim = get_inner_dim($element.offsetParent());
-  var css_transition = "top " + durations.y + "ms" + ", " +
-    "left " + durations.x + "ms" + ", " +
-    "width " + durations.x + "ms";
-  var initial_css = {
-    'position': "relative",
-    'box-sizing': "border-box",
-    'min-width': "0" };
-  var intermediate_css = Object.assign(
-    {transition: css_transition},
-    initial_css );
-  initial_css.top = original_dim.top - container_dim.top;
-  initial_css.left = original_dim.left - container_dim.left;
-  intermediate_css.top = intermediate_css.left = "0";
-  initial_css.width = original_dim.width;
-  intermediate_css.width = container_dim.width;
-  var final_css = {};
-  for (let property_name in intermediate_css)
-    final_css[property_name] = "";
-  var slowest_dims = [], slowest_duration = 0;
-  if (durations.x > durations.y) {
-    slowest_dims = ["left", "width"];
-    slowest_duration = durations.x;
-  } else {
-    slowest_dims = ["top"];
-    slowest_duration = durations.y;
-  }
-  try {
-    await new Promise( (resolve, reject) =>
-      window.requestAnimationFrame(() => {
-        $element.css(initial_css);
-        resolve();
-      }) );
-    await new Promise((resolve, reject) => {
-      window.requestAnimationFrame(() => {
-        $element.css(intermediate_css);
-        resolve();
-      });
-    });
-    await new Promise((resolve, reject) => {
-      window.setTimeout(resolve, slowest_duration);
-      $element.on('transitionend.move_from', (e) => {
-        if (slowest_dims.includes(e.originalEvent.propertyName)) {
-          $element.off('transitionend.move_from');
-          resolve();
-        }
-      });
-    });
-  } finally {
-    $element.css(final_css);
-  }
-}
-
-async function move_to($element, $original, durations = {}) {
-  ({
-    x: durations.x = 1000,
-    y: durations.y = 1000,
-  } = durations);
-  var original_dim = get_outer_dim($original);
-  var container_dim = get_inner_dim($element.offsetParent());
-  var css_transition = "top " + durations.y + "ms" + ", " +
-    "left " + durations.x + "ms" + ", " +
-    "width " + durations.x + "ms";
-  var initial_css = {
-    'position': "relative",
-    'box-sizing': "border-box",
-    'min-width': "0" };
-  var intermediate_css = Object.assign(
-    {transition: css_transition},
-    initial_css );
-  initial_css.top = initial_css.left = "0";
-  intermediate_css.top = original_dim.top - container_dim.top;
-  intermediate_css.left = original_dim.left - container_dim.left;
-  initial_css.width = container_dim.width;
-  intermediate_css.width = original_dim.width;
-  var final_css = {transition: ""};
-  var slowest_dims = [], slowest_duration = 0;
-  if (durations.x > durations.y) {
-    slowest_dims = ["left", "width"];
-    slowest_duration = durations.x;
-  } else {
-    slowest_dims = ["top"];
-    slowest_duration = durations.y;
-  }
-  try {
-    await new Promise( (resolve, reject) =>
-      window.requestAnimationFrame(() => {
-        $element.css(initial_css);
-        resolve();
-      }) );
-    await new Promise((resolve, reject) => {
-      window.requestAnimationFrame(() => {
-        $element.css(intermediate_css);
-        resolve();
-      });
-    });
-    await new Promise((resolve, reject) => {
-      window.setTimeout(resolve, slowest_duration);
-      $element.on('transitionend.move_to', (e) => {
-        if (slowest_dims.includes(e.originalEvent.propertyName)) {
-          $element.off('transitionend.move_to');
-          resolve();
-        }
-      });
-    });
-  } finally {
-    $element.css(final_css);
-  }
-}
-
-async function fade_in($element, duration) {
-  $element.css({visibility: ""});
-  var css_transition = "opacity " + duration + "ms";
-  var initial_css = {};
-  var intermediate_css = Object.assign(
-    {transition: css_transition},
-    initial_css );
-  initial_css.opacity = 0;
-  intermediate_css.opacity = 1;
-  var final_css = {};
-  for (let value_name in intermediate_css)
-    final_css[value_name] = "";
-  try {
-    await new Promise( (resolve, reject) =>
-      window.requestAnimationFrame(() => {
-        $element.css(initial_css);
-        resolve();
-      }) );
-    await new Promise((resolve, reject) => {
-      window.requestAnimationFrame(() => {
-        $element.css(intermediate_css);
-        resolve();
-      });
-    });
-    await new Promise((resolve, reject) => {
-      window.setTimeout(resolve, duration);
-      $element.on('transitionend.fade_in', (e) => {
-        if (e.originalEvent.propertyName == "opacity") {
-          $element.off('transitionend.fade_in');
-          resolve();
-        }
-      });
-    });
-  } finally {
-    $element.css(final_css);
-  }
-}
-
-async function fade_out($element, duration) {
-  var css_transition = "opacity " + duration + "ms";
-  var initial_css = {};
-  var intermediate_css = Object.assign(
-    {transition: css_transition},
-    initial_css );
-  initial_css.opacity = 1;
-  intermediate_css.opacity = 0;
-  var final_css = {};
-  for (let value_name in intermediate_css)
-    final_css[value_name] = "";
-  final_css.visibility = "hidden";
-  try {
-    await new Promise( (resolve, reject) =>
-      window.requestAnimationFrame(() => {
-        $element.css(initial_css);
-        resolve();
-      }) );
-    await new Promise((resolve, reject) => {
-      window.requestAnimationFrame(() => {
-        $element.css(intermediate_css);
-        resolve();
-      });
-    });
-    await new Promise((resolve, reject) => {
-      window.setTimeout(resolve, duration);
-      $element.on('transitionend.fade_out', (e) => {
-        if (e.originalEvent.propertyName == "opacity") {
-          $element.off('transitionend.fade_out');
-          resolve();
-        }
-      });
-    });
-  } finally {
-    $element.css(final_css);
-  }
-}
-
-
-return {
-  move_from: move_from,
-  move_to: move_to,
-  fade_in: fade_in,
-  fade_out: fade_out,
-};
-}(); // end namespace
 
 
 </script>
