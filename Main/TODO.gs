@@ -12,6 +12,8 @@
 • Convert worksheet to theory
 • Worksheet plan
   • optimize worksheet generation to only load and save cfrules once.
+• Upload dialog
+  • upon hitting upload button, add any unconfirmed text in the text adder to file list.
 
 # TODO
 • make sidebar validation not acquire the lock unless necessary
@@ -43,6 +45,10 @@
 • All formulas in WorksheetLig/Worksheet and WorksheetLib/StudyGroup should use SpreadsheetLib/Formula to guarantee locale compatibility.
 • Function to reorder section in worksheet?
 • Rename S3Lib/Signer to Upload/S3Signer
+• Regenerate:
+  • list (combined lists of students for printing)
+  • s-summary (special)
+  • s-sample (special)
 
 # Metadata
 (either JSON or string)
