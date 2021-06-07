@@ -49,6 +49,7 @@
   • list (combined lists of students for printing)
   • s-summary (special)
   • s-sample (special)
+• Refactor stylesheets to use CSS custom properties?
 
 # Metadata
 (either JSON or string)

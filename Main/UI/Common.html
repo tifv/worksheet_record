@@ -251,7 +251,7 @@ async function animate( element,
     initial_style, intermediate_style, final_style,
     slowest_duration, slowest_properties
 ) {
-  var endcallback = null;
+  var endhadler = null;
   function inframe(callback) {
     return new Promise((resolve, reject) => {
       window.requestAnimationFrame(() => {
@@ -275,17 +275,17 @@ async function animate( element,
         Object.assign(element.style, intermediate_style);
       });
       await new Promise((resolve, reject) => {
-        endcallback = (event) => {
+        endhadler = (event) => {
           if (slowest_properties.includes(event.propertyName))
             resolve();
         };
-        element.addEventListener('transitionend', endcallback);
+        element.addEventListener('transitionend', endhadler);
       });
     })()]);
   } finally {
     Object.assign(element.style, final_style);
-    if (endcallback != null)
-      element.removeEventListener('transitionend', endcallback);
+    if (endhadler != null)
+      element.removeEventListener('transitionend', endhadler);
   }
 }
 

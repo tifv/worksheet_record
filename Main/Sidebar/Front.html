@@ -896,6 +896,7 @@ WorksheetSectionDisplay.prototype.set_title_href = async function(title_link) {
     let [pdf_url, src_url] = urls;
     this.$name.attr("href", pdf_url);
     if (src_url) {
+      // XXX there is a bug when this link is added twice
       this.$source.append($("<a/>")
         .addClass("worksheet_section--source_link")
         .text("source")
