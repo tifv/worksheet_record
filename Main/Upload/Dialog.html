@@ -18,6 +18,9 @@
 <? } /* end if standalone */ ?>
 <? if (standalone || partial == "style") { ?>
 <style>
+  :root {
+    --border-resource-loaded: 1px solid lightgray
+  }
   .upload_dialog--phase__swapped_out {
     display: none
   }
@@ -53,6 +56,7 @@
     .resource_loader__disable_all > .resource_loader--load_area {
       height: 52px;
       outline: 0;
+      border-top: var(--border-resource-loaded);
       cursor: auto;
     }
     .resource_loader__disable_url > .resource_loader--load_area > .load_area--url_adder_label,
@@ -90,7 +94,7 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    border-bottom: 1px solid lightgray;
+    border-bottom: var(--border-resource-loaded);
   }
     .resource_item--name {
       flex: 1;
@@ -111,13 +115,18 @@
     .resource_item--delete_button::after {
       content: "delete";
     }
-    .resource_item--url_label {
+    .resource_item--filename::before {
       font-family: 'Material Icons';
       font-size: 16px;
       margin-right: 3px;
       vertical-align: bottom;
+      content: "attachment";
     }
-    .resource_item--url_label::after {
+    .resource_item--url::before {
+      font-family: 'Material Icons';
+      font-size: 16px;
+      margin-right: 3px;
+      vertical-align: bottom;
       content: "link";
     }
   .load_area__dragover ~ .resource_loader--text_adder {
@@ -149,6 +158,8 @@
     overflow-y: hidden;
     display: flex;
     flex-direction: column;
+  }
+  .text_adder.text_adder__active {
   }
     .text_adder > .text_adder--input {
       width: 100%;
@@ -218,6 +229,9 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+  }
+  .url_adder.url_adder__active {
+    border-top: var(--border-resource-loaded);
   }
     .url_adder > .url_adder--input {
       width: 100%;
@@ -362,7 +376,7 @@
         <div class="secondary">Не загружайте файлы, которые нельзя выкладывать в Интернет.</div>
       </div>
       <div class="upload_dialog--resource_loaders block block__ish"
-       ><div id="pdf_loader" class="upload_dialog--pdf_loader resource_loader">
+       ><div class="upload_dialog--pdf_loader resource_loader resource_loader__pdf">
           <label class="resource_loader--load_area load_area">
             <div>Листочек (PDF)</div>
             <div class="secondary">Нажмите, чтобы выбрать файл,<br/>или перетащите его сюда,</div>
@@ -374,15 +388,15 @@
             <input type="url" class="url_adder--input" placeholder="https://"/>
             <div class="url_adder--controls"
              ><button class="url_adder--add_button url_adder--control_button"
-                title="добавить файл"
+                title="добавить ссылку"
                >Добавить</button
              ><button class="url_adder--cancel_button url_adder--control_button material-icons"
-                title="отменить ввод файла"
-               >delete</button
+                title="отменить ввод ссылки"
+               >cancel</button
            ></div>
          </div>
         </div
-       ><div class="upload_dialog--src_loader resource_loader">
+       ><div class="upload_dialog--src_loader resource_loader resource_loader__src">
           <label class="resource_loader--load_area load_area">
             <div>Исходники (LaTeX или Word, картинки и&nbsp;пр.)</div>
             <div class="secondary">Нажмите, чтобы выбрать файлы,<br/>или перетащите их сюда,<br/>или вставьте код TeX:</div>
@@ -399,18 +413,18 @@
                >add</button
              ><button class="text_adder--cancel_button text_adder--control_button material-icons"
                 title="отменить ввод файла"
-               >delete</button
+               >cancel</button
            ></div>
           </div>
           <div class="resource_loader--url_adder url_adder">
             <input type="url" class="url_adder--input" placeholder="https://…"/>
             <div class="url_adder--controls"
              ><button class="url_adder--add_button url_adder--control_button"
-                title="добавить файл"
+                title="добавить ссылку"
                >Добавить</button
              ><button class="url_adder--cancel_button url_adder--control_button material-icons"
-                title="отменить ввод файла"
-               >delete</button
+                title="отменить ввод ссылки"
+               >cancel</button
            ></div>
          </div>
        </div
@@ -431,6 +445,8 @@
 <? } /* end if html */ ?>
 <? if (standalone || partial == "script") { ?>
 <script>
+
+var UploadDialog = function() { // begin namespace
 
 const known_src_types = {
   "text/x-tex" : ".tex",
@@ -454,368 +470,371 @@ const known_src_extensions = {
 
 const letters62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-function find_an_$element($parent, selector) {
-  var $element = $parent.find(selector);
-  if ($element.length < 1)
-    throw Error("No elements found: " + selector);
-  if ($element.length > 1)
-    throw Error("Many elements found: " + selector);
-  return $element;
-}
+class IncompleteField extends Error {};
 
-class UploadDialog {
-  constructor($dialog, upload_info) {
-    this.$dialog = $dialog;
+class UploadDialog extends EventTarget {
+  constructor(element, upload_info) {
+    if (!element.classList.contains('upload_dialog'))
+      throw new Error("internal error");
+    super();
+    this.element = element;
     this.upload_info = upload_info;
-    this.find_an_$element(".upload_dialog--group_name")
-      .text(upload_info.group_name);
-    this.find_an_$element(".upload_dialog--category")
-      .addClass("category-" + (upload_info.category || ""))
-      .text(upload_info.category_name);
+    let group_name = this.element.querySelector(":scope .upload_dialog--group_name");
+    group_name.textContent = upload_info.group_name;
+    let category = this.element.querySelector(":scope .upload_dialog--category");
+    category.classList.add("category-" + (upload_info.category || ""))
+    category.textContent = upload_info.category_name;
     if (upload_info.category != null) {
-      this.find_an_$element(".upload_dialog--category")
-        .addClass("coloured");
+      category.classList.add("coloured");
     }
+    let date = this.element.querySelector(":scope .upload_dialog--date");
     if (upload_info.date != null) {
-      this.find_an_$element(".upload_dialog--date")
-        .text(upload_info.date_s);
+      date.textContent = upload_info.date_s;
     } else {
-      this.find_an_$element(".upload_dialog--date")
-        .addClass("metadata__warning")
-        .text("не задана");
+      date.classList.add("metadata__warning");
+      date.textContent = "не задана";
     }
-    this.find_an_$element(".upload_dialog--title_input")
-      .val(upload_info.title);
-    this.find_an_$element(".upload_dialog--author_input")
-      .val(upload_info.author);
-    var
-      $pdf_loader = this.find_an_$element(".upload_dialog--pdf_loader"),
-      $src_loader = this.find_an_$element(".upload_dialog--src_loader");
-    $pdf_loader.add($src_loader).children(".resource_loader--load_area")
-      .on('drag dragstart dragend dragover dragenter dragleave drop', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-      })
-      .on('dragenter', function(e) {
-        if (e.target !== this)
-          return;
-        $(this).addClass('load_area__dragover');
-      })
-      .on('dragleave dragend drop', function(e) {
-        if (e.target !== this)
-          return;
-        $(this).removeClass('load_area__dragover');
-      });
-    this.pdf_url_adder = new UploadURLAdder(
-      this.find_an_$element(".upload_dialog--pdf_loader .resource_loader--url_adder"),
-      {
-        add_callback: url =>
-          { this.add_pdf_url(url); },
-        activate_callback: $adder => {
-          $src_loader.children(".resource_loader--overlay")
-            .removeClass("resource_loader--overlay");
-          $adder.addClass("resource_loader--url_adder__active resource_loader--overlay");
-        },
-        deactivate_callback: $adder => {
-          $adder.removeClass("resource_loader--url_adder__active");
-        },
-      } );
-    this.src_text_adder = new UploadTextAdder(
-      this.find_an_$element(".upload_dialog--src_loader .resource_loader--text_adder"),
-      {
-        add_callback: file =>
-          { this.add_src_files([file]); },
-        activate_callback: $adder => {
-          $src_loader.children(".resource_loader--overlay")
-            .removeClass("resource_loader--overlay");
-          $adder.addClass("resource_loader--text_adder__active resource_loader--overlay");
-        },
-        deactivate_callback: $adder => {
-          $adder.removeClass("resource_loader--text_adder__active");
-        },
-      } );
-    this.src_url_adder = new UploadURLAdder(
-      this.find_an_$element(".upload_dialog--src_loader .resource_loader--url_adder"),
-      {
-        add_callback: url =>
-          { this.add_src_url(url); },
-        activate_callback: $adder => {
-          $src_loader.children(".resource_loader--overlay")
-            .removeClass("resource_loader--overlay");
-          $adder.addClass("resource_loader--url_adder__active resource_loader--overlay");
-        },
-        deactivate_callback: $adder => {
-          $adder.removeClass("resource_loader--url_adder__active");
-        },
-      } );
-    // XXX allow links to be dragged as well
-    this.find_an_$element(".upload_dialog--pdf_loader .resource_loader--load_area")
-      .on('drop', (e) => this.add_pdf_files(e.originalEvent.dataTransfer.files));
-    this.find_an_$element(".upload_dialog--src_loader .resource_loader--load_area")
-      .on('drop', (e) => this.add_src_files(e.originalEvent.dataTransfer.files));
-    this.find_an_$element(".upload_dialog--pdf_loader .resource_loader--input")
-      .on('change', (e) => this.add_pdf_files(e.originalEvent.target.files));
-    this.find_an_$element(".upload_dialog--src_loader .resource_loader--input")
-      .on('change', (e) => this.add_src_files(e.originalEvent.target.files));
-    this.find_an_$element(".upload_dialog--upload_button")
-      .on('click', () => this.upload_start());
+    this.element.querySelector(":scope .upload_dialog--title_input")
+      .value = upload_info.title;
+    this.element.querySelector(":scope .upload_dialog--author_input")
+      .value = upload_info.author;
+    this.pdf_loader = new PDFLoader(
+      this.element.querySelector(":scope .upload_dialog--pdf_loader") );
+    this.pdf_loader.addEventListener('change', () => {
+      this.update_upload_button();
+    });
+    this.src_loader = new SourceLoader(
+      this.element.querySelector(":scope .upload_dialog--src_loader") );
+    this.src_loader.addEventListener('change', () => {
+      this.update_upload_button();
+    });
     this.upload_without_src = false;
     this.upload_started = false;
-  }
-
-  find_an_$element(selector) {
-    return find_an_$element(this.$dialog, selector);
-  }
-
-  add_pdf_files(files) {
-    if (files.length < 1) {
-      return;
-    }
-    if (files.length > 1) {
-      window.alert("Нельзя добавить несколько файлов PDF одновременно");
-      return;
-    }
-    var [pdf_file] = files;
-    var [, pdf_file_ext] = split_filename(pdf_file.name);
-    if (pdf_file.type != "application/pdf" && pdf_file_ext != ".pdf") {
-      window.alert("Выбранный файл (PDF) имеет неверный тип: " + pdf_file.type);
-      return;
-    }
-    var $resource_list = this.find_an_$element(
-      ".upload_dialog--pdf_loader .resource_loader--resource_list" );
-    $resource_list
-      .empty()
-      .append(this.get_$resource_blob(pdf_file, () => {
-        this.update_upload_button();
-      }));
-    this.update_upload_button();
-  }
-
-  add_pdf_url(url) {
-    var $resource_list = this.find_an_$element(
-      ".upload_dialog--pdf_loader .resource_loader--resource_list" );
-    $resource_list
-      .empty()
-      .append(this.get_$resource_url(url, () => {
-        this.update_upload_button();
-      }));
-    this.update_upload_button();
-  }
-
-  add_src_files(files) {
-    if (files.length < 1) {
-      return;
-    }
-    var $resource_list = this.find_an_$element(
-      ".upload_dialog--src_loader .resource_loader--resource_list" );
-    if ($resource_list.find(".resource_list--item[data-resource-type=\"url\"]").length > 0) {
-      window.alert("Нельзя добавить файлы, если уже добавлена ссылка");
-      return;
-    }
-    for (let file of files) {
-      $resource_list.append(this.get_$resource_blob(file, () => {
-      this.update_src_loader();
-      this.update_upload_button();
-    }));
-    }
-    this.update_src_loader();
-    this.update_upload_button();
-  }
-
-  add_src_url(url) {
-    var $resource_list = this.find_an_$element(
-      ".upload_dialog--src_loader .resource_loader--resource_list" );
-    if ($resource_list.find(".resource_list--item[data-resource-type=\"blob\"]").length > 0) {
-      window.alert("Нельзя добавить ссылку, если уже добавлены файлы");
-      return;
-    }
-    if ($resource_list.find(".resource_list--item[data-resource-type=\"url\"]").length > 0) {
-      window.alert("Нельзя добавить ссылку, если уже добавлена ссылка");
-      return;
-    }
-    $resource_list.append(this.get_$resource_url(url, () => {
-      this.update_src_loader();
-      this.update_upload_button();
-    }));
-    this.update_src_loader();
-    this.update_upload_button();
-  }
-
-  // XXX maybe mark Drive files separately
-  // https://www.gstatic.com/images/icons/material/system/1x/attach_drive_black_20dp.png
-  
-  get_$resource_blob(blob, remove_callback) {
-    var $item = $("<div/>")
-      .addClass("resource_list--item resource_item resource_item__blob")
-      .append( $("<span/>")
-        .addClass("resource_item--name")
-        .text(blob.name)
-        .attr('title', blob.name)
-      )
-      .append( $("<span/>")
-        .addClass("resource_item--delete_button")
-        .attr('title', "убрать файл")
-        .on('click', () => {
-          $item.remove();
-          if (remove_callback != null)
-            remove_callback();
-        })
-      )
-      .attr("data-resource-type", "blob")
-      .data("blob", blob);
-    return $item;
-  }
-
-  get_$resource_url(url, remove_callback) {
-    var $item = $("<div/>")
-      .addClass("resource_list--item resource_item resource_item__url")
-      .append( $("<span/>")
-        .addClass("resource_item--name")
-        .text(url)
-        .attr('title', url)
-        .prepend( $("<span/>")
-          .addClass("resource_item--url_label")
-        )
-      )
-      .append( $("<span/>")
-        .addClass("resource_item--delete_button")
-        .attr('title', "убрать ссылку")
-        .on('click', () => {
-          $item.remove();
-          if (remove_callback != null)
-            remove_callback();
-        })
-      )
-      .attr("data-resource-type", "url")
-      .data("url", url);
-    return $item;
+    this.element.querySelector(".upload_dialog--close_button")
+      .addEventListener('click', () => {
+        this.dispatchEvent(new Event('close'));
+      });
+    this.element.querySelector(".upload_dialog--upload_button")
+      .addEventListener('click', () => {
+        this.upload_start();
+      });
   }
 
   update_upload_button() {
     if (this.upload_without_src) {
       this.upload_without_src = false;
-      this.find_an_$element(".upload_dialog--upload_button")
-        .text("Загрузить листочек");
+      this.element.querySelector(":scope .upload_dialog--upload_button")
+        .textContent = "Загрузить листочек";
     }
-  }
-
-  update_src_loader() {
-    var $src_loader = this.find_an_$element(".upload_dialog--src_loader");
-    var $resource_list = this.find_an_$element(
-      ".upload_dialog--src_loader .resource_loader--resource_list" );
-    var $src_input = this.find_an_$element(
-      ".upload_dialog--src_loader .resource_loader--input" );
-    if ($resource_list.find(".resource_list--item[data-resource-type=\"blob\"]").length > 0) {
-      $src_loader.addClass("resource_loader__disable_url");
-    } else {
-      $src_loader.removeClass("resource_loader__disable_url");
-    }
-    if ($resource_list.find(".resource_list--item[data-resource-type=\"url\"]").length > 0) {
-      $src_loader.addClass("resource_loader__disable_all");
-      $src_input.prop('disabled', true);
-    } else {
-      $src_loader.removeClass("resource_loader__disable_all");
-      $src_input.prop('disabled', false);
-    }
-  }
-
-  on_click_close(handler) {
-    this.find_an_$element(".upload_dialog--close_button")
-      .on('click', handler);
   }
 
 }
 
-class UploadTextAdder {
-  constructor($adder, {add_callback, activate_callback, deactivate_callback}) {
-    this.$adder = $adder;
-    this.add_callback = add_callback;
-    this.activate_callback = activate_callback;
-    this.deactivate_callback = deactivate_callback;
-    if (!this.$adder.hasClass("text_adder")) {
+class ResourceLoader extends EventTarget {
+  constructor(element) {
+    if (!element.classList.contains('resource_loader'))
       throw new Error("internal error");
+    super();
+    this.element = element;
+    this.input = this.element.querySelector(
+      ":scope .resource_loader--input" );
+    this.load_area = this.element.querySelector(
+      ":scope .resource_loader--load_area" );
+    this.resource_list = this.element.querySelector(
+      ":scope .resource_loader--resource_list" );
+    this.blobs = new WeakMap();
+    var eventstop = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
     }
-    this.$filename = this.find_an_$element(".text_adder--name_input");
-    this.$content = this.find_an_$element(".text_adder--input");
-    this.$content.on('focus', () => { this.activate(); });
-    this.find_an_$element(".text_adder--add_button")
-      .on('click', () => { this.add(); });
-    this.find_an_$element(".text_adder--cancel_button")
-      .on('click', () => { this.deactivate(); });
+    var dragenter = (event) => {
+      if (event.target !== this.load_area)
+        return;
+      this.load_area.classList.add('load_area__dragover');
+    }
+    var dragexit = (event) => {
+      if (event.target !== this.load_area)
+        return;
+      this.load_area.classList.remove('load_area__dragover');
+    }
+    for (let eventname of ['drag', 'dragstart', 'dragend', 'dragover', 'dragenter', 'dragleave', 'drop'])
+      this.load_area.addEventListener(eventname, eventstop);
+    for (let eventname of ['dragenter'])
+      this.load_area.addEventListener(eventname, dragenter);
+    for (let eventname of ['dragleave', 'dragend', 'drop'])
+      this.load_area.addEventListener(eventname, dragexit);
+    this.load_area.addEventListener('drop', (event) => {
+      this.add_files(event.dataTransfer.files);
+    });
+    this.input.addEventListener('change', (event) => {
+      this.add_files(event.target.files);
+    });
   }
-  find_an_$element(selector) {
-    return find_an_$element(this.$adder, selector);
+  get_resource_type() {
+    if (this.resource_list.querySelector(":scope > .resource_item__url") != null)
+      return "url";
+    if (this.resource_list.querySelector(":scope > .resource_item__blob") != null)
+      return "blob";
+    if (this.resource_list.querySelector(":scope > *") != null)
+      throw new Error("internal error");
+    return null;
   }
-  add() {
-    var filename = this.$filename.val();
-    if (filename == "") {
-      animate_warning(this.$filename.get()[0]);
+  add_files(files) {
+    if (files.length < 1) {
       return;
     }
-    var content = this.$content.val();
+    if (this.get_resource_type() == "url")
+      throw new Error("Нельзя добавить файлы, если уже добавлена ссылка");
+    for (let file of files) {
+      this.resource_list.appendChild(this.get_item_blob(file));
+    }
+    this.dispatchEvent(new Event('change'));
+  }
+  get_item_blob(blob) {
+    var item, delete_button;
+    item = makehtml('div', {
+      classes: ["resource_list--item", "resource_item", "resource_item__blob"],
+      children: [
+        makehtml('span', {
+          classes: ["resource_item--name", "resource_item--filename"],
+          text: blob.name,
+          attributes: {title: blob.name},
+        }),
+        delete_button = makehtml('span', {
+          classes: ["resource_item--delete_button"],
+          attributes: {title: "убрать файл"},
+        }),
+      ],
+    });
+    delete_button.addEventListener('click', () => {
+      item.remove();
+      this.dispatchEvent(new Event('change'));
+    });
+    this.blobs.set(item, blob);
+    return item;
+  }
+  add_url(url) {
+    if (this.get_resource_type() == "url")
+      throw new Error("Нельзя добавить ссылку, если уже добавлена ссылка");
+    if (this.get_resource_type() == "blob")
+      throw new Error("Нельзя добавить ссылку, если уже добавлены файлы");
+    this.resource_list.appendChild(this.get_item_url(url));
+    this.dispatchEvent(new Event('change'));
+  }
+  get_item_url(url) {
+    // XXX maybe mark Drive files separately
+    // https://www.gstatic.com/images/icons/material/system/1x/attach_drive_black_20dp.png
+    var item, delete_button;
+    item = makehtml('div', {
+      classes: ["resource_list--item", "resource_item", "resource_item__url"],
+      children: [
+        makehtml('span', {
+          classes: ["resource_item--name", "resource_item--url"],
+          text: url,
+          attributes: {title: url},
+        }),
+        delete_button = makehtml('span', {
+          classes: ["resource_item--delete_button"],
+          attributes: {title: "убрать ссылку"},
+        }),
+      ],
+    });
+    delete_button.addEventListener('click', () => {
+      item.remove();
+      this.dispatchEvent(new Event('change'));
+    });
+    item.setAttribute("data-url", url);
+    return item;
+  }
+}
+
+var TextLoaderMixin = (ResourceLoader) => class TextLoader extends ResourceLoader {
+  constructor(element) {
+    var text_adder_element =
+      element.querySelector(":scope > .resource_loader--text_adder");
+    if (text_adder_element == null)
+      throw new Error("internal error");
+    super(element);
+    this.text_adder = new TextAdder(text_adder_element);
+    this.text_adder.addEventListener('add', (event) => {
+      this.add_files([event.detail.blob]);
+    });
+    this.text_adder.addEventListener('activate', () => {
+      for (let element of this.element.querySelectorAll(
+          ":scope > .resource_loader--overlay" )) {
+        element.classList.remove("resource_loader--overlay");
+      }
+      text_adder_element.classList.add(
+        "resource_loader--text_adder__active",
+        "resource_loader--overlay" );
+    });
+    this.text_adder.addEventListener('deactivate', () => {
+      text_adder_element.classList.remove(
+        "resource_loader--text_adder__active" );
+    });
+  }
+};
+
+var URLLoaderMixin = (ResourceLoader) => class URLLoader extends ResourceLoader {
+  constructor(element) {
+    var url_adder_element =
+      element.querySelector(":scope > .resource_loader--url_adder");
+    if (url_adder_element == null)
+      throw new Error("internal error");
+    super(element);
+    this.url_adder = new URLAdder(url_adder_element);
+    this.url_adder.addEventListener('add', (event) => {
+      this.add_url(event.detail.url);
+    });
+    this.url_adder.addEventListener('activate', () => {
+      for (let element of this.element.querySelectorAll(
+          ":scope > .resource_loader--overlay" )) {
+        element.classList.remove("resource_loader--overlay");
+      }
+      url_adder_element.classList.add(
+        "resource_loader--url_adder__active",
+        "resource_loader--overlay" );
+    });
+    this.url_adder.addEventListener('deactivate', () => {
+      url_adder_element.classList.remove(
+        "resource_loader--url_adder__active" );
+    });
+  }
+};
+
+class PDFLoader extends URLLoaderMixin(ResourceLoader) {
+  constructor(element) {
+    if (!element.classList.contains('resource_loader__pdf'))
+      throw new Error("internal error");
+    super(element);
+    this.addEventListener('change', () => {
+      var resource_type = this.get_resource_type();
+      if (resource_type != null) {
+        this.element.classList.add("resource_loader__disable_all");
+        this.input.disabled = true;
+      } else {
+        this.element.classList.remove("resource_loader__disable_all");
+        this.input.disabled = false;
+      }
+    });
+  }
+  add_files(files) {
+    if (files.length > 1)
+      throw new Error("Нельзя добавить несколько файлов PDF одновременно");
+    super.add_files(files);
+  }
+}
+
+class SourceLoader extends TextLoaderMixin(URLLoaderMixin(ResourceLoader)) {
+  constructor(element) {
+    if (!element.classList.contains('resource_loader__src'))
+      throw new Error("internal error");
+    super(element);
+    this.addEventListener('change', () => {
+      var resource_type = this.get_resource_type();
+      if (resource_type == "blob") {
+        this.element.classList.add("resource_loader__disable_url");
+      } else {
+        this.element.classList.remove("resource_loader__disable_url");
+      }
+      if (resource_type == "url") {
+        this.element.classList.add("resource_loader__disable_all");
+        this.input.disabled = true;
+      } else {
+        this.element.classList.remove("resource_loader__disable_all");
+        this.input.disabled = false;
+      }
+    });
+  }
+}
+
+class TextAdder extends EventTarget {
+  constructor(element) {
+    if (!element.classList.contains("text_adder"))
+      throw new Error("internal error");
+    super();
+    this.element = element;
+    this.active = false;
+    this.name_input = this.element.querySelector(
+      ":scope .text_adder--name_input");
+    this.input = this.element.querySelector(
+      ":scope .text_adder--input");
+    this.input.addEventListener('focus', this.activate.bind(this));
+    this.element.querySelector(":scope .text_adder--add_button")
+      .addEventListener('click', this.add.bind(this));
+    this.element.querySelector(":scope .text_adder--cancel_button")
+      .addEventListener('click', this.deactivate.bind(this));
+  }
+  activate() {
+    this.active = true;
+    this.element.classList.add("text_adder__active");
+    this.dispatchEvent(new Event('activate'));
+  }
+  add() {
+    var filename = this.name_input.value;
+    if (filename == "") {
+      animate_warning(this.name_input);
+      throw new IncompleteError();
+    }
+    var content = this.input.value;
     var [, filename_ext] = split_filename(filename);
     var content_blob = new Blob([content], {
       type: filename_ext == ".tex" ? "text/x-tex" : "text/plain",
     });
     content_blob.name = filename;
-    this.add_callback(content_blob);
-    this.$content.val("");
+    this.dispatchEvent(new CustomEvent('add', {detail:
+      {blob: content_blob} }));
+    this.input.value = "";
     this.deactivate();
   }
-  activate() {
-    this.$adder.addClass("text_adder__active");
-    if (this.activate_callback != null)
-      this.activate_callback(this.$adder);
-  }
   deactivate() {
-    this.$content.val("");
-    this.$filename.val("source.tex");
-    this.$adder.removeClass("text_adder__active");
-    if (this.deactivate_callback != null)
-      this.deactivate_callback(this.$adder);
+    this.active = false;
+    this.input.value = "";
+    this.name_input.value = "source.tex";
+    this.element.classList.remove("text_adder__active");
+    this.dispatchEvent(new Event('deactivate'));
   }
 }
 
-class UploadURLAdder {
-  constructor($adder, {add_callback, activate_callback, deactivate_callback}) {
-    this.$adder = $adder;
-    this.add_callback = add_callback;
-    this.activate_callback = activate_callback;
-    this.deactivate_callback = deactivate_callback;
-    if (!this.$adder.hasClass("url_adder")) {
+class URLAdder extends EventTarget {
+  constructor(element) {
+    if (!element.classList.contains("url_adder"))
       throw new Error("internal error");
-    }
-    this.$content = this.find_an_$element(".url_adder--input");
-    this.$content.on('focus', () => { this.activate(); });
-    // XXX enter on input field should add the value, too
-    this.find_an_$element(".url_adder--add_button")
-      .on('click', () => { this.add(); });
-    this.find_an_$element(".url_adder--cancel_button")
-      .on('click', () => { this.deactivate(); });
-  }
-  find_an_$element(selector) {
-    return find_an_$element(this.$adder, selector);
-  }
-  add() {
-    var url = this.$content.val();
-    if (url == "") {
-      animate_warning(this.$content.get()[0]);
-      return;
-    }
-    this.add_callback(url);
-    this.$content.val("");
-    this.deactivate();
+    super();
+    this.element = element;
+    this.active = false;
+    this.input = this.element.querySelector(":scope .url_adder--input");
+    this.input.addEventListener('focus', this.activate.bind(this));
+    this.element.querySelector(":scope .url_adder--add_button")
+      .addEventListener('click', this.add.bind(this));
+    this.input.addEventListener('keyup', (event) => {
+      if (event.key == "Enter")
+        this.add();
+    });
+    this.element.querySelector(":scope .url_adder--cancel_button")
+      .addEventListener('click', this.deactivate.bind(this));
   }
   activate() {
-    this.$adder.addClass("url_adder__active");
-    if (this.activate_callback != null)
-      this.activate_callback(this.$adder);
+    this.active = true;
+    this.element.classList.add("url_adder__active");
+    this.dispatchEvent(new Event('activate'));
+  }
+  add() {
+    var url = this.input.value;
+    if (url == "") {
+      animate_warning(this.input);
+      throw new IncompleteError();
+    }
+    this.dispatchEvent(new CustomEvent('add', {detail:
+      {url: url} }));
+    this.input.value = "";
+    this.deactivate();
   }
   deactivate() {
-    this.$content.val("");
-    this.$adder.removeClass("url_adder__active");
-    if (this.deactivate_callback != null)
-      this.deactivate_callback(this.$adder);
+    this.active = false;
+    this.input.value = "";
+    this.element.classList.remove("url_adder__active");
+    this.dispatchEvent(new Event('deactivate'));
   }
 }
 
@@ -826,6 +845,19 @@ function split_filename(filename) {
   return [
     filename.substring(0, ext_index),
     filename.substring(ext_index) ];
+}
+
+function find_an_$element($parent, selector) {
+  var $element = $parent.find(selector);
+  if ($element.length < 1)
+    throw Error("No elements found: " + selector);
+  if ($element.length > 1)
+    throw Error("Many elements found: " + selector);
+  return $element;
+}
+
+UploadDialog.prototype.find_an_$element = function(selector) {
+  return find_an_$element($(this.element), selector);
 }
 
 UploadDialog.prototype.upload_start = async function() {
@@ -896,10 +928,10 @@ UploadDialog.prototype.upload_prepare_pdf = function(flag_incomplete) {
     animate_warning($pdf_loader.get()[0]);
     return null;
   }
-  if ($pdf_files.filter("[data-resource-type=\"url\"]").length > 0) {
-    return new ResourceUrl($pdf_files.data("url"));
+  if ($pdf_files.filter(".resource_item__url").length > 0) {
+    return new ResourceUrl($pdf_files.attr("data-url"));
   }
-  return new ResourceBlob($pdf_files.data("blob"), ".pdf");
+  return new ResourceBlob(this.pdf_loader.blobs.get($pdf_files[0]), ".pdf");
 }
 
 UploadDialog.prototype.upload_prepare_src = function(flag_incomplete) {
@@ -912,11 +944,11 @@ UploadDialog.prototype.upload_prepare_src = function(flag_incomplete) {
     }
     return null;
   }
-  if ($src_files.filter("[data-resource-type=\"url\"]").length > 0) {
-    return new ResourceUrl($src_files.data("url"));
+  if ($src_files.filter(".resource_item__url").length > 0) {
+    return new ResourceUrl($src_files.attr("data-url"));
   }
-  return new SourceList($src_files.map(function() {
-    return $(this).data("blob");
+  return new SourceList($src_files.map((index, item) => {
+    return this.src_loader.blobs.get(item);
   }).get());
 }
 
@@ -1304,6 +1336,9 @@ function bytes_to_hex(bytes) {
   return pieces.join("");
 }
 
+return UploadDialog
+}(); // end UploadDialog namespace
+
 var JSZipLoader = function() { // begin namespace
 
 var loaded = false;
@@ -1338,7 +1373,7 @@ function load() {
 }
 
 return {is_loaded: is_loaded, load: load};
-}(); // end JSZip Loader namespace
+}(); // end JSZipLoader namespace
 
 </script>
 <? } /* end if script */ ?>
@@ -1349,10 +1384,12 @@ $(function() {
   if ($dialog.length != 1)
     throw new Error("internal error");
   let dialog = new UploadDialog(
-    $dialog,
+    $dialog[0],
     <?!= JSON.stringify(upload_info) ?>
   );
-  dialog.on_click_close(() => google.script.host.close());
+  dialog.addEventListener('close', () => {
+    google.script.host.close();
+  });
 });
 </script>
 </body>

@@ -1366,9 +1366,9 @@ async function upload($title, upload_info) {
     upload_info.author = upload_author;
     var $dialog = $(upload_dialog_html);
     $dialog_container.append($dialog);
-    var dialog = new UploadDialog($dialog, upload_info);
+    var dialog = new UploadDialog($dialog[0], upload_info);
     var upload_complete_promise = new Promise( (resolve, reject) =>
-      dialog.on_click_close(() => {
+      dialog.addEventListener('close', () => {
         upload_author = dialog.find_an_$element(".upload_dialog--author_input").val();
         resolve();
       }) );
