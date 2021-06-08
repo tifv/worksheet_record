@@ -150,6 +150,11 @@ function display_error(error) {
     .status_line--content {
       flex: 1;
     }
+    .status_line--content__compact {
+      white-space: nowrap;
+      overflow-x: hidden;
+      text-overflow: ellipsis;
+    }
     .status_line--error_message {
       color: #dd4b39;
     }
@@ -159,7 +164,7 @@ function display_error(error) {
 <script>
 
   class StatusLine {
-    constructor ({parent = null}) {
+    constructor ({parent = null} = {}) {
       this.element = makehtml('div', {
         classes: ["block", "status_line"],
         children: [
@@ -170,10 +175,8 @@ function display_error(error) {
             classes: ["status_line--content"],
           }),
         ],
+        parent,
       });
-      if (parent != null) {
-        parent.appendChild(this.element);
-      }
     }
     clear_content() {
       while (this.content.firstChild) {
@@ -189,6 +192,10 @@ function display_error(error) {
         attributes: {href: href, target: "_blank"},
         text: text,
       }))
+    }
+    set_compact() {
+      this.content.classList.add("status_line--content__compact");
+      this.content.setAttribute('title', this.content.textContent);
     }
     set_icon(name) {
       this.progress.classList.add("status_line--progress__material_icon");
