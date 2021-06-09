@@ -1,5 +1,6 @@
 function worksheet_planned_add_single(group, {today = WorksheetDate.today(), errors: super_errors} = {}) {
   var plan = group.get_today_worksheet_plan(today);
+  var options = group.get_worksheet_options();
   if (plan == null)
     return;
   var sheet = group.sheet;
@@ -15,7 +16,9 @@ function worksheet_planned_add_single(group, {today = WorksheetDate.today(), err
     if (plan_item.title == null) {
       plan_item.title = worksheet_blank_namer_(plan_item.date);
     }
-    WorksheetBuilder.build(group, sheet.getRange(1, last_column + 1), plan_item);
+    WorksheetBuilder.build( group,
+      sheet.getRange(1, last_column + 1),
+      Object.assign({}, options, plan_item) );
     last_column = sheet.getLastColumn();
   }
 }
