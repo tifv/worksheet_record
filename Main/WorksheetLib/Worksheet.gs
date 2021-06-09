@@ -503,6 +503,8 @@ Worksheet.marker = {start: "‹", end: "›"};
 
 Worksheet.initial = { // {{{
     data_width: 15,
+    sum_column: +2,
+    rating_column: +1,
     title: worksheet_blank_namer_(),
 }; // }}}
 
@@ -1814,6 +1816,14 @@ WorksheetBuilder.build = function(group, range, options) {
     /* options:
      *   data_width (number)
      *     default is initial.data_width
+     *   sum_column (integer)
+     *     +n means that the sum column will be at the n'th column from
+     *     the start of the worksheet
+     *     -n means that it will be at the end of the worksheet
+     *     0 means no sum column will be created
+     *     default is +2
+     *   rating_column (integer)
+     *     default is +1
      *   and other options listed below
      */
     if (group == null) {
@@ -1824,9 +1834,15 @@ WorksheetBuilder.build = function(group, range, options) {
     }
     if (options == null)
         options = {};
-    var {data_width = this.initial.data_width} = options;
+    var {
+        data_width = this.initial.data_width,
+        sum_column = this.initial.sum_column,
+        rating_column = this.initial.rating_column,
+    } = options;
     var sheet = group.sheet;
-    var full_width = data_width + 2 + 2;
+    var full_width = data_width + 2 +
+      Math.max(0, sum_column, rating_column) +
+      Math.max(0, -sum_column, -rating_column);
     var range_width = range.getNumColumns();
     if (range_width < full_width + 2) {
         group.sheetbuf.insert_columns_after(
@@ -1851,11 +1867,33 @@ function WorksheetBuilder(group, start, end, options) { // {{{
     this.group = group;
     this.sheet = group.sheet;
     this.options = this.rectify_options(options);
+    if (
+        options.rating_column != 0 &&
+        options.sum_column != 0 &&
+        options.sum_column == options.rating_column
+    ) {
+        throw new Error("sum and rating columns cannot coincide");
+    }
+    var
+        data_start = start + 1 + Math.max(0, +options.rating_column, +options.sum_column),
+        data_end   = end   - 1 - Math.max(0, -options.rating_column, -options.sum_column);
     this.worksheet = new this.constructor.Worksheet( group,
-        start, end, start + 3, end - 1 );
+        start, end, data_start, data_end );
     this.dim = this.worksheet.dim;
-    this.rating_column = this.dim.title;
-    this.sum_column = this.dim.title + 1;
+    if (options.rating_column != 0) {
+        this.rating_column = (options.rating_column > 0) ?
+            (this.dim.start + options.rating_column - 1) :
+            (this.dim.end   + options.rating_column + 1);
+    } else {
+        this.rating_column = null;
+    }
+    if (options.sum_column != 0) {
+        this.sum_column = (options.sum_column > 0) ?
+            (this.dim.start + options.sum_column - 1) :
+            (this.dim.end   + options.sum_column + 1);
+    } else {
+      this.sum_column = null;
+    }
     if (this.options.color_scheme == null) {
         this.color_scheme = this.group.get_color_scheme();
     } else {
@@ -1867,27 +1905,29 @@ function WorksheetBuilder(group, start, end, options) { // {{{
     this.init_title_range();
     this.init_data_range();
     this.init_label_range();
-    if (this.group.dim.max_row)
+    if (this.group.dim.max_row != null)
         this.init_max_range();
-    if (this.group.dim.weight_row)
+    if (this.group.dim.weight_row != null)
         this.init_weight_range();
-    this.init_rating_range();
-    this.init_sum_range();
-    if (this.group.dim.weight_row)
+    if (this.rating_column != null)
+        this.init_rating_range();
+    if (this.sum_column != null)
+        this.init_sum_range();
+    if (this.group.dim.weight_row != null && this.rating_column != null)
         this.init_metaweight_cell();
-    if (this.group.dim.mirror_row)
+    if (this.group.dim.mirror_row != null)
         this.init_mirror_range();
     if (options.category)
         this.worksheet.set_category( options.category,
             {ignore_sections: true} );
-    set_fixed_value_validation_(this.sheet.getRange(
-        this.group.dim.data_row, this.dim.data_start - 1,
-        this.group.dim.data_height, 1
-    ), "");
-    set_fixed_value_validation_(this.sheet.getRange(
-        this.group.dim.data_row, this.dim.data_end + 1,
-        this.group.dim.data_height, 1
-    ), "");
+    // set_fixed_value_validation_(this.sheet.getRange(
+    //     this.group.dim.data_row, this.dim.data_start - 1,
+    //     this.group.dim.data_height, 1
+    // ), "");
+    // set_fixed_value_validation_(this.sheet.getRange(
+    //     this.group.dim.data_row, this.dim.data_end + 1,
+    //     this.group.dim.data_height, 1
+    // ), "");
     this.init_borders();
     this.add_cf_rules();
     this.worksheet.add_column_group();
@@ -1898,6 +1938,8 @@ WorksheetBuilder.prototype.rectify_options = function(options) {
     if (options == null)
         options = {};
     ({
+        sum_column: options.sum_column = this.constructor.initial.sum_column,
+        rating_column: options.rating_column = this.constructor.initial.rating_column,
         title: options.title = this.constructor.initial.title,
         date: options.date = null,
         color_scheme: options.color_scheme = null,
@@ -1919,7 +1961,7 @@ WorksheetBuilder.prototype.set_column_widths = function() {
     this.sheet.setColumnWidth(this.dim.marker_end, 5);
     if (this.dim.end > this.dim.marker_end) {
         this.sheet.setColumnWidths(
-            this.dim.marker_end, this.dim.end - this.dim.marker_end, 30 );
+            this.dim.marker_end + 1, this.dim.end - this.dim.marker_end, 30 );
     }
     this.sheet.setColumnWidth(this.dim.end + 1, 13);
 } // }}}
@@ -2181,26 +2223,54 @@ WorksheetBuilder.prototype.init_borders = function() {
             left:  {open: false, outer: true},
             right: {open: false, outer: true},
         } );
-    var rating_sum_range = this.sheet.getRange(
-        this.group.dim.data_row, this.dim.start,
-        this.group.dim.data_height, 2 );
-    rating_sum_range
-        .setBorder(true, true, true, true, null, null)
-        .setBorder( null, null, null, null, true, null,
-            "black", SpreadsheetApp.BorderStyle.DOTTED );
-    rating_sum_range.offset(
-            this.group.dim.label_row - this.group.dim.data_row, 0, 1 )
-        .setBorder(true, true, true, true, null, null)
-        .setBorder( null, null, null, null, true, null,
-            "black", SpreadsheetApp.BorderStyle.DOTTED );
-    if (this.group.dim.max_row != null) {
-        rating_sum_range.offset(
-                this.group.dim.max_row - this.group.dim.data_row, 0, 1 )
+    var rating_sum_ranges = [];
+    if (
+        this.rating_column != null &&
+        this.sum_column != null && (
+            this.rating_column - this.sum_column == -1 ||
+            this.rating_column - this.sum_column == +1
+        )
+    ) {
+        if (this.rating_column - this.sum_column == -1) {
+            rating_sum_ranges.push(this.sheet.getRange(
+                this.group.dim.data_row, this.rating_column,
+                this.group.dim.data_height, 2 ));
+        } else {
+            rating_sum_ranges.push(this.sheet.getRange(
+                this.group.dim.data_row, this.sum_column,
+                this.group.dim.data_height, 2 ));
+        }
+    } else {
+        if (this.rating_column != null) {
+            rating_sum_ranges.push(this.sheet.getRange(
+                this.group.dim.data_row, this.rating_column,
+                this.group.dim.data_height, 1 ));
+        }
+        if (this.sum_column != null) {
+            rating_sum_ranges.push(this.sheet.getRange(
+                this.group.dim.data_row, this.sum_column,
+                this.group.dim.data_height, 1 ));
+        }
+    }
+    for (let rating_sum_range of rating_sum_ranges) {
+        rating_sum_range
             .setBorder(true, true, true, true, null, null)
             .setBorder( null, null, null, null, true, null,
                 "black", SpreadsheetApp.BorderStyle.DOTTED );
+        rating_sum_range.offset(
+                this.group.dim.label_row - this.group.dim.data_row, 0, 1 )
+            .setBorder(true, true, true, true, null, null)
+            .setBorder( null, null, null, null, true, null,
+                "black", SpreadsheetApp.BorderStyle.DOTTED );
+        if (this.group.dim.max_row != null) {
+            rating_sum_range.offset(
+                    this.group.dim.max_row - this.group.dim.data_row, 0, 1 )
+                .setBorder(true, true, true, true, null, null)
+                .setBorder( null, null, null, null, true, null,
+                    "black", SpreadsheetApp.BorderStyle.DOTTED );
+        }
     }
-    if (this.group.dim.weight_row != null) {
+    if (this.group.dim.weight_row != null && this.rating_column != null) {
         // metaweight cell
         this.sheet.getRange(this.group.dim.weight_row, this.rating_column)
             .setBorder(true, true, true, true, null, null);
@@ -2210,8 +2280,7 @@ WorksheetBuilder.prototype.init_borders = function() {
         this.dim.start,
         this.group.dim.sheet_height - this.group.dim.title_row + 1,
         this.dim.width
-    )
-        .setBorder(true, true, true, true, null, null);
+    ).setBorder(true, true, true, true, null, null);
 } // }}}
 
 // WorksheetBuilder().add_cf_rules {{{
@@ -2221,7 +2290,9 @@ WorksheetBuilder.prototype.add_cf_rules = function() {
     if (this.group.dim.weight_row != null) {
         cfrules.push(this.worksheet.new_cfrule_weight(this.color_scheme));
     }
-    cfrules.push(this.worksheet.new_cfrule_rating(this.color_scheme));
+    if (this.rating_column != null || this.sum_column != null) {
+        cfrules.push(this.worksheet.new_cfrule_rating(this.color_scheme));
+    }
     ConditionalFormatting.merge(this.sheet, ...cfrules);
 } // }}}
 

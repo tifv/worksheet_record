@@ -1,12 +1,13 @@
 function action_worksheet_insert() {
   try {
     var [worksheet, lock] = ActionHelpers.get_active_worksheet({lock: "acquire"});
+    var options = worksheet.group.get_worksheet_options();
     var note_data = worksheet.get_title_note_data();
     // XXX check that the next column exists and is empty
     WorksheetBuilder.build(
       worksheet.group,
       worksheet.sheet.getRange(1, worksheet.dim.end + 1),
-      {date: note_data.get("date")} );
+      Object.assign({}, options, {date: note_data.get("date")}) );
     lock.releaseLock();
     worksheet.sheet.getParent().toast(
       "Исправьте дату в примечании к заголовку таблички, если требуется." );
@@ -19,6 +20,7 @@ function action_worksheet_add() {
   try {
     var [group, lock] = ActionHelpers.get_active_group({lock: "acquire"});
     var sheet = group.sheet;
+    var options = group.get_worksheet_options();
     var last_column = sheet.getLastColumn();
     {
       let frozen_columns = sheet.getFrozenColumns();
@@ -33,7 +35,7 @@ function action_worksheet_add() {
     WorksheetBuilder.build( group,
       sheet.getRange( 1, last_column + 1,
         1, group.sheetbuf.dim.sheet_width - last_column ),
-      {date: date} );
+      Object.assign({}, options, {date: date}) );
     lock.releaseLock();
     group.sheet.getParent().toast(
       "Дата: " + date.format() + "; " +
@@ -231,13 +233,13 @@ function action_worksheet_planned_add(group_name) {
 
 function action_worksheet_convert_to_olympiad() {
   if (!User.admin_is_acquired()) {
-        const ui = SpreadsheetApp.getUi();
-        let response_btn = ui.alert( "Конвертация в олимпиаду",
-            "Это труднообратимая операция.",
-            ui.ButtonSet.OK_CANCEL );
-        if (response_btn != ui.Button.OK) {
-            return;
-        }
+    const ui = SpreadsheetApp.getUi();
+    let response_btn = ui.alert( "Конвертация в олимпиаду",
+      "Это труднообратимая операция.",
+      ui.ButtonSet.OK_CANCEL );
+    if (response_btn != ui.Button.OK) {
+      return;
+    }
   }
   try {
     var [worksheet, lock] = ActionHelpers.get_active_worksheet({lock: "acquire"});

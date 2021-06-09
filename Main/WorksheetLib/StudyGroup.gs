@@ -162,12 +162,13 @@ return {
 var StudyGroup = function() { // namespace {{{1
 
 StudyGroup.metadata_keys = { // {{{
-    main:           "worksheet_group",
-    filename:       "worksheet_group-filename",
-    color_scheme:   "worksheet_group-color_scheme",
-    timetable:      "worksheet_group-timetable",
-    worksheet_plan: "worksheet_group-worksheet_plan",
-    student_count:  "worksheet_group-student_count",
+    main:              "worksheet_group",
+    filename:          "worksheet_group-filename",
+    color_scheme:      "worksheet_group-color_scheme",
+    worksheet_options: "worksheet_group-worksheet_options",
+    timetable:         "worksheet_group-timetable",
+    worksheet_plan:    "worksheet_group-worksheet_plan",
+    student_count:     "worksheet_group-student_count",
 }; // }}}
 
 // StudyGroup constructor (sheet, name) {{{
@@ -393,6 +394,26 @@ StudyGroup.prototype.set_color_scheme = function(color_scheme) {
     color_scheme = ColorSchemes.copy(color_scheme, ["name"]);
     SheetMetadata.set_object( this.sheet,
         this.constructor.metadata_keys.color_scheme, color_scheme );
+} // }}}
+
+// StudyGroup().get_worksheet_options {{{
+StudyGroup.prototype.get_worksheet_options = function() {
+    var worksheet_options = SheetMetadata.get_object( this.sheet,
+        this.constructor.metadata_keys.worksheet_options );
+    if (worksheet_options == null)
+        return null;
+    return worksheet_options;
+} // }}}
+
+// StudyGroup().set_worksheet_options (color_scheme) {{{
+StudyGroup.prototype.set_worksheet_options = function(worksheet_options) {
+    if (worksheet_options == null) {
+        SheetMetadata.unset( this.sheet,
+            this.constructor.metadata_keys.worksheet_options );
+        return;
+    }
+    SheetMetadata.set_object( this.sheet,
+        this.constructor.metadata_keys.worksheet_options, worksheet_options );
 } // }}}
 
 // StudyGroup().get_timetable {{{

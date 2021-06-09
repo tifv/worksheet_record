@@ -346,3 +346,13 @@ function test_set_timetables() {
   }
 }
 
+function test_set_minimal_worksheet() {
+  try {
+    var [group, lock] = ActionHelpers.get_active_group({lock: "acquire"});
+    group.set_worksheet_options({rating_column: 0, sum_column: +1});
+    lock.releaseLock();
+  } catch (error) {
+    report_error(error);
+  }
+}
+
