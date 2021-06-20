@@ -1832,17 +1832,13 @@ WorksheetBuilder.build = function(group, range, options) {
     } else if (!(group instanceof StudyGroup)) {
         throw new Error("Worksheet build: type error (group)");
     }
-    if (options == null)
-        options = {};
-    var {
-        data_width = this.initial.data_width,
-        sum_column = this.initial.sum_column,
-        rating_column = this.initial.rating_column,
-    } = options;
+    console.log(options);
+    options = this.rectify_options(options, group);
+    console.log(options);
     var sheet = group.sheet;
-    var full_width = data_width + 2 +
-      Math.max(0, sum_column, rating_column) +
-      Math.max(0, -sum_column, -rating_column);
+    var full_width = options.data_width + 2 +
+      Math.max(0, +options.sum_column, +options.rating_column) +
+      Math.max(0, -options.sum_column, -options.rating_column);
     var range_width = range.getNumColumns();
     if (range_width < full_width + 2) {
         group.sheetbuf.insert_columns_after(
@@ -1861,22 +1857,18 @@ WorksheetBuilder.build = function(group, range, options) {
  *         default will use group color scheme
  *     category (string)
  *         default is not to set category
+ *     colgroup (boolean)
+ *         whether to create a column group
+ *         default is true
  * }}} */
 
 function WorksheetBuilder(group, start, end, options) { // {{{
     this.group = group;
     this.sheet = group.sheet;
-    this.options = this.rectify_options(options);
-    if (
-        options.rating_column != 0 &&
-        options.sum_column != 0 &&
-        options.sum_column == options.rating_column
-    ) {
-        throw new Error("sum and rating columns cannot coincide");
-    }
+    this.options = options;
     var
-        data_start = start + 1 + Math.max(0, +options.rating_column, +options.sum_column),
-        data_end   = end   - 1 - Math.max(0, -options.rating_column, -options.sum_column);
+        data_start = start + 1 + Math.max(0, +this.options.rating_column, +this.options.sum_column),
+        data_end   = end   - 1 - Math.max(0, -this.options.rating_column, -this.options.sum_column);
     this.worksheet = new this.constructor.Worksheet( group,
         start, end, data_start, data_end );
     this.dim = this.worksheet.dim;
@@ -1920,33 +1912,45 @@ function WorksheetBuilder(group, start, end, options) { // {{{
     if (options.category)
         this.worksheet.set_category( options.category,
             {ignore_sections: true} );
-    // set_fixed_value_validation_(this.sheet.getRange(
-    //     this.group.dim.data_row, this.dim.data_start - 1,
-    //     this.group.dim.data_height, 1
-    // ), "");
-    // set_fixed_value_validation_(this.sheet.getRange(
-    //     this.group.dim.data_row, this.dim.data_end + 1,
-    //     this.group.dim.data_height, 1
-    // ), "");
+    set_fixed_value_validation_(this.sheet.getRange(
+        this.group.dim.data_row, this.dim.data_start - 1,
+        this.group.dim.data_height, 1
+    ), "");
+    set_fixed_value_validation_(this.sheet.getRange(
+        this.group.dim.data_row, this.dim.data_end + 1,
+        this.group.dim.data_height, 1
+    ), "");
     this.init_borders();
     this.add_cf_rules();
-    this.worksheet.add_column_group();
+    if (options.colgroup)
+        this.worksheet.add_column_group();
 } // }}}
 
-// WorksheetBuilder().rectify_options (options) => (options) {{{
-WorksheetBuilder.prototype.rectify_options = function(options) {
+// WorksheetBuilder.rectify_options (options) => (options) {{{
+WorksheetBuilder.rectify_options = function(options, group) {
+    if (group == null || !(group instanceof StudyGroup))
+        throw new Error("invalid argument");
     if (options == null)
         options = {};
     ({
-        sum_column: options.sum_column = this.constructor.initial.sum_column,
-        rating_column: options.rating_column = this.constructor.initial.rating_column,
-        title: options.title = this.constructor.initial.title,
+        data_width: options.data_width = this.initial.data_width,
+        sum_column: options.sum_column = this.initial.sum_column,
+        rating_column: options.rating_column = this.initial.rating_column,
+        title: options.title = this.initial.title,
         date: options.date = null,
         color_scheme: options.color_scheme = null,
         category: options.category = null,
+        colgroup: options.colgroup = null,
     } = options);
-    if (this.group.dim.category_row == null)
+    if (group.dim.category_row == null)
         options.category = null;
+    if (
+        options.rating_column != 0 &&
+        options.sum_column != 0 &&
+        options.sum_column == options.rating_column
+    ) {
+        throw new Error("sum and rating columns cannot coincide");
+    }
     return options;
 } // }}}
 

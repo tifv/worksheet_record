@@ -101,13 +101,14 @@ function worksheet_planned_add_forever_all() {
   const spreadsheet = MainSpreadsheet.get();
   if (spreadsheet == null)
     throw new Error("Main spreadsheet was not configured");
-  var today = WorksheetDate.today();
   for (let trigger of ScriptApp.getProjectTriggers()) {
     if (trigger.getHandlerFunction().startsWith("worksheet_planned_add."))
       ScriptApp.deleteTrigger(trigger);
   }
   var hour = 3, minute = 15;
   for (let group of StudyGroup.list(spreadsheet)) {
+    if (group.get_worksheet_plan() == null)
+      continue;
     ScriptApp.newTrigger("worksheet_planned_add.gid$" + group.sheet.getSheetId())
       .timeBased()
         .everyDays(1)

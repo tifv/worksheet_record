@@ -7,7 +7,7 @@ function action_worksheet_insert() {
     WorksheetBuilder.build(
       worksheet.group,
       worksheet.sheet.getRange(1, worksheet.dim.end + 1),
-      Object.assign({}, options, {date: note_data.get("date")}) );
+      Object.assign({}, {date: note_data.get("date")}, options) );
     lock.releaseLock();
     worksheet.sheet.getParent().toast(
       "Исправьте дату в примечании к заголовку таблички, если требуется." );
@@ -35,7 +35,7 @@ function action_worksheet_add() {
     WorksheetBuilder.build( group,
       sheet.getRange( 1, last_column + 1,
         1, group.sheetbuf.dim.sheet_width - last_column ),
-      Object.assign({}, options, {date: date}) );
+      Object.assign({}, {date: date}, options) );
     lock.releaseLock();
     group.sheet.getParent().toast(
       "Дата: " + date.format() + "; " +
@@ -205,6 +205,7 @@ function action_worksheet_planned_add(group_name) {
     var lock = ActionHelpers.acquire_lock();
     const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     var group = StudyGroup.find_by_name(spreadsheet, group_name);
+    var options = group.get_worksheet_options();
     var today = WorksheetDate.today();
     var plan = group.get_today_worksheet_plan(today);
     if (plan == null)
@@ -222,7 +223,9 @@ function action_worksheet_planned_add(group_name) {
       if (plan_item.title == null) {
         plan_item.title = worksheet_blank_namer_(plan_item.date);
       }
-      WorksheetBuilder.build(group, sheet.getRange(1, last_column + 1), plan_item);
+      WorksheetBuilder.build( group,
+        sheet.getRange(1, last_column + 1),
+        Object.assign({}, options, plan_item) );
       last_column = sheet.getLastColumn();
     }
     lock.releaseLock();

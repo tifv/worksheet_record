@@ -4,6 +4,9 @@
 • Remake sidebar UI to emphasize source links
 • various uploads tools (renaming, stabilization) in Adminhelper
 • detect that frozen rows were probably unfrozen, and suggest to restore them
+• Factor out WorksheetSectionBuilder and provide worksheet options to it (such as date)
+  • or make a separate group options for sections
+  • or check whether the worksheet has a date, and if it doesn't, default to empty date.
 
 # Priority TODO (2)
 • make markers invisible in published mode (add a cf rule to whiten them).

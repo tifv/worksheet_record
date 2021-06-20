@@ -136,11 +136,11 @@ function expand_columns_forever_optimistic() {
   var now = new Date();
   now.setSeconds(0);
   var date = new Date(now.valueOf());
-  console.log(times);
+  console.log(Array.from(times.keys()));
   for (let time of times) {
     date.setHours(0);
     date.setMinutes(time + 5);
-    console.log(date.getHours(), date.getMinutes());
+    console.log(date.getHours() + ":" + date.getMinutes());
     ScriptApp.newTrigger("expand_columns_fuzzy.fuzzy$15")
       .timeBased().everyDays(1)
       .atHour(date.getHours())

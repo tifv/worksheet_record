@@ -34,9 +34,13 @@ function init_add_study_group_(name) {
     ],
     category_musthave: true,
   });
+  var name_range = group.sheet.getRange(group.dim.mirror_row, 2);
+  name_range.setNumberFormat("@STRING@");
+  name_range.setValue(name);
 }
 
-function init_add_group_names() {
+/*
+function init_fix_group_names() {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   for (let group of StudyGroup.list(spreadsheet)) {
     group.sheet.getRange(group.dim.mirror_row, 2)
@@ -44,6 +48,7 @@ function init_add_group_names() {
     group.sheetbuf.set_value("mirror_row", 2, group.name)
   }
 }
+*/
 
 function test_add_study_group_antirow(iteratee) {
   for (var i = 0; i < 16; ++i) {
@@ -349,7 +354,9 @@ function test_set_timetables() {
 function test_set_minimal_worksheet() {
   try {
     var [group, lock] = ActionHelpers.get_active_group({lock: "acquire"});
-    group.set_worksheet_options({rating_column: 0, sum_column: +1});
+    console.log("Before: " + JSON.stringify(group.get_worksheet_options()));
+    group.set_worksheet_options({rating_column: 0, sum_column: +1, date: null, colgroup: false});
+    console.log("After: " + JSON.stringify(group.get_worksheet_options()));
     lock.releaseLock();
   } catch (error) {
     report_error(error);
