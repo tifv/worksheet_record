@@ -45,7 +45,7 @@ function action_worksheet_add() {
   }
 }
 
-function action_worksheet_recolor() {
+function action_worksheet_recolor_dialog() {
   try {
     var group = ActionHelpers.get_active_group();
     var template = HtmlService.createTemplateFromFile(
@@ -63,42 +63,43 @@ function action_worksheet_recolor() {
   }
 }
 
-function action_worksheet_recolor_finish(group_name, color_scheme, {scope, group: group_options}) {
+function action_worksheet_recolor_single(color_scheme) {
+  var [worksheet, lock] = ActionHelpers.get_active_worksheet({lock: "acquire"});
+  worksheet.recolor_cf_rules(color_scheme);
+  lock.releaseLock();
+}
+
+function action_worksheet_recolor_group(group_name, color_scheme, options = {}) {
   var lock = ActionHelpers.acquire_lock();
-  if (scope == "worksheet") {
-    var worksheet = ActionHelpers.get_active_worksheet({lock: "preserve"});
-    worksheet.recolor_cf_rules(color_scheme);
-  } else if (scope == "group") {
-    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    var group = StudyGroup.find_by_name(spreadsheet, group_name);
-    var worksheet_start_col = Worksheet.find_start_col(group);
-    var cfrules = ConditionalFormatting.RuleList.load(group.sheet);
-    if (group_options.rating) {
-      let end_col = (worksheet_start_col != null) ?
-        worksheet_start_col : group.sheetbuf.dim.sheet_width;
-      cfrules.replace({ type: "gradient",
-        condition: group.get_cfcondition_rating(),
-        locations: [
-          [group.dim.data_row, 1, group.dim.data_height, end_col],
-          [group.dim.max_row, 1, 1, end_col],
-        ],
-      }, group.get_cfeffect_rating(color_scheme));
-    }
-    if (group_options.worksheets && worksheet_start_col != null) {
-      Worksheet.recolor_cf_rules(group, color_scheme, cfrules, worksheet_start_col);
-    }
-    if (group_options.group) {
-      if (color_scheme.origin == "group") {
-        // no-op, this should equal to the current scheme
-        // XXX no, this is incorrect assumption
-      } else if (color_scheme.origin == "default") {
-        group.set_color_scheme(null);
-      } else {
-        group.set_color_scheme(color_scheme);
-      }
-    }
-    cfrules.save(group.sheet);
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var group = StudyGroup.find_by_name(spreadsheet, group_name);
+  var worksheet_start_col = Worksheet.find_start_col(group);
+  var cfrules = ConditionalFormatting.RuleList.load(group.sheet);
+  if (options.rating) {
+    let end_col = (worksheet_start_col != null) ?
+      worksheet_start_col : group.sheetbuf.dim.sheet_width;
+    cfrules.replace({ type: "gradient",
+      condition: group.get_cfcondition_rating(),
+      locations: [
+        [group.dim.data_row, 1, group.dim.data_height, end_col],
+        [group.dim.max_row, 1, 1, end_col],
+      ],
+    }, group.get_cfeffect_rating(color_scheme));
   }
+  if (options.worksheets && worksheet_start_col != null) {
+    Worksheet.recolor_cf_rules(group, color_scheme, cfrules, worksheet_start_col);
+  }
+  if (options.group) {
+    if (color_scheme.origin == "group") {
+      // no-op, this should equal to the current scheme
+      // XXX no, this is incorrect assumption
+    } else if (color_scheme.origin == "default") {
+      group.set_color_scheme(null);
+    } else {
+      group.set_color_scheme(color_scheme);
+    }
+  }
+  cfrules.save(group.sheet);
   lock.releaseLock();
 }
 

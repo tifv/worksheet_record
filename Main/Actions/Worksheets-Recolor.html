@@ -178,23 +178,29 @@ async function worksheet_recolor() {
     .appendTo("#color_schemes--control");
   $("#color_schemes--control > button").prop('disabled', true);
   try {
-    await new Promise((resolve, reject) =>
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)
-        .action_worksheet_recolor_finish(
-          group_name,
-          color_scheme,
-          {
-            scope: $(".recolor--scope[name=\"recolor--scope\"]:checked").val(),
-            group: {
+    if ($(".recolor--scope[name=\"recolor--scope\"]:checked").val() == "worksheet") {
+      await new Promise((resolve, reject) =>
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject)
+          .action_worksheet_recolor_single(color_scheme)
+      );
+    } else {
+      await new Promise((resolve, reject) =>
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject)
+          .action_worksheet_recolor_group(
+            group_name,
+            color_scheme,
+            {
               worksheets: $("#recolor--group__worksheets").prop('checked'),
               rating: $("#recolor--group__rating").prop('checked'),
               group: $("#recolor--group__group").prop('checked'),
             }
-          }
-        )
-    );
+          )
+      );
+    }
   } catch(error) {
     $("<div/>")
       .addClass("error")
