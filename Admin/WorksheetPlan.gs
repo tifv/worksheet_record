@@ -29,7 +29,9 @@ function worksheet_planned_add_all() {
   var errors = [];
   for (let group of StudyGroup.list(spreadsheet)) {
     try {
-      worksheet_planned_add_single(group, {today: today, errors: errors});
+      worksheet_planned_add_single(group, {
+        today: WorksheetDate.from_object(today),
+        errors: errors });
     } catch (error) {
       console.error(error);
       errors.push(error);
