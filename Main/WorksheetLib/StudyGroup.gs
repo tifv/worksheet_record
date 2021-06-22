@@ -171,6 +171,8 @@ StudyGroup.metadata_keys = { // {{{
     student_count:     "worksheet_group-student_count",
 }; // }}}
 
+const student_count_note = "количество участников";
+
 // StudyGroup constructor (sheet, name) {{{
 function StudyGroup(sheet, name = null) {
     if (sheet == null) {
@@ -198,8 +200,7 @@ define_lazy_properties_(StudyGroup.prototype, {
         return StudyGroupDim.load(this.sheet);
     },
     student_count_cell: function() {
-        return SheetMetacell.get( this.sheet,
-            this.constructor.metadata_keys.student_count );
+        return this.get_student_count_cell();
     }
 }); // }}}
 
@@ -247,7 +248,7 @@ StudyGroup.prototype.add_metadatum = function(options = {}) {
         skip_remove: options.skip_remove = false,
             // make the call faster by not trying to remove old metadata
     } = options);
-    if (!options || !options.skip_remove) {
+    if (!options.skip_remove) {
         var metadata = this.sheet.createDeveloperMetadataFinder()
             .withLocationType(
                 SpreadsheetApp.DeveloperMetadataLocationType.SHEET )
@@ -262,19 +263,6 @@ StudyGroup.prototype.add_metadatum = function(options = {}) {
     this.sheet.addDeveloperMetadata(
         this.constructor.metadata_keys.main,
         SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT );
-} // }}}
-
-// StudyGroup().set_student_count_cell (range) {{{
-StudyGroup.prototype.set_student_count_cell = function(range) {
-    Object.defineProperty( this, "student_count_cell",
-      {configurable: true, value: range} );
-    if (range == null) {
-        SheetMetacell.unset( this.sheet,
-            this.constructor.metadata_keys.student_count );
-        return;
-    }
-    SheetMetacell.set( this.sheet,
-        this.constructor.metadata_keys.student_count, range );
 } // }}}
 
 // StudyGroup().check (options) {{{
@@ -298,6 +286,17 @@ StudyGroup.prototype.check = function(options = {}) {
     }
     if (options.dim) {
       StudyGroupDim.load(this.sheet);
+    }
+} // }}}
+
+// StudyGroup().recover_metadata {{{
+StudyGroup.prototype.recover_metadata = function() {
+    this.add_metadatum();
+    var student_count_cell = this.get_student_count_cell();
+    if (student_count_cell == null) {
+        student_count_cell = this.recover_student_count_cell();
+        if (student_count_cell != null)
+            this.set_student_count_cell(student_count_cell);
     }
 } // }}}
 
@@ -351,6 +350,46 @@ StudyGroup.list_names = function*(spreadsheet) {
     for (let workgroup of StudyGroup.list(spreadsheet)) {
         yield workgroup.name;
     }
+} // }}}
+
+// StudyGroup().get_student_count_cell {{{
+StudyGroup.prototype.get_student_count_cell = function() {
+    return SheetMetacell.get( this.sheet,
+        this.constructor.metadata_keys.student_count );
+} // }}}
+
+// StudyGroup().set_student_count_cell (range) {{{
+StudyGroup.prototype.set_student_count_cell = function(range) {
+    Object.defineProperty( this, "student_count_cell",
+      {configurable: true, value: range} );
+    if (range == null) {
+        SheetMetacell.unset( this.sheet,
+            this.constructor.metadata_keys.student_count );
+        return;
+    }
+    SheetMetacell.set( this.sheet,
+        this.constructor.metadata_keys.student_count, range );
+    range.setNote(student_count_note);
+} // }}}
+
+// StudyGroup().recover_student_count_cell {{{
+StudyGroup.prototype.recover_student_count_cell = function() {
+    var
+        frozen_height = this.dim.frozen_height,
+        frozen_width = this.sheet.getFrozenColumns();
+    if (frozen_height == 0 || frozen_width == 0)
+        return null;
+    var frozen_range = this.sheet.getRange( 1, 1,
+        frozen_height, frozen_width );
+    var notes = frozen_range.getNotes();
+    for (let i = 0; i < notes.length; ++i) {
+        let row = notes[i];
+        for (let j = 0; j < row.length; ++j) {
+            if (row[j] == student_count_note)
+                return frozen_range.offset(i, j, 1, 1);
+        }
+    }
+    return null;
 } // }}}
 
 // StudyGroup().get_filename {{{
@@ -969,7 +1008,7 @@ StudyGroupBuilder.prototype.init_columns = function() {
         .setBorder(true, true, true, true, null, null);
     sheet.setColumnWidths(
         frozen_columns + 1, max_columns - frozen_columns, 21 );
-    return {student_count_cell: student_count_cell};
+    return {student_count_cell};
 } // }}}
 
 // StudyGroupBuilder().allocate_columns (num_columns) => (start_column) {{{

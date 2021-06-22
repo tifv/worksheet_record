@@ -17,7 +17,7 @@ function sidebar_load_contents(group_name, {continuation = null, cached = []} = 
   // cached means that group_name is null, and contains a list of group names that
   // are already loaded. If active group is in the list, no further loading is necessary.
   // XXX avoid modifying the spreadsheet at all (when getting location)
-  // if it is unaviodable, return whatever contents is already scanned,
+  // if it is unavoidable, return whatever contents is already scanned,
   // and set special parameter to the continuation token that will trigger
   // lock acquisition on the next iteration.
   var start_time = (new Date()).getTime();
@@ -51,7 +51,7 @@ function sidebar_load_contents(group_name, {continuation = null, cached = []} = 
     } = continuation);
   }
   if (validate)
-    var lock = ActionHelpers.acquire_lock();
+    var lock = ActionLock.acquire();
   iterate_worksheets:
   for (let worksheet of Worksheet.list(group, start_column)) {
     let worksheet_title_id = worksheet.get_title_metadata_id({
@@ -107,39 +107,39 @@ function sidebar_load_contents_validate(contents_item) {
       entity.get_title_metadata_id({validate: true});
     }
   }
-  var lock = ActionHelpers.acquire_lock();
-  var section_by_note = null, section_by_id = null, sections = [];
-  group.sheetbuf.ensure_loaded(column, column + width - 1);
-  var column_by_note = group.sheetbuf.find_closest("notes", "title_row", title_note, column);
-  if (column_by_note != null) {
-    section_by_note = Worksheet.Section.surrounding( group, null,
-      group.sheet.getRange(1, column_by_note) );
-    sections.push(section_by_note);
-  }
-  if (section_by_note != null && title_id == get_validated_id(section_by_note)) {
-    section_by_id = section_by_note;
-    section_by_note = null;
-  } else {
-    let column_by_id = Worksheet.find_title_column_by_id(group, title_id);
-    if (column_by_id != null) {
-      section_by_id = Worksheet.Section.surrounding( group, null,
-        group.sheet.getRange(1, column_by_id) );
-      if (title_id != get_validated_id(section_by_id)) {
-        // metadatum seems to be misplaced, we better remove it
-        group.sheet.createDeveloperMetadataFinder()
-          .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.COLUMN)
-          .withId(title_id)
-          .find().forEach(metadatum => { metadatum.remove(); });
+  return ActionLock.with_lock(() => {
+    var section_by_note = null, section_by_id = null, sections = [];
+    group.sheetbuf.ensure_loaded(column, column + width - 1);
+    var column_by_note = group.sheetbuf.find_closest("notes", "title_row", title_note, column);
+    if (column_by_note != null) {
+      section_by_note = Worksheet.Section.surrounding( group, null,
+        group.sheet.getRange(1, column_by_note) );
+      sections.push(section_by_note);
+    }
+    if (section_by_note != null && title_id == get_validated_id(section_by_note)) {
+      section_by_id = section_by_note;
+      section_by_note = null;
+    } else {
+      let column_by_id = Worksheet.find_title_column_by_id(group, title_id);
+      if (column_by_id != null) {
+        section_by_id = Worksheet.Section.surrounding( group, null,
+          group.sheet.getRange(1, column_by_id) );
+        if (title_id != get_validated_id(section_by_id)) {
+          // metadatum seems to be misplaced, we better remove it
+          group.sheet.createDeveloperMetadataFinder()
+            .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.COLUMN)
+            .withId(title_id)
+            .find().forEach(metadatum => { metadatum.remove(); });
+        }
       }
     }
-  }
-  var contents = [];
-  for (let section of sections) {
-    validate_id(section.worksheet);
-    contents.push(sidebar_load_contents_section_(section, true));
-  }
-  lock.releaseLock();
-  return contents;
+    var contents = [];
+    for (let section of sections) {
+      validate_id(section.worksheet);
+      contents.push(sidebar_load_contents_section_(section, true));
+    }
+    return contents;
+  });
 }
 
 function sidebar_load_contents_section_(section, validated = false) {

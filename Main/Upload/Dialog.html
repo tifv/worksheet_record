@@ -724,7 +724,7 @@ class PDFLoader extends URLLoaderMixin(ResourceLoader) {
   }
 }
 
-const SRC_ERROR = {};
+const SRC_ERROR = new Object;
 
 class SourceLoader extends TextLoaderMixin(URLLoaderMixin(ResourceLoader)) {
   constructor(element) {
@@ -906,7 +906,7 @@ function split_filename(filename) {
     filename.substring(ext_index) ];
 }
 
-const SRC_EMPTY = {};
+const SRC_EMPTY = new Object;
 
 UploadDialog.prototype.upload_start = async function() {
   var title = this.upload_prepare_title();
@@ -917,7 +917,19 @@ UploadDialog.prototype.upload_start = async function() {
       pdf_resource == null || src_resource == null )
     return;
   if (src_resource === SRC_EMPTY) {
-    src_resource = null;
+    if (!this.allow_without_src) {
+      this.allow_without_src = true;
+      this.element.querySelector(":scope .upload_dialog--upload_button")
+        .textContent = "Загрузить только PDF :(";
+      this.src_loader.addEventListener('change', () => {
+        this.allow_without_src = false;
+        this.element.querySelector(":scope .upload_dialog--upload_button")
+          .textContent = "Загрузить листочек";
+      }, {once: true});
+      return;
+    } else {
+      src_resource = null;
+    }
   }
 
   this.element.querySelector(".upload_dialog--phase__input")
@@ -971,22 +983,13 @@ UploadDialog.prototype.upload_prepare_pdf = function() {
 }
 
 UploadDialog.prototype.upload_prepare_src = function() {
-  var resource = this.src_loader.get_resource_src(this.allow_without_src);
+  var resource = this.src_loader.get_resource_src();
   if (resource === SRC_ERROR) {
     return null;
   } else if (resource == null) {
-    if (this.allow_without_src)
-      return SRC_EMPTY;
-    animate_warning(this.src_loader.element);
-    this.allow_without_src = true;
-    this.element.querySelector(":scope .upload_dialog--upload_button")
-      .textContent = "Загрузить только PDF :(";
-    this.src_loader.addEventListener('change', () => {
-      this.allow_without_src = false;
-      this.element.querySelector(":scope .upload_dialog--upload_button")
-        .textContent = "Загрузить листочек";
-    }, {once: true});
-    return null;
+    if (!this.allow_without_src)
+      animate_warning(this.src_loader.element);
+    return SRC_EMPTY;
   }
   return resource;
 }

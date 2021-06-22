@@ -178,29 +178,29 @@ function upload_finish({
   ]));
   const group = StudyGroup.find_by_name(spreadsheet, group_name);
   const sheet = group.sheet;
-  var lock = ActionHelpers.acquire_lock();
-  var metadata = sheet.createDeveloperMetadataFinder()
-    .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.COLUMN)
-    .withId(title_id)
-    .find();
-  if (metadata.length < 1)
-    throw new Error("upload_worksheet: cannot find title to update");
-  var column = metadata[0].getLocation().getColumn().getColumn();
-  var cell = sheet.getRange(group.dim.title_row, column);
-  function col_R1C1(key) {
-    return "R" + uploads.first_row + "C" + uploads.key_columns.get(key) + ":C" + uploads.key_columns.get(key);
-  }
-  cell
-    .setFormulaR1C1("=hyperlink(" +
-      "filter(" +
-        "'" + uploads.name + "'!" + col_R1C1("pdf") + ";" +
-        //"'" + uploads.name + "'!" + col_R1C1("initial_pdf") + "=\"" + pdf_url + "\"" + ";" +
-        "'" + uploads.name + "'!" + col_R1C1("id") + "=\"" + id + "\"" +
-      ");" +
-      "\"" + cell.getValue() + "\"" +
-    ")")
-    .setShowHyperlink(true);
-  lock.releaseLock();
+  ActionLock.with_lock(() => {
+    var metadata = sheet.createDeveloperMetadataFinder()
+      .withLocationType(SpreadsheetApp.DeveloperMetadataLocationType.COLUMN)
+      .withId(title_id)
+      .find();
+    if (metadata.length < 1)
+      throw new Error("upload_worksheet: cannot find title to update");
+    var column = metadata[0].getLocation().getColumn().getColumn();
+    var cell = sheet.getRange(group.dim.title_row, column);
+    function col_R1C1(key) {
+      return "R" + uploads.first_row + "C" + uploads.key_columns.get(key) + ":C" + uploads.key_columns.get(key);
+    }
+    cell
+      .setFormulaR1C1("=hyperlink(" +
+        "filter(" +
+          "'" + uploads.name + "'!" + col_R1C1("pdf") + ";" +
+          //"'" + uploads.name + "'!" + col_R1C1("initial_pdf") + "=\"" + pdf_url + "\"" + ";" +
+          "'" + uploads.name + "'!" + col_R1C1("id") + "=\"" + id + "\"" +
+        ");" +
+        "\"" + cell.getValue() + "\"" +
+      ")")
+      .setShowHyperlink(true);
+  });
 }
 
 function decode_hyperlink_formula_(formula) {

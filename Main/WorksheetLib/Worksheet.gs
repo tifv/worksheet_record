@@ -1484,7 +1484,7 @@ WorksheetSection.prototype.get_addendum = function(options = {}) {
     sheet.getRange(
         group.dim.data_row, section.dim.data_start,
         group.dim.data_height, 1
-    ).setValue("◦");
+    ).setFormula("=\"◦\"");
     sheet.setColumnWidth(section.dim.data_start, options.column_width);
     return section;
 } // }}}
@@ -1832,10 +1832,7 @@ WorksheetBuilder.build = function(group, range, options) {
     } else if (!(group instanceof StudyGroup)) {
         throw new Error("Worksheet build: type error (group)");
     }
-    console.log(options);
     options = this.rectify_options(options, group);
-    console.log(options);
-    var sheet = group.sheet;
     var full_width = options.data_width + 2 +
       Math.max(0, +options.sum_column, +options.rating_column) +
       Math.max(0, -options.sum_column, -options.rating_column);

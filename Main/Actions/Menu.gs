@@ -1,12 +1,14 @@
 const emoji = {
     plus:    "\u{2795}",
     minus:   "\u{2796}",
-    koala:   "\uD83D\uDC28",
+    down:    "\u{2B07}\u{FE0F}",
+    shuffle: "\u{1F500}",
+    koala:   "\u{1F428}",
     bat:     "\u{1F987}",
-    chicken: "\uD83D\uDC24",
+    chicken: "\u{1F424}",
     sun:     "\u{1F31E}",
-    moon:    "\uD83C\uDF1D",
-    devil:   "\uD83D\uDC7F",
+    moon:    "\u{1F31D}",
+    devil:   "\u{1F47F}",
     nut:     "\u{1F330}",
     cookie:  "\u{1F36A}",
     cake:    "\u{1F967}",
@@ -58,21 +60,21 @@ function menu_create() {
     }
     { let rows_menu = ui.createMenu("Строки");
         rows_menu
-            .addItem( emoji.plus  + " Добавить строки…",
+            .addItem( emojipad.plus  + "Добавить строки…",
                 "action_add_rows" )
-            .addItem( emoji.minus + " Удалить лишние строки…",
-                "action_remove_excess_rows" )
+            .addItem( emojipad.down  + "Отсортировать строки",
+                "action_sort_rows_by_name" )
             ;
         menu.addSubMenu(rows_menu);
     }
     { let worksheets_menu = ui.createMenu("Листочки");
         worksheets_menu
-            .addItem( emojipad.plus    + "Добавить раздел-добавку…",
+            .addItem( emojipad.plus + "Добавить раздел-добавку…",
                 "action_add_section" )
             .addSeparator()
-            .addItem( emoji.plus + " Вставить бланк рядом справа",
+            .addItem( emojipad.plus + "Вставить бланк рядом справа",
                 "action_worksheet_insert" )
-            .addItem( emoji.plus + " Добавить бланк в конец",
+            .addItem( emojipad.plus + "Добавить бланк в конец",
                 "action_worksheet_add" )
             .addSeparator()
             .addItem( "Перекрасить листочки…",

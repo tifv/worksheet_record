@@ -18,7 +18,8 @@ UI/Common
 Actions/Error
 Actions/User
 Actions/Menu
-Actions/Helpers
+Actions/Lock
+Actions/Active
 Actions/Columns
 Actions/Columns-AddSection
 Actions/Columns-Add

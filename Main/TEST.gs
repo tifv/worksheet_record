@@ -352,14 +352,12 @@ function test_set_timetables() {
 }
 
 function test_set_minimal_worksheet() {
-  try {
-    var [group, lock] = ActionHelpers.get_active_group({lock: "acquire"});
-    console.log("Before: " + JSON.stringify(group.get_worksheet_options()));
-    group.set_worksheet_options({rating_column: 0, sum_column: +1, date: null, colgroup: false});
-    console.log("After: " + JSON.stringify(group.get_worksheet_options()));
-    lock.releaseLock();
-  } catch (error) {
-    report_error(error);
-  }
+  ReportError.with_reporting(() => {
+    Active.with_group((group) => {
+      console.log("Before: " + JSON.stringify(group.get_worksheet_options()));
+      group.set_worksheet_options({rating_column: 0, sum_column: +1, date: null, colgroup: false});
+      console.log("After: " + JSON.stringify(group.get_worksheet_options()));
+    });
+  });
 }
 
