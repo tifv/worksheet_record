@@ -1937,7 +1937,7 @@ WorksheetBuilder.rectify_options = function(options, group) {
         date: options.date = null,
         color_scheme: options.color_scheme = null,
         category: options.category = null,
-        colgroup: options.colgroup = null,
+        colgroup: options.colgroup = true,
     } = options);
     if (group.dim.category_row == null)
         options.category = null;
