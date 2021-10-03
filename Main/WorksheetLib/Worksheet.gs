@@ -1974,16 +1974,22 @@ WorksheetBuilder.prototype.add_title_metadata = function() {
 
 // WorksheetBuilder().init_markers {{{
 WorksheetBuilder.prototype.init_markers = function() {
+    var marker_start_cell = this.sheet.getRange(
+        this.group.dim.label_row, this.dim.data_start - 1 );
     this.group.sheetbuf.set_value( "label_row",
         this.dim.data_start - 1, this.constructor.Worksheet.marker.start );
     set_fixed_value_validation_(
-        this.sheet.getRange(this.group.dim.label_row, this.dim.data_start - 1),
+        marker_start_cell,
         this.constructor.Worksheet.marker.start );
+    marker_start_cell.setFontColor('white');
+    var marker_end_cell = this.sheet.getRange(
+        this.group.dim.label_row, this.dim.data_end + 1 );
     this.group.sheetbuf.set_value( "label_row",
         this.dim.data_end + 1, this.constructor.Worksheet.marker.end );
     set_fixed_value_validation_(
-        this.sheet.getRange(this.group.dim.label_row, this.dim.data_end + 1),
+        marker_end_cell,
         this.constructor.Worksheet.marker.end );
+    marker_end_cell.setFontColor('white');
 } // }}}
 
 // WorksheetBuilder().init_title_range {{{
@@ -2179,22 +2185,26 @@ WorksheetBuilder.prototype.init_mirror_range = function() {
             'if(',
                 'or(',
                     left_marker_mirror_R1C1,
-                        '<>"' + this.constructor.Worksheet.marker.start + '";',
+                        '<>"' + this.constructor.Worksheet.marker.start + '",',
                     right_marker_mirror_R1C1,
                         '<>"' + this.constructor.Worksheet.marker.end + '"',
-                '); ',
-                'na(); ',
+                '), ',
+                'na(), ',
                 'if(',
                     'or(',
-                        'isblank(', title_mirror_R1C1, ');',
+                        'isblank(', title_mirror_R1C1, '),',
                         'left(', title_mirror_R1C1, ')="{"',
-                    '); ',
-                    'iferror(na()); ',
+                    '), ',
+                    'arrayformula(if(',
+                        '(', label_row_mirror_R1C1, '="' + this.constructor.Worksheet.marker.start + '")', '+',
+                        '(', label_row_mirror_R1C1, '="' + this.constructor.Worksheet.marker.end + '"),',
+                        label_row_mirror_R1C1, ',', 'iferror(na())',
+                    ')),',
                     'arrayformula(', label_row_mirror_R1C1, ')',
                 ')',
-            '); ',
+            '), ',
             'split(',
-                'rept("#N/A ";columns(', label_row_mirror_R1C1, '));',
+                'rept("#N/A ",columns(', label_row_mirror_R1C1, ')),',
             '" ")',
         ')'
     );
