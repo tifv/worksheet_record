@@ -75,8 +75,7 @@ function test_add_study_group_antirow_clean() {
 }
 
 function test_add_study_group_antirow_(name, flags) {
-  if (!flags.mirror || !flags.category)
-    return;
+  if (!flags.mirror || !flags.category) { return; }
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var color_schemes = ColorSchemes.get(spreadsheet);
   function named_scheme(name) {
@@ -121,10 +120,17 @@ function test_add_study_group_antirow_(name, flags) {
     color_scheme: named_scheme("lotus"),
   });
   var sheet = group.sheet;
-  sheet.collapseAllColumnGroups();
+  try {
+    sheet.collapseAllColumnGroups();
+  } catch (error) {
+    console.error(error);
+  }
   group = new StudyGroup(sheet);
   sheet.getRange(group.dim.data_row + 1, 2, group.dim.data_height - 1, 1)
-    .setValues(test_sample_names(20));
+    .setValues(test_sample_names_(20));
+  test_worksheet_add_random_plus_(group, {
+    data_width: 20, title: "Олимпиада", category: "o", olympiad: {limit: 10}
+  });
   test_worksheet_add_random_(group, {
     data_width: 20, title: "Алгебра", category: "a",
   });
@@ -186,7 +192,7 @@ function test_add_study_group_(name) {
   sheet.collapseAllColumnGroups();
   group = new StudyGroup(sheet);
   sheet.getRange(group.dim.data_row + 1, 2, group.dim.data_height - 1, 1)
-    .setValues(test_sample_names(20));
+    .setValues(test_sample_names_(20));
   test_worksheet_add_random_(group, {
     data_width: 20, title: "Алгебра", category: "a",
   });
@@ -220,7 +226,7 @@ function test_add_study_group_color_(name) {
   var sheet = group.sheet;
   group = new StudyGroup(sheet);
   sheet.getRange(group.dim.data_row + 1, 2, group.dim.data_height - 1, 1)
-    .setValues(test_sample_names(20));
+    .setValues(test_sample_names_(20));
   function add_worksheet(name, shift=0) {
     test_worksheet_add_random_(group, {
       data_width: 20, title: name + (shift != 0 ? " " + shift : ""),
@@ -246,7 +252,7 @@ function test_add_study_group_color_(name) {
   add_worksheet("default");
 }
 
-function test_sample_values(n, random) {
+function test_sample_values_(n, random) {
   var x = [], y = [];
   for (var i = 0; i < n; ++i) {
     x.push([i, Math.random()]);
@@ -259,7 +265,20 @@ function test_sample_values(n, random) {
   return x.map(([i,]) => y.map(([j,]) => (i >= j ? 1 : null)));
 }
 
-function test_sample_labels(n) {
+function test_sample_values_plus_(n, random) {
+  var x = [], y = [];
+  for (var i = 0; i < n; ++i) {
+    x.push([i, Math.random()]);
+    y.push([i, Math.random()]);
+  }
+  if (random) {
+    x.sort(([i, u], [j, v]) => u - v);
+    y.sort(([i, u], [j, v]) => u - v);
+  }
+  return x.map(([i,]) => y.map(([j,]) => (i >= j ? (i - j + 1) : null)));
+}
+
+function test_sample_labels_(n) {
   var l = [];
   for (var i = 0; i < n; ++i) {
     l.push(i + 1);
@@ -267,7 +286,7 @@ function test_sample_labels(n) {
   return [l];
 }
 
-function test_sample_names(n) {
+function test_sample_names_(n) {
   var names = [
     "Новоселова Янина", "Решетилова Анна", "Ноздрёв Андрей", "Корявова Зоя", "Елизаров Наум",
     "Уваров Валерий", "Яромеева Мария", "Газинский Дементий", "Позон Евлампий", "Золотова Алиса",
@@ -292,9 +311,9 @@ function test_worksheet_add_(group, options) {
   if (group.dim.data_height != 20 || worksheet.dim.data_width != 20)
     throw "wat";
   sheet.getRange(group.dim.data_row + 1, worksheet.dim.data_start, group.dim.data_height - 1, worksheet.dim.data_width)
-    .setValues(test_sample_values(20, false));
+    .setValues(test_sample_values_(20, false));
   sheet.getRange(group.dim.label_row, worksheet.dim.data_start, 1, worksheet.dim.data_width)
-    .setValues(test_sample_labels(20));
+    .setValues(test_sample_labels_(20));
   if (options.check)
     worksheet.check();
 }
@@ -303,9 +322,20 @@ function test_worksheet_add_random_(group, options) {
   const sheet = group.sheet;
   var worksheet = WorksheetBuilder.build(group, sheet.getRange(1,sheet.getMaxColumns()), options);
   sheet.getRange(group.dim.data_row + 1, worksheet.dim.data_start, group.dim.data_height - 1, worksheet.dim.data_width)
-    .setValues(test_sample_values(20, true));
+    .setValues(test_sample_values_(20, true));
   sheet.getRange(group.dim.label_row, worksheet.dim.data_start, 1, worksheet.dim.data_width)
-    .setValues(test_sample_labels(20));
+    .setValues(test_sample_labels_(20));
+  if (options.check)
+    worksheet.check();
+}
+
+function test_worksheet_add_random_plus_(group, options) {
+  const sheet = group.sheet;
+  var worksheet = WorksheetBuilder.build(group, sheet.getRange(1,sheet.getMaxColumns()), options);
+  sheet.getRange(group.dim.data_row + 1, worksheet.dim.data_start, group.dim.data_height - 1, worksheet.dim.data_width)
+    .setValues(test_sample_values_plus_(20, true));
+  sheet.getRange(group.dim.label_row, worksheet.dim.data_start, 1, worksheet.dim.data_width)
+    .setValues(test_sample_labels_(20));
   if (options.check)
     worksheet.check();
 }

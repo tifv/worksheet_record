@@ -18,7 +18,7 @@ function worksheet_blank_namer_(date) {
   return "{" + date_format + "}";
 }
 
-var Worksheet = function() { // namespace {{{1
+var Worksheet = function() { // begin namespace {{{1
 
 class WorksheetBase {}; // {{{2
 
@@ -246,28 +246,6 @@ WorksheetBase.prototype.get_title_metadata = function(options = {}) {
     return null;
 } // }}}
 
-// WorksheetBase().get_weight_formula {{{
-WorksheetBase.prototype.get_weight_formula = function() {
-  if (this.group.dim.weight_row == null)
-    return null;
-  for (let i = 0; i < this.dim.data_width; ++i) {
-    let formula = this.group.sheetbuf.get_formula( "weight_row",
-      this.dim.data_start + i )
-    if (formula !== "")
-      return formula;
-    let value = this.group.sheetbuf.get_value( "weight_row",
-      this.dim.data_start + i )
-    if (value !== "")
-      return value;
-  }
-  return null;
-} // }}}
-
-// WorksheetBase().has_weight_row {{{
-WorksheetBase.prototype.has_weight_row = function() {
-  return this.get_weight_formula() != null;
-} // }}}
-
 // WorksheetBase().get_max_formula {{{
 WorksheetBase.prototype.get_max_formula = function() {
   if (this.group.dim.max_row == null)
@@ -285,9 +263,101 @@ WorksheetBase.prototype.get_max_formula = function() {
   return null;
 } // }}}
 
+// WorksheetBase().set_max_formula {{{
+WorksheetBase.prototype.set_max_formula = function(max_formula) {
+  if (this.group.dim.max_row == null) {
+    if (max_formula != null)
+      throw new Error("Worksheet().set_max_formula: no max row");
+    return null;
+  }
+  if (typeof max_formula != "string" || !max_formula.startsWith("=")) {
+    this.group.sheetbuf.set_values( "max_row",
+      this.dim.data_start, this.dim.data_end, max_formula );
+    return;
+  }
+  this.group.sheetbuf.set_formulas( "max_row",
+    this.dim.data_start, this.dim.data_end, max_formula, 0 );
+} // }}}
+
+// WorksheetBase().set_max_formula_default {{{
+WorksheetBase.prototype.set_max_formula_default = function() {
+  if (this.group.dim.max_row == null) {
+    return;
+  }
+  var data_column_R1C1 = 'R' + this.group.dim.data_row + 'C[0]:C[0]';
+  var max_formula_R1C1 = '=max(0,' + data_column_R1C1 + ')';
+  this.set_max_formula(max_formula_R1C1);
+} // }}}
+
 // WorksheetBase().has_max_row {{{
 WorksheetBase.prototype.has_max_row = function() {
   return this.get_max_formula() != null;
+} // }}}
+
+// WorksheetBase().get_weight_formula {{{
+WorksheetBase.prototype.get_weight_formula = function() {
+  if (this.group.dim.weight_row == null)
+    return null;
+  for (let i = 0; i < this.dim.data_width; ++i) {
+    let formula = this.group.sheetbuf.get_formula( "weight_row",
+      this.dim.data_start + i )
+    if (formula !== "")
+      return formula;
+    let value = this.group.sheetbuf.get_value( "weight_row",
+      this.dim.data_start + i )
+    if (value !== "")
+      return value;
+  }
+  return null;
+} // }}}
+
+// WorksheetBase().set_weight_formula {{{
+WorksheetBase.prototype.set_weight_formula = function(weight_formula) {
+  if (this.group.dim.weight_row == null) {
+    if (weight_formula != null)
+      throw new Error("Worksheet().set_weight_formula: no weight row");
+    return null;
+  }
+  if (typeof weight_formula != "string" || !weight_formula.startsWith("=")) {
+    this.group.sheetbuf.set_values( "weight_row",
+      this.dim.data_start, this.dim.data_end, weight_formula );
+    return;
+  }
+  this.group.sheetbuf.set_formulas( "weight_row",
+    this.dim.data_start, this.dim.data_end, weight_formula, 0 );
+} // }}}
+
+// WorksheetBase().set_weight_formula_default {{{
+WorksheetBase.prototype.set_weight_formula_default = function() {
+  if (this.group.dim.weight_row == null) {
+    return;
+  }
+  var data_column_R1C1 = 'R' + this.group.dim.data_row + 'C[0]:C[0]';
+  var max_R1C1, max_formula;
+  if (this.group.dim.max_row != null) {
+    max_R1C1 = 'R' + this.group.dim.max_row + 'C[0]';
+    max_formula = max_R1C1;
+  } else {
+    max_R1C1 = 'R' + this.group.dim.data_row + 'C[0]:C[0]';
+    max_formula = 'max(0,' + max_R1C1 + ')';
+  }
+  var weight_formula_R1C1 = ''.concat(
+    '= if(',
+      max_formula, ', ',
+      '1 / ',
+      'sqrt( ',
+        'max(1,sumif(', data_column_R1C1, ',">0"))',
+        ' * ',
+        'max(1,', max_R1C1, ')',
+      ' ), ',
+    '0)'
+  );
+  this.set_weight_formula(weight_formula_R1C1);
+} // }}}
+
+// WorksheetBase().has_weight_row {{{
+WorksheetBase.prototype.has_weight_row = function() {
+  return this.get_weight_formula() != null;
 } // }}}
 
 // WorksheetBase().set_data_borders (start, end, options) {{{
@@ -710,6 +780,17 @@ Worksheet.get_cfcondition_data = function() {
     values: [0] });
 } // }}}
 
+// Worksheet.get_cffilter_data (group) {{{
+Worksheet.get_cffilter_data = function(group) {
+  return ConditionalFormatting.RuleFilter.convert_object({ type: "boolean",
+    condition: this.get_cfcondition_data(),
+    location: [
+      [group.dim.data_row, 1, group.dim.data_height, group.sheetbuf.dim.sheet_width],
+      [group.dim.max_row, 1, 1, group.sheetbuf.dim.sheet_width],
+    ].filter(([r,]) => r != null)
+  });
+} // }}}
+
 // Worksheet.get_cfeffect_data (color_scheme) {{{
 Worksheet.get_cfeffect_data = function(color_scheme) {
   return new ConditionalFormatting.BooleanEffect(
@@ -736,31 +817,6 @@ Worksheet.get_cfeffect_data_limit = function(color_scheme) {
     {background: HSL.to_hex(HSL.deepen(color_scheme.mark, 2))} );
 } // }}}
 
-// Worksheet().new_cfrule_data_limit {{{
-Worksheet.prototype.new_cfrule_data_limit = function(color_scheme, limit = null) {
-  if (limit == null && this.group.dim.weight_row == null)
-    throw new WorksheetError( "Worksheet().new_cfrule_data_limit: " +
-      "impossible without weight_row" );
-  if (limit == null && this.sum_column == null)
-    throw new WorksheetError( "Worksheet().new_cfrule_data_limit: " +
-      "impossible without sum_column" );
-  return { type: "boolean",
-    condition: {
-      type: SpreadsheetApp.BooleanCriteria
-        .NUMBER_GREATER_THAN_OR_EQUAL_TO ,
-      values: [ limit != null ? limit :
-        ("=R" + this.group.dim.weight_row + "C" + this.sum_column) ]
-    },
-    ranges: [
-      [ this.group.dim.data_row, this.dim.data_start - 1,
-        this.group.dim.data_height, this.dim.data_width + 2 ],
-      [ this.group.dim.max_row, this.dim.data_start - 1,
-        1, this.dim.data_width + 2 ],
-    ].filter(([r,]) => r != null),
-    effect: this.constructor.get_cfeffect_data_limit(color_scheme),
-  };
-} // }}}
-
 // Worksheet.get_cfcondition_weight (group) {{{
 Worksheet.get_cfcondition_weight = function(group) {
   if (group.dim.weight_row == null)
@@ -785,7 +841,7 @@ Worksheet.get_cfcondition_weight = function(group) {
   });
 } // }}}
 
-// Worksheet.get_cfeffect_weight {{{
+// Worksheet.get_cfeffect_weight (color_scheme) {{{
 Worksheet.get_cfeffect_weight = function(color_scheme) {
   return new ConditionalFormatting.GradientEffect({
     min_color: HSL.to_hex(HSL.deepen(color_scheme.mark, 0.35)),
@@ -793,7 +849,7 @@ Worksheet.get_cfeffect_weight = function(color_scheme) {
   });
 } // }}}
 
-// Worksheet().new_cfrule_weight {{{
+// Worksheet().new_cfrule_weight (color_scheme) {{{
 Worksheet.prototype.new_cfrule_weight = function(color_scheme) {
   if (this.group.dim.weight_row == null)
     throw new WorksheetError( "Worksheet().new_cfrule_weight: " +
@@ -809,7 +865,7 @@ Worksheet.prototype.new_cfrule_weight = function(color_scheme) {
   };
 } // }}}
 
-// Worksheet().new_cfrule_rating {{{
+// Worksheet().new_cfrule_rating (color_scheme) {{{
 Worksheet.prototype.new_cfrule_rating = function(color_scheme) {
   let cfranges = [];
   if (this.sum_column != null)
@@ -898,6 +954,150 @@ Worksheet.prototype.set_metaweight = function(value, options = {}) {
   }
   this.group.sheetbuf.set_value( "weight_row",
     this.rating_column, metaweight );
+} // }}}
+
+// Worksheet().set_rating_formula (formula, options?) {{{
+Worksheet.prototype.set_rating_formula = function(formula, {
+  rating_column = this.rating_column,
+  has_max_row = this.has_max_row(),
+  number_format = null,
+  set_font_size = false,
+} = {}) {
+  if (rating_column == null)
+    throw new Error("Worksheet().set_rating_formula: rating_column is not set");
+  var cell_formatting = number_format != null || set_font_size;
+  var range = this.sheet.getRange(
+    this.group.dim.data_row, rating_column,
+    this.group.dim.data_height, 1,
+  );
+  range.setFormulaR1C1(formula);
+  var formatted_ranges = [range];
+  if (has_max_row) {
+    this.group.sheetbuf.set_formula( "max_row",
+      rating_column, formula );
+    if (cell_formatting) {
+      formatted_ranges.push(this.sheet.getRange(
+        this.group.dim.max_row, rating_column
+      ));
+    }
+  }
+  if (number_format != null)
+    for (let range of formatted_ranges)
+      range.setNumberFormat(number_format);
+  if (set_font_size != null)
+    for (let range of formatted_ranges)
+      range.setFontSize(8);
+} // }}}
+
+// Worksheet().set_rating_formula_default (options?) {{{
+Worksheet.prototype.set_rating_formula_default = function({
+  rating_column = this.rating_column,
+  has_max_row = this.has_max_row(),
+  has_weight_row = this.has_weight_row(),
+  set_number_format = false,
+  set_font_size = false,
+} = {}) {
+  var data_row_rating_R1C1 =
+    'R[0]C[' + (this.dim.data_start - 1 - rating_column) + ']:' +
+    'R[0]C[' + (this.dim.data_end   + 1 - rating_column) + ']';
+  var formula;
+  if (has_weight_row) {
+    var weight_row_rating_R1C1 =
+      'R' + this.group.dim.weight_row +
+        'C[' + (this.dim.data_start - 1 - rating_column) + ']:' +
+      'R' + this.group.dim.weight_row +
+        'C[' + (this.dim.data_end   + 1 - rating_column) + ']';
+    formula = ''.concat(
+      '=sumproduct(',
+        weight_row_rating_R1C1, ',',
+        data_row_rating_R1C1,
+      ')',
+    );
+  } else {
+    formula = ''.concat(
+      '=sum(',
+        data_row_rating_R1C1,
+      ')',
+    );
+  }
+  this.set_rating_formula(formula, {
+    rating_column, has_max_row,
+    number_format: set_number_format ? (
+      (this.group.dim.weight_row != null) ?
+        "0.00;−0.00" : "0.#;−0.#"
+    ) : null,
+    set_font_size,
+  });
+} // }}}
+
+// Worksheet().set_sum_formula (formula, options?) {{{
+Worksheet.prototype.set_sum_formula = function(formula, {
+  sum_column = this.sum_column,
+  has_max_row = this.has_max_row(),
+  number_format = null,
+  set_font_size = false,
+} = {}) {
+  if (sum_column == null)
+    throw new Error("Worksheet().set_sum_formula: sum_column is not set");
+  var cell_formatting = number_format != null || set_font_size;
+  var range = this.sheet.getRange(
+    this.group.dim.data_row, sum_column,
+    this.group.dim.data_height, 1,
+  );
+  range.setFormulaR1C1(formula);
+  var formatted_ranges = [range];
+  if (has_max_row) {
+    this.group.sheetbuf.set_formula( "max_row",
+      sum_column, formula );
+    if (cell_formatting) {
+      formatted_ranges.push(this.sheet.getRange(
+        this.group.dim.max_row, sum_column
+      ));
+    }
+  }
+  if (number_format != null)
+    for (let range of formatted_ranges)
+      range.setNumberFormat(number_format);
+  if (set_font_size != null)
+    for (let range of formatted_ranges)
+      range.setFontSize(8);
+} // }}}
+
+// Worksheet().set_sum_formula_default (options?) {{{
+Worksheet.prototype.set_sum_formula_default = function({
+  sum_column = this.sum_column,
+  has_max_row = this.has_max_row(),
+  set_number_format = false,
+  set_font_size = false,
+} = {}) {
+  var data_row_sum_R1C1 =
+    'R[0]C[' + (this.dim.data_start - 1 - sum_column) + ']:' +
+    'R[0]C[' + (this.dim.data_end   + 1 - sum_column) + ']';
+  var formula;
+  if (has_max_row) {
+    var max_row_sum_R1C1 =
+      'R' + this.group.dim.max_row +
+        'C[' + (this.dim.data_start - 1 - sum_column) + ']:' +
+      'R' + this.group.dim.max_row +
+        'C[' + (this.dim.data_end   + 1 - sum_column) + ']';
+    formula = ''.concat(
+      '=countifs(',
+        max_row_sum_R1C1,  ',">0",',
+        data_row_sum_R1C1, ',">0"',
+      ')',
+    );
+  } else {
+    formula = ''.concat(
+      '=countif(',
+        data_row_sum_R1C1, ',">0"',
+      ')',
+    );
+  }
+  this.set_sum_formula(formula, {
+    sum_column, has_max_row,
+    number_format: set_number_format ? "0" : null,
+    set_font_size,
+  });
 } // }}}
 
 // Worksheet().is_unused () {{{
@@ -1794,18 +1994,191 @@ WorksheetSection.prototype.alloy_subproblems = function() {
   });
 } // }}}
 
-return Worksheet;
+return Worksheet
 }(); // end Worksheet namespace }}}1
+
+var OlympiadSheet = function() { // begin namespace {{{1
+
+class OlympiadSheet extends Worksheet {};
+
+OlympiadSheet.initial = Object.assign({}, Worksheet.initial, {
+  olympiad: {
+    limit: 4,
+  },
+});
+
+OlympiadSheet.from_worksheet = function(worksheet) {
+  return new OlympiadSheet(
+    worksheet.group,
+    worksheet.dim.start,      worksheet.dim.end,
+    worksheet.dim.data_start, worksheet.dim.data_end,
+  );
+}
+
+define_lazy_properties_(OlympiadSheet.prototype, { // {{{
+  limit_cell_row_name: function() {
+    return "weight_row";
+  },
+  limit_cell_row: function() {
+    return this.group.dim[this.limit_cell_row_name];
+  },
+  limit_cell_column: function() {
+    return this.sum_column;
+  },
+  limit_cell: function() {
+    if (this.limit_cell_row != null && this.limit_cell_column != null)
+      return this.sheet.getRange(
+        this.limit_cell_row, this.limit_cell_column );
+    return null;
+  },
+}); // }}}
+
+// OlympiadSheet().has_limit_cell {{{
+OlympiadSheet.prototype.has_limit_cell = function() {
+  return ( this.limit_cell_row != null &&
+    this.limit_cell_column != null );
+} // }}}
+
+// OlympiadSheet().set_limit (value, options?) {{{
+OlympiadSheet.prototype.set_limit = function(value, {
+  set_cell_format = false,
+  set_cell_borders = false
+} = {}) {
+  if (!this.has_limit_cell())
+    throw new Error("OlympiadSheet().set_limit: no limit cell");
+  this.group.sheetbuf.set_value(
+    this.limit_cell_row_name, this.limit_cell_column,
+    value );
+  if (set_cell_format) {
+    this.group.sheetbuf.set_note(
+      this.limit_cell_row_name, this.limit_cell_column,
+      "пороговый балл решённой задачи" );
+    this.limit_cell.setFontSize(8);
+  }
+  if (set_cell_borders) {
+    this.limit_cell.setBorder(true, true, true, true, null, null);
+  }
+} // }}}
+
+// OlympiadSheet().set_weight_formula_default {{{
+OlympiadSheet.prototype.set_weight_formula_default = function() {
+  this.set_weight_formula(null);
+} // }}}
+
+// OlympiadSheet().set_rating_formula_default (options?) {{{
+OlympiadSheet.prototype.set_rating_formula_default = function({
+  rating_column = this.rating_column,
+  has_max_row = this.has_max_row(),
+  set_number_format = false,
+  set_font_size = false,
+} = {}) {
+  var data_row_rating_R1C1 =
+    'R[0]C[' + (this.dim.data_start - 1 - rating_column) + ']:' +
+    'R[0]C[' + (this.dim.data_end   + 1 - rating_column) + ']';
+  var formula = ''.concat(
+    '=sum(',
+      data_row_rating_R1C1,
+    ')',
+  );
+  this.set_rating_formula(formula, {
+    rating_column, has_max_row,
+    number_format: set_number_format ? "0.#;−0.#" : null,
+    set_font_size,
+  });
+} // }}}
+
+// OlympiadSheet().set_sum_formula_default (options?) {{{
+OlympiadSheet.prototype.set_sum_formula_default = function({
+  sum_column = this.sum_column,
+  has_max_row = this.has_max_row(),
+  has_limit_cell = this.has_limit_cell(),
+  limit_value = null,
+  set_number_format = false,
+  set_font_size = false,
+} = {}) {
+  if (!has_limit_cell && limit_value == null)
+    throw new Error( "OlympiadSheet().set_sum_formula_default: " +
+      "neither limit_cell nor limit value are provided" );
+  if (has_limit_cell && limit_value != null)
+    throw new Error( "OlympiadSheet().set_sum_formula_default: " +
+      "both limit_cell and limit value are provided" );
+  var data_row_sum_R1C1 =
+    'R[0]C[' + (this.dim.data_start - 1 - sum_column) + ']:' +
+    'R[0]C[' + (this.dim.data_end   + 1 - sum_column) + ']';
+  var limit_R1C1;
+  if (has_limit_cell) {
+    limit_R1C1 =
+      '">="&R' + this.limit_cell_row +
+      'C[' + (this.sum_column - this.limit_cell_column) + ']';
+  } else {
+    limit_R1C1 = '">=' + limit_value + '"';
+  }
+  if (has_max_row) {
+    var max_row_sum_R1C1 =
+      'R' + this.group.dim.max_row +
+        'C[' + (this.dim.data_start - 1 - sum_column) + ']:' +
+      'R' + this.group.dim.max_row +
+        'C[' + (this.dim.data_end   + 1 - sum_column) + ']';
+    formula = ''.concat(
+      '=countifs(',
+        max_row_sum_R1C1,  ',', limit_R1C1, ',',
+        data_row_sum_R1C1, ',', limit_R1C1,
+      ')',
+    );
+  } else {
+    formula = ''.concat(
+      '=countif(',
+        data_row_sum_R1C1, ',', limit_R1C1,
+      ')',
+    );
+  }
+  this.set_sum_formula(formula, {
+    sum_column, has_max_row,
+    number_format: set_number_format ? "0" : null,
+    set_font_size,
+  });
+} // }}}
+
+// OlympiadSheet().new_cfrule_data_limit (color_scheme, options) {{{
+OlympiadSheet.prototype.new_cfrule_data_limit = function(color_scheme, {
+  has_limit_cell = this.has_limit_cell(),
+  limit_value = null,
+} = {}) {
+  if (!has_limit_cell && limit_value == null)
+    throw new Error( "OlympiadSheet().new_cfrule_data_limit: " +
+      "neither limit_cell nor limit value are provided" );
+  if (has_limit_cell && limit_value != null)
+    throw new Error( "OlympiadSheet().new_cfrule_data_limit: " +
+      "both limit_cell and limit value are provided" );
+  var limit = has_limit_cell ?
+    ("=R" + this.limit_cell_row + "C" + this.limit_cell_column) :
+    limit_value;
+  return { type: "boolean",
+    condition: {
+      type: SpreadsheetApp.BooleanCriteria
+        .NUMBER_GREATER_THAN_OR_EQUAL_TO ,
+      values: [limit],
+    },
+    ranges: [
+      [ this.group.dim.data_row, this.dim.data_start - 1,
+        this.group.dim.data_height, this.dim.data_width + 2 ],
+      [ this.group.dim.max_row, this.dim.data_start - 1,
+        1, this.dim.data_width + 2 ],
+    ].filter(([r,]) => r != null),
+    effect: this.constructor.get_cfeffect_data_limit(color_scheme),
+  };
+} // }}}
+
+return OlympiadSheet;
+}(); // end OlympiadSheet namespace }}}1
 
 var WorksheetBuilder = function() { // begin namespace {{{1
 
 // XXX add alternative builder that creates standalone title
 // like worksheet with markers, but without formatting datarange etc.
 
-// XXX add alternative builder that creates a series of worksheets
-// and returns an array
-
 WorksheetBuilder.Worksheet = Worksheet;
+WorksheetBuilder.OlympiadSheet = OlympiadSheet;
 Object.defineProperty( WorksheetBuilder, "initial",
   {enumerable: false, get: function() {
     return this.Worksheet.initial;
@@ -1864,9 +2237,14 @@ function WorksheetBuilder(group, start, end, options) { // {{{
   this.sheet = group.sheet;
   this.options = options;
   var
-    data_start = start + 1 + Math.max(0, +this.options.rating_column, +this.options.sum_column),
-    data_end   = end   - 1 - Math.max(0, -this.options.rating_column, -this.options.sum_column);
-  this.worksheet = new this.constructor.Worksheet( group,
+    data_start = start + 1 +
+      Math.max(0, +this.options.rating_column, +this.options.sum_column),
+    data_end   = end   - 1 -
+      Math.max(0, -this.options.rating_column, -this.options.sum_column);
+  const Worksheet = options.olympiad ?
+    this.constructor.OlympiadSheet :
+    this.constructor.Worksheet;
+  this.worksheet = new Worksheet( group,
     start, end, data_start, data_end );
   this.dim = this.worksheet.dim;
   if (options.rating_column != 0) {
@@ -1883,6 +2261,10 @@ function WorksheetBuilder(group, start, end, options) { // {{{
   } else {
     this.sum_column = null;
   }
+  Object.defineProperties(this.worksheet, {
+    rating_column: {configurable: true, value: this.rating_column},
+    sum_column:    {configurable: true, value: this.sum_column   },
+  });
   if (this.options.color_scheme == null) {
     this.color_scheme = this.group.get_color_scheme();
   } else {
@@ -1904,6 +2286,8 @@ function WorksheetBuilder(group, start, end, options) { // {{{
     this.init_sum_range();
   if (this.group.dim.weight_row != null && this.rating_column != null)
     this.init_metaweight_cell();
+  if (options.olympiad && this.worksheet.has_limit_cell())
+    this.init_limit_cell();
   if (this.group.dim.mirror_row != null)
     this.init_mirror_range();
   if (options.category)
@@ -1938,6 +2322,7 @@ WorksheetBuilder.rectify_options = function(options, group) {
     color_scheme: options.color_scheme = null,
     category: options.category = null,
     colgroup: options.colgroup = true,
+    olympiad: options.olympiad = false,
   } = options);
   if (group.dim.category_row == null)
     options.category = null;
@@ -1947,6 +2332,13 @@ WorksheetBuilder.rectify_options = function(options, group) {
     options.sum_column == options.rating_column
   ) {
     throw new Error("sum and rating columns cannot coincide");
+  }
+  if (options.olympiad) {
+    if (typeof (options.olympiad) != 'object')
+      options.olympiad = {};
+    ({
+      limit: options.olympiad.limit = this.OlympiadSheet.initial.olympiad.limit,
+    } = options.olympiad);
   }
   return options;
 } // }}}
@@ -2032,10 +2424,7 @@ WorksheetBuilder.prototype.init_label_range = function() {
 WorksheetBuilder.prototype.init_max_range = function() {
   if (this.group.dim.max_row == null)
     throw new Error("internal error");
-  var data_column_R1C1 = 'R' + this.group.dim.data_row + 'C[0]:C[0]';
-  var max_formula_R1C1 = '=max(0;' + data_column_R1C1 + ')';
-  this.group.sheetbuf.set_formulas( "max_row",
-    this.dim.data_start, this.dim.data_end, max_formula_R1C1, 0 );
+  this.worksheet.set_max_formula_default();
   this.worksheet.max_range
     .setNumberFormat('0.#;−0.#')
     .setFontSize(8);
@@ -2045,28 +2434,7 @@ WorksheetBuilder.prototype.init_max_range = function() {
 WorksheetBuilder.prototype.init_weight_range = function() {
   if (this.group.dim.weight_row == null)
     throw new Error("internal error");
-  var data_column_R1C1 = 'R' + this.group.dim.data_row + 'C[0]:C[0]';
-  var max_R1C1, max_formula;
-  if (this.group.dim.max_row != null) {
-    max_R1C1 = 'R' + this.group.dim.max_row + 'C[0]';
-    max_formula = max_R1C1;
-  } else {
-    max_R1C1 = 'R' + this.group.dim.data_row + 'C[0]:C[0]';
-    max_formula = 'max(0;' + max_R1C1 + ')';
-  }
-  var weight_formula_R1C1 = ''.concat(
-    '= if(',
-      max_formula, '; ',
-      '1 / ',
-      'sqrt( ',
-        'max(1;sumif(', data_column_R1C1, ';">0"))',
-        ' * ',
-        'max(1;', max_R1C1, ')',
-      ' ); ',
-    '0)'
-  );
-  this.group.sheetbuf.set_formulas( "weight_row",
-    this.dim.data_start, this.dim.data_end, weight_formula_R1C1, 0 );
+  this.worksheet.set_weight_formula_default();
   this.worksheet.weight_range
     .setNumberFormat('#.0#;−#.0#;0')
     .setFontSize(8);
@@ -2074,82 +2442,28 @@ WorksheetBuilder.prototype.init_weight_range = function() {
 
 // WorksheetBuilder().init_rating_range {{{
 WorksheetBuilder.prototype.init_rating_range = function() {
-  var data_row_rating_R1C1 =
-    'R[0]C[' + (this.dim.data_start - 1 - this.rating_column) + ']:' +
-    'R[0]C[' + (this.dim.data_end   + 1 - this.rating_column) + ']';
-  var rating_formula_R1C1;
-  if (this.group.dim.weight_row != null) {
-    var weight_row_rating_R1C1 =
-      'R' + this.group.dim.weight_row +
-        'C[' + (this.dim.data_start - 1 - this.rating_column) + ']:' +
-      'R' + this.group.dim.weight_row +
-        'C[' + (this.dim.data_end   + 1 - this.rating_column) + ']';
-    rating_formula_R1C1 = ''.concat(
-      '=sumproduct(',
-        weight_row_rating_R1C1, ';',
-        data_row_rating_R1C1,
-      ')'
-    );
-  } else {
-    rating_formula_R1C1 = ''.concat(
-      '=sum(',
-        data_row_rating_R1C1,
-      ')'
-    );
-  }
-  var number_format = (this.group.dim.weight_row != null) ?
-    "0.00;−0.00" : "0.#;−0.#";
-  this.sheet.getRange(this.group.dim.data_row, this.rating_column, this.group.dim.data_height, 1)
-    .setFormulaR1C1(rating_formula_R1C1)
-    .setNumberFormat(number_format)
-    .setFontSize(8);
-  if (this.group.dim.max_row != null) {
-    this.group.sheetbuf.set_formula( "max_row",
-      this.rating_column, rating_formula_R1C1 );
-    this.sheet.getRange(this.group.dim.max_row, this.rating_column)
-      .setNumberFormat(number_format)
-      .setFontSize(8);
-  }
+  this.worksheet.set_rating_formula_default({
+    rating_column: this.rating_column,
+    has_max_row: this.group.dim.max_row != null,
+    has_weight_row: this.group.dim.weight_row != null,
+    set_number_format: true,
+    set_font_size: true,
+  });
   this.group.sheetbuf.set_value( "label_row",
     this.rating_column, "Σ" );
 } // }}}
 
 // WorksheetBuilder().init_sum_range {{{
 WorksheetBuilder.prototype.init_sum_range = function() {
-  var data_row_sum_R1C1 =
-    'R[0]C[' + (this.dim.data_start - 1 - this.sum_column) + ']:' +
-    'R[0]C[' + (this.dim.data_end   + 1 - this.sum_column) + ']';
-  var sum_formula_R1C1;
-  if (this.group.dim.max_row != null) {
-    var max_row_sum_R1C1 =
-      'R' + this.group.dim.max_row +
-        'C[' + (this.dim.data_start - 1 - this.sum_column) + ']:' +
-      'R' + this.group.dim.max_row +
-        'C[' + (this.dim.data_end   + 1 - this.sum_column) + ']';
-    sum_formula_R1C1 = ''.concat(
-      '=countifs(',
-        max_row_sum_R1C1,  ';">0";',
-        data_row_sum_R1C1, ';">0"',
-      ')'
-    );
-  } else {
-    sum_formula_R1C1 = ''.concat(
-      '=countif(',
-        data_row_sum_R1C1, ';">0"',
-      ')'
-    );
-  }
-  this.sheet.getRange(this.group.dim.data_row, this.sum_column, this.group.dim.data_height, 1)
-    .setFormulaR1C1(sum_formula_R1C1)
-    .setNumberFormat('0')
-    .setFontSize(8);
-  if (this.group.dim.max_row != null) {
-    this.group.sheetbuf.set_formula( "max_row",
-      this.sum_column, sum_formula_R1C1 );
-    this.sheet.getRange(this.group.dim.max_row, this.sum_column)
-      .setNumberFormat('0')
-      .setFontSize(8);
-  }
+  this.worksheet.set_sum_formula_default({
+    sum_column: this.sum_column,
+    has_max_row: this.group.dim.max_row != null,
+    limit_value:
+      (this.options.olympiad && !this.worksheet.has_limit_cell()) ?
+        this.options.olympiad.limit : null,
+    set_number_format: true,
+    set_font_size: true,
+  });
   this.group.sheetbuf.set_value( "label_row",
     this.sum_column, "S" );
 } // }}}
@@ -2165,6 +2479,13 @@ WorksheetBuilder.prototype.init_metaweight_cell = function() {
   this.sheet.getRange(this.group.dim.weight_row, this.rating_column)
     .setNumberFormat('0.0;−0.0')
     .setFontSize(8);
+} // }}}
+
+// WorksheetBuilder().init_limit_cell {{{
+WorksheetBuilder.prototype.init_limit_cell = function() {
+  if (!this.options.olympiad || !this.worksheet.has_limit_cell())
+    throw new Error("internal error");
+  this.worksheet.set_limit(this.options.olympiad.limit, {set_cell_format: true});
 } // }}}
 
 // WorksheetBuilder().init_mirror_range {{{
@@ -2229,8 +2550,8 @@ WorksheetBuilder.prototype.init_borders = function() {
   this.worksheet.set_data_borders(
     this.dim.data_start, this.dim.data_end,
     {
-      max_row: this.group.dim.max_row != null ? true : null,
-      weight_row: this.group.dim.weight_row != null ? true : null,
+      max_row: this.worksheet.has_max_row() ? true : null,
+      weight_row: this.worksheet.has_weight_row() ? true : null,
       left:  {open: false, outer: true},
       right: {open: false, outer: true},
     } );
@@ -2286,6 +2607,10 @@ WorksheetBuilder.prototype.init_borders = function() {
     this.sheet.getRange(this.group.dim.weight_row, this.rating_column)
       .setBorder(true, true, true, true, null, null);
   }
+  if (this.options.olympiad && this.worksheet.has_limit_cell()) {
+    this.worksheet.limit_cell
+      .setBorder(true, true, true, true, null, null);
+  }
   this.sheet.getRange(
     this.group.dim.title_row,
     this.dim.start,
@@ -2296,15 +2621,25 @@ WorksheetBuilder.prototype.init_borders = function() {
 
 // WorksheetBuilder().add_cf_rules {{{
 WorksheetBuilder.prototype.add_cf_rules = function() {
-  var cfrules = [];
-  cfrules.push(this.worksheet.new_cfrule_data(this.color_scheme));
+  var cfrules = ConditionalFormatting.RuleList.load(this.sheet);
+  cfrules.insert(this.worksheet.new_cfrule_data(this.color_scheme));
   if (this.group.dim.weight_row != null) {
-    cfrules.push(this.worksheet.new_cfrule_weight(this.color_scheme));
+    cfrules.insert(this.worksheet.new_cfrule_weight(this.color_scheme));
   }
   if (this.rating_column != null || this.sum_column != null) {
-    cfrules.push(this.worksheet.new_cfrule_rating(this.color_scheme));
+    cfrules.insert(this.worksheet.new_cfrule_rating(this.color_scheme));
   }
-  ConditionalFormatting.merge(this.sheet, ...cfrules);
+  if (this.options.olympiad) {
+    cfrules.insert(
+      this.worksheet.new_cfrule_data_limit(this.color_scheme, {
+        limit_value: this.worksheet.has_limit_cell() ?
+          null :
+          this.options.olympiad.limit,
+      }),
+      this.worksheet.constructor.get_cffilter_data(this.group),
+    );
+  }
+  cfrules.save(this.sheet);
 } // }}}
 
 return WorksheetBuilder;
