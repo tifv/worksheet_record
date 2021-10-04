@@ -1,28 +1,20 @@
-/*
-
-function test_whatever_spreadsheet() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
-  const sheet = spreadsheet.getActiveSheet();
-  const range = sheet.getActiveRange();
-}
-
-function test_whatever_range() {
-  var range = SpreadsheetApp.getActiveRange();
-}
-
-function test_whatever() {
-  console.log("whatever");
-}
-
-*/
-
 function init_add_study_groups() {
   init_add_study_group_("X");
 }
 
+/*
+function init_fix_group_names() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  for (let group of StudyGroup.list(spreadsheet)) {
+    group.sheet.getRange(group.dim.mirror_row, 2)
+      .setNumberFormat("@STRING@");
+    group.sheetbuf.set_value("mirror_row", 2, group.name)
+  }
+}
+*/
+
 function init_add_study_group_(name) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  //test_worksheet_clear_(spreadsheet, name);
   var group = StudyGroupBuilder.build(spreadsheet, name, {
     data_height: 20,
     rating: true, sum: true,
@@ -39,16 +31,81 @@ function init_add_study_group_(name) {
   name_range.setValue(name);
 }
 
-/*
-function init_fix_group_names() {
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  for (let group of StudyGroup.list(spreadsheet)) {
-    group.sheet.getRange(group.dim.mirror_row, 2)
-      .setNumberFormat("@STRING@");
-    group.sheetbuf.set_value("mirror_row", 2, group.name)
-  }
+function init_add_study_group_14_(name) {
+  init_add_study_group_dated_(name, [true, false, false, true, false, false, false]);
 }
-*/
+
+function init_add_study_group_2_(name) {
+  init_add_study_group_dated_(name, [false, true, false, false, false, false, false]);
+}
+
+function init_add_study_group_6_(name) {
+  init_add_study_group_dated_(name, [false, false, false, false, false, true, false]);
+}
+
+function init_add_study_group_dated_(name, weekdays) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var group = StudyGroupBuilder.build(spreadsheet, name, {
+    data_height: 40,
+    rating: true, sum: true,
+    categories: [
+      {code: "a", rating: false, sum: false},
+      {code: "g", rating: false, sum: false},
+      {code: "c", rating: false, sum: false},
+      {code: "o", rating: false, sum: false}
+    ],
+    category_musthave: false,
+    attendance: {
+      columns: {date_lists: [
+        {
+          title: "I",
+          start: new Date(Date.parse("2021-09-23 ")),
+          end:   new Date(Date.parse("2022-01-01 ")),
+          weekdays,
+        },
+        {
+          title: "II",
+          start: new Date(Date.parse("2022-01-01 ")),
+          end:   new Date(Date.parse("2022-06-01 ")),
+          weekdays,
+        }
+      ]},
+    },
+  });
+  var name_range = group.sheet.getRange(group.dim.mirror_row, 2);
+  name_range.setNumberFormat("@STRING@");
+  name_range.setValue(name);
+}
+
+function init_add_study_group_olympiads_(name) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var group = StudyGroupBuilder.build(spreadsheet, name, {
+    data_height: 40,
+    rating: true, sum: false,
+    rows: {
+        data_row:     4,
+        title_row:    2,
+        label_row:    3,
+        mirror_row:   1,
+        category_row: null,
+        max_row:      null,
+        weight_row:   null,
+    }
+  });
+  var name_range = group.sheet.getRange(group.dim.mirror_row, 2);
+  name_range.setNumberFormat("@STRING@");
+  name_range.setValue(name);
+  group.set_worksheet_options({
+    rating_column: +1,
+    sum_column: 0,
+    date: null,
+    colgroup: false,
+    data_width: 6,
+    olympiad: {limit: 4},
+  });
+}
+
+
 
 function test_add_study_group_antirow(iteratee) {
   for (var i = 0; i < 16; ++i) {
