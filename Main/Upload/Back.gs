@@ -217,6 +217,64 @@ function decode_hyperlink_formula_(formula) {
   return null;
 }
 
+function upload_fake_finish_(section, options = {}) {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const categories = Categories.get(spreadsheet);
+  var worksheet = section.worksheet;
+  var group = worksheet.group;
+  var group_name = group.name;
+  var category = worksheet.get_category();
+  var category_info = categories[category || "mixture"] || {};
+  var title = options.title || section.get_qualified_title();
+  var date = section.get_title_note_data().get("date");
+  var author = UploadAuthor.get();
+  var filename_base; {
+    let filename_pieces = [];
+    filename_pieces.push(group.get_filename());
+    filename_pieces.push( category_info.filename ||
+      (category == null ? "mixture" : "whatever") );
+    if (options.filename_date != null) {
+      filename_pieces.push(options.filename_date.format({filename: true}));
+    } else if (date != null) {
+      filename_pieces.push(date.format({filename: true}));
+    }
+    if (options.filename_suffix != null)
+      filename_pieces.push(options.filename_suffix);
+    filename_base = filename_pieces.join('-');
+  }
+  date = (date != null ? date.to_object() : null);
+  const uploads = UploadRecord.get(spreadsheet, "minimal");
+  var id = Utilities.getUuid();
+  uploads.append(new Map([
+    ["group", "'" + group_name],
+    ["category", (category != null) ?
+      "'" + category : null ],
+    ["title", "'" + title],
+    ["date", (date != null) ?
+      "'" + WorksheetDate.from_object(date).format() :
+      null ],
+    ["uploader", Session.getActiveUser().getEmail()],
+    ["author", author],
+    ["id", id],
+    ["status", "void"],
+    ["filename", filename_base],
+  ]));
+  var cell = section.title_range.getCell(1, 1);
+  function col_R1C1(key) {
+    return "R" + uploads.first_row + "C" + uploads.key_columns.get(key) + ":C" + uploads.key_columns.get(key);
+  }
+  cell
+    .setFormulaR1C1("=hyperlink(" +
+      "filter(" +
+        "'" + uploads.name + "'!" + col_R1C1("pdf") + ";" +
+        //"'" + uploads.name + "'!" + col_R1C1("initial_pdf") + "=\"" + pdf_url + "\"" + ";" +
+        "'" + uploads.name + "'!" + col_R1C1("id") + "=\"" + id + "\"" +
+      ");" +
+      "\"" + cell.getValue() + "\"" +
+    ")")
+    .setShowHyperlink(true);
+}
+
 
 var UploadConfig = function() { // begin namespace
 

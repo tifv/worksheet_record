@@ -2,16 +2,12 @@ function init_add_study_groups() {
   init_add_study_group_("X");
 }
 
-/*
-function init_fix_group_names() {
+function init_fix_groups() {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   for (let group of StudyGroup.list(spreadsheet)) {
-    group.sheet.getRange(group.dim.mirror_row, 2)
-      .setNumberFormat("@STRING@");
-    group.sheetbuf.set_value("mirror_row", 2, group.name)
+    group.sheet.getRange("B9:B").setValues(group.sheet.getRange("B9:B").getValues());
   }
 }
-*/
 
 function init_add_study_group_(name) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -29,6 +25,17 @@ function init_add_study_group_(name) {
   var name_range = group.sheet.getRange(group.dim.mirror_row, 2);
   name_range.setNumberFormat("@STRING@");
   name_range.setValue(name);
+  group.sheet.getRange(2, 2).setFormula(
+      '=filter(importrange("…","B2:2"),' +
+      'importrange("…","B1:1")=$B$1)' );
+  group.sheet.getRange(6, 3).setFormula(
+      '=filter(importrange("…","B3:3"),' +
+      'importrange("…","B1:1")=B1)' );
+  group.sheet.getRange("B9")
+    .setFormula(
+      '=sort(filter(importrange("…", "B2:B"),' +
+      'not(isblank(importrange("…", "B2:B"))),' +
+      'importrange("…", "G2:G")=$B$1))' )
 }
 
 function init_add_study_group_14_(name) {

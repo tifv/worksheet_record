@@ -17,11 +17,11 @@ function acquire() {
 }
 
 function with_lock(operator) {
-  var lock = acquire();
+  // var lock = acquire();
   try {
     return operator();
   } finally {
-    lock.releaseLock();
+    // lock.releaseLock();
   }
 }
 

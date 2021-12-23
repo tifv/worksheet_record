@@ -122,6 +122,28 @@ function action_worksheet_upload() {
   });
 }
 
+function action_worksheet_fake_upload() {
+  ReportError.with_reporting(() => {
+    if (!upload_enabled_()) {
+      throw new ReportError("Загрузка файлов не настроена");
+    }
+    Active.with_section((section) => {
+      if (section.worksheet.is_unused()) {
+        throw new ReportError("У листочка нет заголовка.")
+      }
+      if (!section.is_addendum()) {
+        upload_fake_finish_(section);
+      } else {
+        let original_section = section.get_original();
+        upload_fake_finish_( section,
+          action_worksheet_upload_addendum.get_dialog_options(
+            original_section, section )
+        );
+      }
+    });
+  });
+}
+
 function action_worksheet_upload_addendum(options) {
   if (options.type == null)
     throw new Error("internal error: missing option");

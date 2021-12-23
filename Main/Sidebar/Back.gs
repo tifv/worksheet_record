@@ -258,7 +258,7 @@ function sidebar_collapse_expand(group_name, column_actions) {
       var col_group = sheet.getColumnGroup(column, 1);
     } catch (error) {
       console.error( "No column group at column " +
-        sheet.getRange(1, collapse_col).getA1Notation().replace(/\d+/,"") );
+        sheet.getRange(1, column).getA1Notation().replace(/\d+/,"") );
       console.error(error);
     }
     if (col_group == null)

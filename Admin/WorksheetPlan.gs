@@ -118,7 +118,7 @@ function worksheet_planned_add_forever_all() {
         .nearMinute(minute)
       .create();
     console.log("scheduling worksheet planned adding for group “" + group.name + "”");
-    minute += 3;
+    minute += 5;
     if (minute >= 60) {
       hour += 1;
       minute -= 60;

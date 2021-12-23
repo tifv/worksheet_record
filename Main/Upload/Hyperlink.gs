@@ -1,5 +1,5 @@
 function decode_hyperlink_formula_(formula) {
-  var hyperlink_filter_match = /^=(?:hyperlink|HYPERLINK)\((?:filter|FILTER)\((?:uploads|'uploads')!R\d+C\d+:C\d+[,;](?:uploads|'uploads')!R\d+C\d+:C\d+="([^"]*)"\)[,;]"([^"]*)"\)$/
+  var hyperlink_filter_match = /^=(?:hyperlink|HYPERLINK) *\( *(?:filter|FILTER) *\( *(?:uploads|'uploads')!R\d+C\d+:C\d+ *[,;] *(?:uploads|'uploads')!R\d+C\d+:C\d+ *= *"([^"]*)" *\) *[,;] *"([^"]*)" *\) *$/
     .exec(formula);
   if (hyperlink_filter_match != null) {
     return [{filter: hyperlink_filter_match[1]}, hyperlink_filter_match[2]];

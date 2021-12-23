@@ -107,6 +107,8 @@ function menu_add_admin_(menu) {
         .addItem("Метаданные ведомости…", "metadata_editor")
         .addItem("(WIP) Добавить группу…", "action_add_group")
         .addItem("(WIP) Листочки по плану…", "action_worksheet_planned")
+        .addItem("(WIP) «выложить» листочек…",
+                "action_worksheet_fake_upload" )
         .addItem("Воссоздать toc", "action_regenerate_toc")
         .addItem("Настр. загрузку файлов", "upload_configure")
         .addItem("Обновить меню", "menu_create")
