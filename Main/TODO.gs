@@ -7,6 +7,8 @@
 • Factor out WorksheetSectionBuilder and provide worksheet options to it (such as date)
   • or make a separate group options for sections
   • or check whether the worksheet has a date, and if it doesn't, default to empty date.
+• Detect empty files in uploads and question them (or replace hash part with EMPTY and detect in in conditional formatting).
+• Detect invalid URLs in uploads and reject them?
 
 # Priority TODO (2)
 • make markers invisible in published mode (add a cf rule to whiten them).
@@ -56,5 +58,7 @@
   • Script to create special course groups
   • Recreate s-summary
 • a function that detects whether attendance was filled the last week
+• make a separate (hidden) row for problem status (and maybe make some statistics based on it — like how many problems remain for a given student)
+• make CFormatting reasonably resistant to #REF! errors in formulas
 
 */
