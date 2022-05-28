@@ -3,15 +3,15 @@ function init_add_study_groups() {
 }
 
 function init_fix_groups() {
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   for (let group of StudyGroup.list(spreadsheet)) {
     group.sheet.getRange("B9:B").setValues(group.sheet.getRange("B9:B").getValues());
   }
 }
 
 function init_add_study_group_(name) {
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var group = StudyGroupBuilder.build(spreadsheet, name, {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  let group = StudyGroupBuilder.build(spreadsheet, name, {
     data_height: 20,
     rating: true, sum: true,
     categories: [
@@ -22,20 +22,22 @@ function init_add_study_group_(name) {
     ],
     category_musthave: true,
   });
-  var name_range = group.sheet.getRange(group.dim.mirror_row, 2);
+  const name_range = group.sheet.getRange(group.dim.mirror_row, 2);
   name_range.setNumberFormat("@STRING@");
   name_range.setValue(name);
+  const timetable_id = "…";
+  const participants_id = "…";
   group.sheet.getRange(2, 2).setFormula(
-      '=filter(importrange("…","B2:2"),' +
-      'importrange("…","B1:1")=$B$1)' );
+      '=filter(importrange("' + timetable_id + '","B2:2"),' +
+      'importrange("' + timetable_id + '","B1:1")=$B$1)' );
   group.sheet.getRange(6, 3).setFormula(
-      '=filter(importrange("…","B3:3"),' +
-      'importrange("…","B1:1")=B1)' );
+      '=filter(importrange("' + timetable_id + '","B3:3"),' +
+      'importrange("' + timetable_id + '","B1:1")=B1)' );
   group.sheet.getRange("B9")
     .setFormula(
-      '=sort(filter(importrange("…", "B2:B"),' +
-      'not(isblank(importrange("…", "B2:B"))),' +
-      'importrange("…", "G2:G")=$B$1))' )
+      '=sort(filter(importrange("' + participants_id + '", "A2:A"),' +
+      'not(isblank(importrange("' + participants_id + '", "A2:A"))),' +
+      'importrange("' + participants_id + '", "F2:F")=$B$1))' )
 }
 
 function init_add_study_group_14_(name) {
@@ -51,8 +53,8 @@ function init_add_study_group_6_(name) {
 }
 
 function init_add_study_group_dated_(name, weekdays) {
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var group = StudyGroupBuilder.build(spreadsheet, name, {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  let group = StudyGroupBuilder.build(spreadsheet, name, {
     data_height: 40,
     rating: true, sum: true,
     categories: [
@@ -79,7 +81,7 @@ function init_add_study_group_dated_(name, weekdays) {
       ]},
     },
   });
-  var name_range = group.sheet.getRange(group.dim.mirror_row, 2);
+  const name_range = group.sheet.getRange(group.dim.mirror_row, 2);
   name_range.setNumberFormat("@STRING@");
   name_range.setValue(name);
 }
