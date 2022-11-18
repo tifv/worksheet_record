@@ -61,7 +61,7 @@ function expand_columns_today() {
   const spreadsheet = MainSpreadsheet.get();
   // assume it is early morning
   // remove existing expand_columns_*() triggers
-  expand_columns_never();
+  expand_columns_not_today();
   // schedule expand_columns_now() triggers for the day
   var times = new Set();
   var busy = false;
@@ -141,6 +141,16 @@ function expand_columns_forever_optimistic() {
   }
   if (!busy)
     throw new Error("no group defines a timetable for today");
+}
+
+function expand_columns_not_today() {
+  for (let trigger of ScriptApp.getProjectTriggers()) {
+    if (
+      trigger.getHandlerFunction().startsWith("expand_columns_fuzzy") ||
+      trigger.getHandlerFunction().startsWith("expand_columns_now")
+    )
+      ScriptApp.deleteTrigger(trigger);
+  }
 }
 
 function expand_columns_never() {

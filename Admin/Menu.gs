@@ -33,6 +33,7 @@ function menu_create() {
   const menu = ui.createMenu("Ведомость");
   menu
     .addItem("Выявить ненужные загрузки", "uploads_mark_dead")
+    .addItem("Импортировать расписание", "import_timetable")
     .addItem("Обновить меню", "menu_create")
   ;
   menu.addToUi();
