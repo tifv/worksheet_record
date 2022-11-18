@@ -158,6 +158,7 @@ function add_helper_cf(uploads, cfrules) {
           "not(isblank(", "R[0]", pdf_C1, ")),",
           "or(",
             "isblank(", "R[0]", src_C1, "),",
+            "iferror(find(\"VOID\",", "R[0]", src_C1, ")>=0,FALSE),",
             "iferror(find(\"overleaf.com\",", "R[0]", src_C1, ")>=0,FALSE)",
           ")",
         ")"

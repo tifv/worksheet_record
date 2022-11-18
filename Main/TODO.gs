@@ -6,7 +6,6 @@
 • Factor out WorksheetSectionBuilder and provide worksheet options to it (such as date)
   • or make a separate group options for sections
   • or check whether the worksheet has a date, and if it doesn't, default to empty date.
-• Detect empty files in uploads and question them (or replace hash part with EMPTY and detect in in conditional formatting).
 • Detect invalid URLs in uploads and reject them?
 
 # Priority TODO (2)

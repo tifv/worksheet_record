@@ -385,7 +385,7 @@
           <div class="resource_loader--url_adder url_adder">
             <input type="url" class="url_adder--input" placeholder="https://"/>
             <div class="url_adder--controls"
-             ><button class="url_adder--add_button url_adder--control_button"
+             ><button class="url_adder--add_button url_adder--control_button action"
                 title="добавить ссылку"
                >Добавить</button
              ><button class="url_adder--cancel_button url_adder--control_button material-icons"
@@ -406,7 +406,7 @@
             <textarea class="text_adder--input" placeholder="\LaTeX …"></textarea>
             <div class="text_adder--controls"
              ><input type="text" class="text_adder--name_input" value="source.tex" placeholder="filename.txt"
-            /><button class="text_adder--add_button text_adder--control_button material-icons"
+            /><button class="text_adder--add_button text_adder--control_button material-icons action"
                 title="добавить файл"
                >add</button
              ><button class="text_adder--cancel_button text_adder--control_button material-icons"
@@ -417,7 +417,7 @@
           <div class="resource_loader--url_adder url_adder">
             <input type="url" class="url_adder--input" placeholder="https://…"/>
             <div class="url_adder--controls"
-             ><button class="url_adder--add_button url_adder--control_button"
+             ><button class="url_adder--add_button url_adder--control_button action"
                 title="добавить ссылку"
                >Добавить</button
              ><button class="url_adder--cancel_button url_adder--control_button material-icons"
@@ -873,16 +873,25 @@ class URLAdder extends EventTarget {
       animate_warning(this.input);
       return;
     }
-    this.dispatchEvent(new CustomEvent('add', {detail: {url}}));
-    this.input.value = "";
-    this.deactivate();
+    this.add_common(url);
   }
   add_unfinished() {
+    // return true if successfully added the resource or if it was unnecessary
     if (!this.active)
       return true;
     var url = this.input.value;
     if (url == "") {
       return true;
+    }
+    return this.add_common(url);
+  }
+  add_common(url) {
+    if (url.includes("overleaf.com")) {
+      window.alert(
+        "Ссылка на файл — это ссылка, по которой файл скачивается/открывается " +
+        "непосредственно и автоматически. " +
+        "Ссылка на overleaf не является ссылкой на файл." );
+      return false;
     }
     this.dispatchEvent(new CustomEvent('add', {detail: {url}}));
     this.input.value = "";
@@ -1037,20 +1046,26 @@ ResourceBlob.prototype.get_hash = async function() {
 ResourceBlob.prototype.set_filename = async function(basename) {
   if (typeof basename != "string")
     throw new Error("internal error");
+  let hash = await this.get_hash();
   const n = 4;
-  var hash = await this.get_hash();
-  var varletters = [];
-  var v = 0;
-  for (let i = 0; i < hash.length; ++i) {
-    v *= 256;
-    v += hash[i];
-    v %= (62**n);
+  let hash_sn;
+  if (this.blob.size > 0) {
+    let letters = [];
+    let v = 0;
+    for (let i = 0; i < hash.length; ++i) {
+      v *= 256;
+      v += hash[i];
+      v %= (62**n);
+    }
+    for (let i = 0; i < n; ++i) {
+      letters.push(letters62[v % 62]);
+      v = Math.floor(v / 62);
+    }
+    hash_sn = letters.join("");
+  } else {
+    hash_sn = "VOID";
   }
-  for (let i = 0; i < n; ++i) {
-    varletters.push(letters62[v % 62]);
-    v = Math.floor(v / 62);
-  }
-  this.filename = basename + "-" + varletters.join("") + this.filename_ext;
+  this.filename = basename + "-" + hash_sn + this.filename_ext;
 }
 
 ResourceBlob.prototype.get_file_info = async function() {
