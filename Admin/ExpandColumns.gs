@@ -60,12 +60,8 @@ var expand_columns_fuzzy = new Proxy({}, {get: function(obj, name) {
 function expand_columns_today() {
   const spreadsheet = MainSpreadsheet.get();
   // assume it is early morning
-  // remove existing expand_columns_now() triggers
-  for (let trigger of ScriptApp.getProjectTriggers()) {
-    if ( trigger.getHandlerFunction() == "expand_columns_now" ||
-        trigger.getHandlerFunction().startsWith("expand_columns_fuzzy.") )
-      ScriptApp.deleteTrigger(trigger);
-  }
+  // remove existing expand_columns_*() triggers
+  expand_columns_never();
   // schedule expand_columns_now() triggers for the day
   var times = new Set();
   var busy = false;
@@ -111,12 +107,8 @@ function expand_columns_forever_optimistic() {
   // optimistic: use tomorrow's timetable as if it will continue forever
   const spreadsheet = MainSpreadsheet.get();
   // assume it is early morning
-  // remove existing expand_columns_now() triggers
-  for (let trigger of ScriptApp.getProjectTriggers()) {
-    if ( trigger.getHandlerFunction() == "expand_columns_now" ||
-        trigger.getHandlerFunction().startsWith("expand_columns_fuzzy.") )
-      ScriptApp.deleteTrigger(trigger);
-  }
+  // remove existing expand_columns_*() triggers
+  expand_columns_never();
   // schedule expand_columns_now() triggers for the rest of the eternity
   var times = new Set();
   var busy = false;
@@ -140,7 +132,7 @@ function expand_columns_forever_optimistic() {
   for (let time of times) {
     date.setHours(0);
     date.setMinutes(time + 5);
-    console.log(date.getHours() + ":" + date.getMinutes());
+    console.log(date.getHours().toString().padStart(2,"0") + ":" + date.getMinutes().toString().padStart(2,"0"));
     ScriptApp.newTrigger("expand_columns_fuzzy.fuzzy$15")
       .timeBased().everyDays(1)
       .atHour(date.getHours())
@@ -151,3 +143,9 @@ function expand_columns_forever_optimistic() {
     throw new Error("no group defines a timetable for today");
 }
 
+function expand_columns_never() {
+  for (let trigger of ScriptApp.getProjectTriggers()) {
+    if (trigger.getHandlerFunction().startsWith("expand_columns_"))
+      ScriptApp.deleteTrigger(trigger);
+  }
+}

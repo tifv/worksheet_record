@@ -957,12 +957,13 @@ StudyGroupBuilder.prototype.init_columns = function() {
         .setVerticalAlignment("top");
     if (student_count_cell != null) {
         const data_column_R1C1 = "R" + this.dim.data_row + "C[0]:C[0]";
+        const first_cell_R1C1 = "R" + (this.dim.data_row + 1) + "C[0]";
         student_count_cell
             .setFormulaR1C1(
-                '= counta(' + data_column_R1C1 + ') - ' +
+                '= if( iserror(' + first_cell_R1C1 + '), na(), counta(' + data_column_R1C1 + ') - ' +
                 'sum(arrayformula(' +
                     'iferror(N(find("(→)",' + data_column_R1C1 + ')>0))' +
-                '))' )
+                ')) )' )
             .setNumberFormat("0 чел\\.")
             .setFontSize(8)
             .setVerticalAlignment("bottom");

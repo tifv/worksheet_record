@@ -7,6 +7,8 @@ function worksheet_cleanup_single(group, {errors: super_errors}) {
     if (!worksheet.is_unused())
       continue;
     let date = worksheet.get_title_note_data().get("date");
+    if (date == null)
+      continue;
     if (today.compare(date) <= 0)
       continue;
     if (yesterday.compare(date) <= 0) {

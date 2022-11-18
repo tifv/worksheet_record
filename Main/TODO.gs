@@ -3,7 +3,6 @@
 # Priority TODO
 • Remake sidebar UI to emphasize source links
 • various uploads tools (renaming, stabilization) in Adminhelper
-• detect that frozen rows were probably unfrozen, and suggest to restore them
 • Factor out WorksheetSectionBuilder and provide worksheet options to it (such as date)
   • or make a separate group options for sections
   • or check whether the worksheet has a date, and if it doesn't, default to empty date.
@@ -12,7 +11,6 @@
 
 # Priority TODO (2)
 • make markers invisible in published mode (add a cf rule to whiten them).
-• Add action: sort rows in name order
 • Convert worksheet to theory
 • Worksheet plan
   • optimize worksheet generation to only load and save cfrules once.
@@ -46,7 +44,7 @@
     and moving it in correct place
 • Admin mode and introduction
 • Multiadd worksheets: add several worksheets or add a worksheet to several groups at once
-• All formulas in WorksheetLig/Worksheet and WorksheetLib/StudyGroup should use SpreadsheetLib/Formula to guarantee locale compatibility.
+• All formulas in WorksheetLib/Worksheet and WorksheetLib/StudyGroup should use SpreadsheetLib/Formula to guarantee locale compatibility.
 • Function to reorder section in worksheet?
 • Rename S3Lib/Signer to Upload/S3Signer
 • Regenerate:
