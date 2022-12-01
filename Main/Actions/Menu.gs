@@ -90,6 +90,10 @@ function menu_create() {
             .addItem( emojipad.sun   + "листочек…",
                 "action_worksheet_upload" );
         action_worksheet_upload_addendum.populate_menu(upload_menu, true);
+        upload_menu
+            .addSeparator()
+            .addItem( "Извлечь ссылку на исходник",
+                "action_worksheet_upload_show_src_link" );
         menu.addSubMenu(upload_menu);
     }
     menu.addSeparator();

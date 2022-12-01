@@ -197,6 +197,50 @@ function addendums_restore_hardcoded() {
     ] ));
 }
 
+function action_worksheet_upload_show_src_link() {
+  ReportError.with_reporting(() => {
+    if (!upload_enabled_()) {
+      throw new ReportError("Загрузка файлов не настроена");
+    }
+    Active.with_section((section) => {
+      var spreadsheet = section.group.sheet.getParent();
+      successful: {
+        let title_formula = section.get_title_formula();
+        if (title_formula == "")
+          break successful;
+        let title_formula_decode = decode_hyperlink_formula_(title_formula);
+        if (title_formula_decode == null)
+          break successful;
+        let [{filter = null}, ] = title_formula_decode;
+        if (filter == null)
+          break successful;
+        var response = [];
+        for (let datum of UploadRecord.get(spreadsheet, "minimal").find("id", filter)) {
+          let response_part = [];
+          response_part.push('<p>');
+          if (datum.has('pdf')) {
+            response_part.push('PDF: <a href="' + datum.get('pdf') + '">' + datum.get('pdf') + '</a>');
+          }
+          if (datum.has('pdf') && datum.has('src')) {
+            response_part.push('<br/>')
+          }
+          if (datum.has('src')) {
+            response_part.push('source: <a href="' + datum.get('src') + '">' + datum.get('src') + '</a>');
+          }
+          response_part.push('</p>');
+          response.push(response_part.join(''));
+        }
+        if (response.length == 0)
+          break successful;
+        SpreadsheetApp.getUi().showModelessDialog(HtmlService.createHtmlOutput(response.join('')), "Загруженный файл");
+        return;
+      }
+      throw new ReportError("Файл не найден в реестре загрузок.")
+    });
+  });
+}
+
+
 function action_worksheet_planned() {
   var template = HtmlService.createTemplateFromFile(
     "Actions/Worksheets-Timetable" );
