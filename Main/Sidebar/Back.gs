@@ -210,7 +210,7 @@ function sidebar_load_uploads_search(search_text) {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   console.log(search_text);
   var response = [];
-  for (let datum of UploadRecord.get(spreadsheet, "full").find("id", search_text)) {
+  for (let datum of UploadRecord.get(spreadsheet, "minimal").find("id", search_text)) {
     response.push(sidebar_load_uploads_encode_datum_(datum));
   }
   console.log(JSON.stringify(response));

@@ -89,7 +89,7 @@ function menu_create() {
         upload_menu
             .addItem( emojipad.sun   + "листочек…",
                 "action_worksheet_upload" );
-        action_worksheet_upload_addendum.populate_menu(upload_menu, true);
+        action_worksheet_upload_addendum.populate_menu(upload_menu, {add_separator: true});
         upload_menu
             .addSeparator()
             .addItem( "Извлечь ссылку на исходник",
@@ -135,7 +135,7 @@ function menu_meta_setup_(mainfunc, metadata_key) {
         return Object.fromEntries(load_list().map(
             ([name, arg, label,]) => [name, [arg, label]] ));
     }
-    mainfunc.populate_menu = function(menu, add_separator) {
+    mainfunc.populate_menu = function(menu, {add_separator=false} = {}) {
         var menu_data = load_list();
         if (menu_data.length == 0)
             return false;

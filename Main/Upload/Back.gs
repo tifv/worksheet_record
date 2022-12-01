@@ -1,3 +1,5 @@
+// General description of upload process (initial design; not necessarily up-to-date)
+
 // Phase server-init
 // • detect presence of upload configuration
 // • detect presence of upload record
