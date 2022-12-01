@@ -219,13 +219,21 @@ function action_worksheet_upload_show_src_link() {
           let response_part = [];
           response_part.push('<p>');
           if (datum.has('pdf')) {
-            response_part.push('PDF: <a href="' + datum.get('pdf') + '">' + datum.get('pdf') + '</a>');
+            let pdf_link = datum.get('pdf');
+            response_part.push(
+              'PDF: <a target="_blank" href="' + pdf_link + '">' +
+                pdf_link.substring(pdf_link.lastIndexOf('/')) + '</a>'
+            );
           }
           if (datum.has('pdf') && datum.has('src')) {
             response_part.push('<br/>')
           }
           if (datum.has('src')) {
-            response_part.push('source: <a href="' + datum.get('src') + '">' + datum.get('src') + '</a>');
+            let src_link = datum.get('src');
+            response_part.push(
+              'Source: <a target="_blank" href="' + src_link + '">' +
+                src_link.substring(src_link.lastIndexOf('/')) + '</a>'
+            );
           }
           response_part.push('</p>');
           response.push(response_part.join(''));
