@@ -238,7 +238,9 @@ function worksheet_planned_add_forever_all() {
         .atHour(hour)
         .nearMinute(minute)
       .create();
-    console.log("scheduling worksheet planned adding for group “" + group.name + "”");
+    console.log( "scheduling worksheet planned adding for " +
+      "group “" + group.name + "” " +
+      "at " + hour.toString().padStart(2, "0") + ":" + minute.toString().padStart(2, "0") );
     minute += 5;
     if (minute >= 60) {
       hour += 1;
