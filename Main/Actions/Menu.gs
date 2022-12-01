@@ -92,7 +92,7 @@ function menu_create() {
         action_worksheet_upload_addendum.populate_menu(upload_menu, {add_separator: true});
         upload_menu
             .addSeparator()
-            .addItem( "Извлечь ссылку на исходник",
+            .addItem( "Найти исходник…",
                 "action_worksheet_upload_show_src_link" );
         menu.addSubMenu(upload_menu);
     }
