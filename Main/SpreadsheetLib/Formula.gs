@@ -158,19 +158,33 @@ class WhitespaceToken extends CommonToken {};
 WhitespaceToken.regex = /^\s+/;
 
 class BraketToken extends Token {
+    static match(subformula, context, options) {
+        var lambda_match = subformula.match(this.lambda_call_regex);
+        if (lambda_match == null)
+        return super.match(subformula, context, options);
+        var tokens = [
+            (context == "arguments") ?
+                new ClosingArgsToken() :
+                new ClosingParenToken()
+        ];
+        if (lambda_match[1] != "")
+            tokens.push(new WhitespaceToken(match[1]));
+        tokens.push(new OpeningArgsToken());
+        return [lambda_match[0].length, ...tokens];
+    }
     static match_constructor(match, context, options) {
         var string = match[0];
         if (string == "(") {
-            return new OpeningParenToken(string);
+            return new OpeningParenToken();
         } else if (string == ")") {
             if (context == "arguments") {
-                return new ClosingArgsToken(string);
+                return new ClosingArgsToken();
             }
-            return new ClosingParenToken(string);
+            return new ClosingParenToken();
         } else if (string == "{") {
-            return new OpeningBraceToken(string);
+            return new OpeningBraceToken();
         } else if (string == "}") {
-            return new ClosingBraceToken(string);
+            return new ClosingBraceToken();
         } else {
             throw new FormulaError("internal error");
         }
@@ -180,6 +194,7 @@ class BraketToken extends Token {
     }
 };
 BraketToken.regex = /^[(){}]/;
+BraketToken.lambda_call_regex = /^\)(\s*)\(/;
 
 class DelimiterToken extends LocalizedToken {
     static match_constructor_en(match, context, options) {
@@ -596,7 +611,7 @@ IdentifierToken.regex = /^[A-Za-z_][A-Za-z0-9_.]*/;
 
 class FunctionToken extends IdentifierToken {
     static match(subformula, context, options) {
-        var match = subformula.match(/^([A-Za-z_][A-Za-z0-9_.]*)(\s*)\(/);
+        var match = subformula.match(this.regex);
         if (match == null)
             return null;
         if (match.index > 0)
@@ -608,6 +623,7 @@ class FunctionToken extends IdentifierToken {
         return [match[0].length, ...tokens];
     }
 };
+FunctionToken.regex = /^([A-Za-z_][A-Za-z0-9_.]*)(\s*)\(/;
 
 class OpeningBraketToken extends BraketToken {};
 class ClosingBraketToken extends BraketToken {};
