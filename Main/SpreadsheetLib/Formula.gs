@@ -237,7 +237,7 @@ DelimiterToken.regex_en = /^[,;]/;
 DelimiterToken.regex_ru = /^[;\\]/;
 
 class OperatorToken extends CommonToken {};
-OperatorToken.regex = /^(?:==|<=|>=|<>|[+\-*\/^=<>&])/;
+OperatorToken.regex = /^(?:==|<=|>=|<>|[+\-*\/^=<>&:])/;
 
 class NotationalToken extends Token {
     static match(subformula, context, options) {
