@@ -8,8 +8,7 @@ function action_regenerate_toc() {
     spreadsheet.deleteSheet(toc_sheet);
   }
   var min_group_sheet_index = null;
-  var formula_pieces = ['={"Оглавление","",""'];
-  var first_group = true;
+  var formula_pieces = ['={"Оглавление","","";iferror({"","","";\'toc-extra\'!R1C1:C3;"","",""},{"","",""})'];
   for (let group of StudyGroup.list(spreadsheet)) {
     if (toc_sheet_index == null) {
       let group_sheet_index = group.sheet.getIndex();
@@ -19,21 +18,22 @@ function action_regenerate_toc() {
     let start_col = Worksheet.find_start_col(group);
     if (start_col == null)
       continue;
-    formula_pieces.push(';"","","";');
-    first_group = false;
+    formula_pieces.push(';\n');
     let name = group.name;
+    let group_title_ref = "'" + name + "'!R2C2";
     let title_ref = "'" + name + "'!R" + group.dim.title_row + "C" + start_col + ":R" + group.dim.title_row;
-    let void_ref = "arrayformula(" + title_ref + "+na())";
+    let void_ref = "map(" + title_ref + ",lambda(x,))";
     let category_ref = group.dim.category_row != null ?
       ("'" + name + "'!R" + group.dim.category_row + "C" + start_col + ":R" + group.dim.category_row) :
       void_ref;
-    let data_ref = "iferror({" + void_ref + ";" + category_ref + ";" + title_ref + "})";
+    let data_ref = "{" + void_ref + ";" + category_ref + ";" + title_ref + "}";
     formula_pieces.push(
-      '"' + group.name + '","","";',
+      group_title_ref + '&" (' + group.name + ')","","";',
       "transpose(filter(" +
         data_ref + ",not(isblank(" + title_ref + "))" +
       "))"
     );
+    formula_pieces.push(';"","",""');
   }
   formula_pieces.push("}");
   if (toc_sheet_index == null && min_group_sheet_index != null) {
