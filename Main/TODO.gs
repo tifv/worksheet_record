@@ -58,5 +58,6 @@
 • make a separate (hidden) row for problem status (and maybe make some statistics based on it — like how many problems remain for a given student)
 • make CFormatting reasonably resistant to #REF! errors in formulas
 • when adding additional ProblemSection's, consult with the timetable to determine the corresponding date more precisely.
+• refactor upload_finish() and upload_fake_finish()
 
 */

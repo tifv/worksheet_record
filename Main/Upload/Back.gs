@@ -190,18 +190,28 @@ function upload_finish({
     var column = metadata[0].getLocation().getColumn().getColumn();
     var cell = sheet.getRange(group.dim.title_row, column);
     function col_R1C1(key) {
-      return "R" + uploads.first_row + "C" + uploads.key_columns.get(key) + ":C" + uploads.key_columns.get(key);
+      return (
+        "R" + uploads.first_row +
+        "C" + uploads.key_columns.get(key) +
+        ":C" + uploads.key_columns.get(key)
+      );
     }
+    var value = cell.getValue().trim();
     cell
+      .setShowHyperlink(true)
+      .setRichTextValue(
+        SpreadsheetApp.newRichTextValue()
+          .setText(value)
+          .setLinkUrl(pdf_url)
+          .build() )
+      .setFontColor(null)
       .setFormulaR1C1("=hyperlink(" +
         "filter(" +
           "'" + uploads.name + "'!" + col_R1C1("pdf") + ";" +
-          //"'" + uploads.name + "'!" + col_R1C1("initial_pdf") + "=\"" + pdf_url + "\"" + ";" +
           "'" + uploads.name + "'!" + col_R1C1("id") + "=\"" + id + "\"" +
         ");" +
-        "\"" + cell.getValue() + "\"" +
-      ")")
-      .setShowHyperlink(true);
+        "\"" + value + "\"" +
+      ")");
   });
 }
 
@@ -249,18 +259,28 @@ function upload_fake_finish_(section, options = {}) {
   ]));
   var cell = section.title_range.getCell(1, 1);
   function col_R1C1(key) {
-    return "R" + uploads.first_row + "C" + uploads.key_columns.get(key) + ":C" + uploads.key_columns.get(key);
+    return (
+      "R" + uploads.first_row +
+      "C" + uploads.key_columns.get(key) +
+      ":C" + uploads.key_columns.get(key)
+    );
   }
+  var value = cell.getValue().trim();
   cell
+    .setShowHyperlink(true)
+    .setRichTextValue(
+      SpreadsheetApp.newRichTextValue()
+        .setText(value)
+        .setLinkUrl("https://example.com")
+        .build() )
+    .setFontColor(null)
     .setFormulaR1C1("=hyperlink(" +
       "filter(" +
         "'" + uploads.name + "'!" + col_R1C1("pdf") + ";" +
-        //"'" + uploads.name + "'!" + col_R1C1("initial_pdf") + "=\"" + pdf_url + "\"" + ";" +
         "'" + uploads.name + "'!" + col_R1C1("id") + "=\"" + id + "\"" +
       ");" +
-      "\"" + cell.getValue() + "\"" +
-    ")")
-    .setShowHyperlink(true);
+      "\"" + value + "\"" +
+    ")");
 }
 
 
