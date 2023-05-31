@@ -97,7 +97,7 @@ function import_timetable() {
       let today_worksheet_plan = get_list(group_worksheet_plan, date);
       today_timetable[period] = timetable_item;
       let value = values[i][j];
-      if (value == null)
+      if (typeof value !== "string")
         continue;
       let category_codes = categories
         .filter(([code, name]) => value.toLowerCase().startsWith(name.toLowerCase()))

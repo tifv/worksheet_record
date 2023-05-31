@@ -90,8 +90,9 @@ function expand_columns_today() {
       .timeBased().at(date)
       .create();
   }
-  if (!busy)
-    throw new Error("no group defines a timetable for today");
+  if (!busy) {
+    console.log("no group defines a timetable for today");
+  }
 }
 
 function expand_columns_forever() {
