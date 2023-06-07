@@ -267,13 +267,6 @@ function upload_fake_finish_(section, options = {}) {
   }
   var value = cell.getValue().trim();
   cell
-    .setShowHyperlink(true)
-    .setRichTextValue(
-      SpreadsheetApp.newRichTextValue()
-        .setText(value)
-        .setLinkUrl("https://example.com")
-        .build() )
-    .setFontColor(null)
     .setFormulaR1C1("=hyperlink(" +
       "filter(" +
         "'" + uploads.name + "'!" + col_R1C1("pdf") + ";" +
