@@ -1896,24 +1896,27 @@ WorksheetSection.prototype.remove_excess_columns = function() {
   var label_values = this.group.sheetbuf.slice_values( "label_row",
     this.dim.data_start, this.dim.data_end );
   var data_values = this.data_range.getValues();
+  return this.remove_columns((index) => {
+    if (label_values[index] != "") {
+      return false;
+    }
+    for (let data_row of data_values) {
+      if (data_row[index] != "") {
+        return false;
+      }
+    }
+    return true;
+  })
+} // }}}
 
+// WorksheetSection().remove_columns {{{
+WorksheetSection.prototype.remove_columns = function(remove_filter) {
+  // after this function is applied, all worksheet structures
+  // (worksheets, sections) should be discarded
   var removed_count = 0;
   var removing_series = 0;
   for (let i = this.dim.data_width - 1; i >= -1; --i) {
-    let col_is_blank = true;
-    if (i < 0) {
-      col_is_blank = false;
-    } else if (label_values[i] != "") {
-      col_is_blank = false;
-    } else {
-      for (let data_row of data_values) {
-        if (data_row[i] != "") {
-          col_is_blank = false;
-          break;
-        }
-      }
-    }
-    if (col_is_blank) {
+    if (i >= 0 && remove_filter(i)) {
       ++removing_series;
     } else if (removing_series > 0) {
       removed_count += removing_series;
@@ -1934,7 +1937,7 @@ WorksheetSection.prototype.remove_excess_columns = function() {
         this.dim.data_start + i + 1, removing_series );
       if (i < 0 && this.dim.start == this.dim.data_start) {
         this.group.sheetbuf.set_value( "title_row",
-          this.dim.title, title );
+          this.dim.title, title ); // XXX may destroy formula?
         this.group.sheetbuf.set_note ( "title_row",
           this.dim.title, title_note );
         if (category != null)
