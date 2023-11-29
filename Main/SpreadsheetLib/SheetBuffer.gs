@@ -231,6 +231,7 @@ function SheetBuffer(sheet, row_map, super_dim = {}) {
         },
     });
     this._row_map = row_map;
+    this._load_height = Math.max(...Object.entries(row_map).map(([,v]) => v));
     this._loaded_start = null;
     this._loaded_end = null;
     this._data = {
@@ -327,9 +328,9 @@ function SheetBuffer_ensure_loaded(start, end) {
 function SheetBuffer_load_chunk(start, end) {
     SpreadsheetFlusher.add_dimensions( true,
         this.dim.sheet_id, this.dim.sheet_height, this.dim.sheet_width,
-        1, start, this.dim.frozen_height, end - start + 1 );
+        1, start, this._load_height, end - start + 1 );
     var range = this.sheet.getRange(
-        1, start, this.dim.frozen_height, end - start + 1 );
+        1, start, this._load_height, end - start + 1 );
     return [range.getValues(), range.getFormulasR1C1(), range.getNotes()];
 }
 
