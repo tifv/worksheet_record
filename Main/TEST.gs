@@ -1,5 +1,17 @@
 function init_add_study_groups() {
-  init_add_study_group_("X");
+  init_add_study_group_("7р1", "R");
+  init_add_study_group_("7р2", "R");
+  init_add_study_group_("7р3", "R");
+  init_add_study_group_("8р1", "R");
+  init_add_study_group_("8р2", "R");
+  init_add_study_group_("8р3", "R");
+  init_add_study_group_("9р1", "R");
+  init_add_study_group_("9р2", "R");
+  init_add_study_group_("9р3", "R");
+  init_add_study_group_("7м1", "7M");
+  init_add_study_group_("7м2", "7M");
+  init_add_study_group_("8м1", "8M");
+  init_add_study_group_("8м2", "8M");
 }
 
 function init_fix_groups() {
@@ -9,7 +21,7 @@ function init_fix_groups() {
   }
 }
 
-function init_add_study_group_(name) {
+function init_add_study_group_(name, cls) {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   let group = StudyGroupBuilder.build(spreadsheet, name, {
     data_height: 20,
@@ -25,8 +37,8 @@ function init_add_study_group_(name) {
   const name_range = group.sheet.getRange(group.dim.mirror_row, 2);
   name_range.setNumberFormat("@STRING@");
   name_range.setValue(name);
-  const timetable_id = "…";
-  const participants_id = "…";
+  const timetable_id = "1JCpIZ27gnkTjI3xiQKafTDoCY5r3oukEiYIZTRIfwbQ";
+  const participants_id = "1KRxnAtI3FYBPW0KW527sMc8arepREEBpJ7TwOgusdgU";
   group.sheet.getRange(2, 2).setFormula(
       '=filter(importrange("' + timetable_id + '","B2:2"),' +
       'importrange("' + timetable_id + '","B1:1")=$B$1)' );
@@ -35,9 +47,9 @@ function init_add_study_group_(name) {
       'importrange("' + timetable_id + '","B1:1")=B1)' );
   group.sheet.getRange("B9")
     .setFormula(
-      '=sort(filter(importrange("' + participants_id + '", "A2:A"),' +
-      'not(isblank(importrange("' + participants_id + '", "A2:A"))),' +
-      'importrange("' + participants_id + '", "F2:F")=$B$1))' )
+      '=sort(filter(importrange("' + participants_id + '", "' + cls + '!A2:A"),' +
+      'not(isblank(importrange("' + participants_id + '", "' + cls + '!A2:A"))),' +
+      'importrange("' + participants_id + '", "' + cls + '!F2:F")=$B$1))' )
 }
 
 function init_add_study_group_14_(name) {

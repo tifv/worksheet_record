@@ -668,7 +668,7 @@ function merge(sheet, ...cfrule_objs) {
 
 return {
     merge: merge,
-    RuleList:   CFRuleList,
+    RuleList: CFRuleList,
     Rule: CFRule, RuleFilter: CFRuleFilter,
     RangeList: CFRangeList, LocationList: CFLocationList,
     Range: CFRange,

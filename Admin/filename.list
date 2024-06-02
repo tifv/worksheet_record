@@ -15,11 +15,13 @@ WorksheetLib/StudyGroup
 WorksheetLib/Worksheet
 Main
 Menu
+Scheduler
 ExpandColumns
 WorksheetPlan
 WorksheetCleanup
 Upload/Record
 Upload/Hyperlink
 Upload/Actions
+Hidden
 TEST
 TODO

@@ -34,7 +34,14 @@ function menu_create() {
   menu
     .addItem("Выявить ненужные загрузки", "uploads_mark_dead")
     .addItem("Импортировать расписание", "import_timetable")
+    .addSeparator()
     .addItem("Обновить меню", "menu_create")
+    .addItem("Переподключить ведомость", "connect_main");
+    .addItem(
+      HiddenSpreadsheet.is_set()
+        ? "Переподключить скрытую ведомость"
+        : "Подключить скрытую ведомость",
+      "connect_hidden" );
   ;
   menu.addToUi();
 };

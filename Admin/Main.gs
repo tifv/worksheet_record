@@ -1,37 +1,38 @@
-var MainSpreadsheet = function myFunction() {
+var MainSpreadsheet = function() {
 
 const property_key = "main_spreadsheet";
 
-var main_spreadsheet = null;
+var spreadsheet = null;
 
 function get() {
-  if (main_spreadsheet != null)
-    return main_spreadsheet;
-  var id = PropertiesService.getDocumentProperties().getProperty(property_key);
+  if (spreadsheet != null)
+    return spreadsheet;
+  var id = PropertiesService.getDocumentProperties()
+    .getProperty(property_key);
   if (id == null)
     return null;
   try {
-    main_spreadsheet = SpreadsheetApp.openById(id);
-    return main_spreadsheet;
+    spreadsheet = SpreadsheetApp.openById(id);
+    return spreadsheet;
   } catch (error) {
     return null;
   }
 }
 
 function set(spreadsheet) {
-  main_spreadsheet = spreadsheet;
-  PropertiesService.getDocumentProperties().setProperty(property_key, main_spreadsheet.getId());
+  PropertiesService.getDocumentProperties()
+    .setProperty(property_key, spreadsheet.getId());
 }
 
 function is_set() {
-  if (main_spreadsheet != null)
+  if (spreadsheet != null)
     return true;
-  var id = PropertiesService.getDocumentProperties().getProperty(property_key);
+  var id = PropertiesService.getDocumentProperties()
+    .getProperty(property_key);
   if (id == null)
     return false;
   return true;
 }
-
 
 return {get: get, set: set, is_set: is_set};
 }();

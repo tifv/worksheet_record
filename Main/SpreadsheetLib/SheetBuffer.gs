@@ -238,6 +238,7 @@ function SheetBuffer(sheet, row_map, super_dim = {}) {
         values:   new_loaded_values(row_map),
         formulas: new_loaded_values(row_map),
         notes:    new_loaded_values(row_map),
+        colors:   new_loaded_values(row_map),
     };
     this._merges = new MergedRangesBuffer(sheet, row_map, this.dim);
 }
@@ -289,13 +290,14 @@ function SheetBuffer_ensure_loaded(start, end) {
         let load_start = this._loaded_start - chunk_size;
         if (load_start < 1)
             load_start = 1;
-        let [added_values, added_formulas, added_notes] =
+        let [added_values, added_formulas, added_notes, added_colors] =
             SheetBuffer_load_chunk.call( this,
                 load_start, this._loaded_start - 1 );
         for (let [loaded, added] of [
             [this._data.values,   added_values  ],
             [this._data.formulas, added_formulas],
             [this._data.notes,    added_notes   ],
+            [this._data.colors,   added_colors  ],
         ]) {
             for (let row_name in this._row_map) {
                 Array.prototype.unshift.apply( loaded[row_name],
@@ -308,13 +310,14 @@ function SheetBuffer_ensure_loaded(start, end) {
         let load_end = this._loaded_end + chunk_size;
         if (load_end > sheet_width)
             load_end = sheet_width;
-        let [added_values, added_formulas, added_notes] = 
+        let [added_values, added_formulas, added_notes, added_colors] =
             SheetBuffer_load_chunk.call( this,
                 this._loaded_end + 1, load_end );
         for (let [loaded, added] of [
             [this._data.values,   added_values  ],
             [this._data.formulas, added_formulas],
             [this._data.notes,    added_notes   ],
+            [this._data.colors,   added_colors  ],
         ]) {
             for (let row_name in this._row_map) {
                 Array.prototype.push.apply( loaded[row_name],
@@ -331,7 +334,7 @@ function SheetBuffer_load_chunk(start, end) {
         1, start, this._load_height, end - start + 1 );
     var range = this.sheet.getRange(
         1, start, this._load_height, end - start + 1 );
-    return [range.getValues(), range.getFormulasR1C1(), range.getNotes()];
+    return [range.getValues(), range.getFormulasR1C1(), range.getNotes(), range.getBackgrounds()];
 }
 
 function SheetBuffer_slice(value_type, row_name, start, end) {
@@ -354,6 +357,10 @@ SheetBuffer.prototype.slice_values = function(row_name, start, end) {
 
 SheetBuffer.prototype.slice_formulas = function(row_name, start, end) {
     return SheetBuffer_slice.call(this, "formulas", row_name, start, end);
+}
+
+SheetBuffer.prototype.slice_colors = function(row_name, start, end) {
+    return SheetBuffer_slice.call(this, "colors", row_name, start, end);
 }
 
 function SheetBuffer_get(value_type, row_name, column) {
@@ -496,6 +503,47 @@ SheetBuffer.prototype.set_note = function(row_name, column, note) {
         this._data.notes[row_name][i] = note != null ? note : "";
     }
     this.sheet.getRange(this._row_map[row_name], column).setNote(note);
+    SpreadsheetFlusher.reset();
+}
+
+SheetBuffer.prototype.set_color = function(row_name, column, color) {
+    if (column < 1 || column > this.dim.sheet_width)
+        throw new SheetBufferError("set_note: index out of bounds");
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
+    if ( this._loaded_start != null &&
+        column >= this._loaded_start && column <= this._loaded_end
+    ) {
+        let i = column - this._loaded_start;
+        this._data.colors[row_name][i] = color != null ? color : "";
+    }
+    this.sheet.getRange(this._row_map[row_name], column).setBackground(color);
+    SpreadsheetFlusher.reset();
+}
+
+SheetBuffer.prototype.set_colors = function(row_name, start, end, colors) {
+    if (start < 1 || end > this.dim.sheet_width)
+        throw new SheetBufferError("set_colors: index out of bounds");
+    if (start > end)
+        throw new SheetBufferError("set_colors: invalid indices");
+    var width = end - start + 1;
+    if (!(colors instanceof Array)) {
+        let formulas_array = new Array(width);
+        formulas_array.fill(colors);
+        colors = formulas_array;
+    } else if (colors.length != width) {
+        throw new SheetBufferError("set_colors: invalid colors array");
+    }
+    if (this._row_map[row_name] == null)
+        throw new SheetBufferError("unknown row: " + row_name)
+    if ( this._loaded_start != null &&
+        end >= this._loaded_start && start <= this._loaded_end
+    ) {
+        let i = start - this._loaded_start;
+        this._data.colors[row_name].splice(i, width, ...colors);
+    }
+    this.sheet.getRange(this._row_map[row_name], start, 1, width)
+        .setBackgrounds([colors]);
     SpreadsheetFlusher.reset();
 }
 
@@ -794,7 +842,7 @@ SheetBuffer.prototype.find_merge = function(
      * overlap start column
      * if options.allow_end_overlap is true, then returned merge may
      * overlap end column
-     */   
+     */
     ({
         allow_overlap_start: options.allow_overlap_start = false,
         allow_overlap_end:   options.allow_overlap_end   = false,

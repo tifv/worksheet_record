@@ -50,22 +50,28 @@ function worksheet_cleanup_single(group, {errors: super_errors}) {
 }
 
 function worksheet_cleanup_all() {
-  const spreadsheet = MainSpreadsheet.get();
-  var errors = [];
-  for (let group of StudyGroup.list(spreadsheet)) {
+  let errors = [];
+  let iteratee = (group) => {
     try {
       worksheet_cleanup_single(group, {errors: errors});
     } catch (error) {
       console.error(error.toString());
       errors.push(error);
     }
-  }
+  };
+  const main_spreadsheet = MainSpreadsheet.get();
+  for (let group of StudyGroup.list(main_spreadsheet))
+    iteratee(group);
+  const hidden_spreadsheet = HiddenSpreadsheet.get();
+  for (let group of StudyGroup.list(hidden_spreadsheet))
+    iteratee(group);
   if (errors.length > 0) {
     throw errors[0];
   }
 }
 
 function worksheet_cleanup_forever() {
+  worksheet_cleanup_never();
   ScriptApp.newTrigger("worksheet_cleanup_all")
     .timeBased()
       .everyDays(1)
@@ -74,3 +80,9 @@ function worksheet_cleanup_forever() {
     .create();
 }
 
+function worksheet_cleanup_never() {
+  for (let trigger of ScriptApp.getProjectTriggers()) {
+    if (trigger.getHandlerFunction().startsWith("worksheet_cleanup_"))
+      ScriptApp.deleteTrigger(trigger);
+  }
+}
