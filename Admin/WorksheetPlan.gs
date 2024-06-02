@@ -135,6 +135,7 @@ function import_timetable() {
   } else {
     timetable = SpreadsheetApp.openById(ref);
   }
+  const main_spreadsheet = MainSpreadsheet.get();
   const sheet = timetable.getSheetByName("timetable");
   const frozen_rows = sheet.getFrozenRows();
   const frozen_cols = sheet.getFrozenColumns();
@@ -235,7 +236,6 @@ function import_timetable() {
       today_worksheet_plan.push({period: period, category: category});
     }
   }
-  const main_spreadsheet = MainSpreadsheet.get();
   const hidden_spreadsheet = HiddenSpreadsheet.get();
   for (let group_name of group_names) {
     let group = null;
@@ -251,5 +251,20 @@ function import_timetable() {
     group.set_timetable(timetables[group_name]);
     group.set_worksheet_plan(worksheet_plans[group_name]);
   }
+}
+
+function unset_timetable() {
+    let iteratee = (group) => {
+      group.set_timetable(null);
+      group.set_worksheet_plan(null);
+    };
+    const main_spreadsheet = MainSpreadsheet.get();
+    for (let group of StudyGroup.list(main_spreadsheet))
+      iteratee(group);
+    const hidden_spreadsheet = HiddenSpreadsheet.get();
+    if (hidden_spreadsheet !== null) {
+      for (let group of StudyGroup.list(hidden_spreadsheet))
+        iteratee(group);
+    }
 }
 

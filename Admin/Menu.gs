@@ -36,12 +36,12 @@ function menu_create() {
     .addItem("Импортировать расписание", "import_timetable")
     .addSeparator()
     .addItem("Обновить меню", "menu_create")
-    .addItem("Переподключить ведомость", "connect_main");
+    .addItem("Переподключить ведомость", "connect_main")
     .addItem(
       HiddenSpreadsheet.is_set()
         ? "Переподключить скрытую ведомость"
         : "Подключить скрытую ведомость",
-      "connect_hidden" );
+      "connect_hidden" )
   ;
   menu.addToUi();
 };
