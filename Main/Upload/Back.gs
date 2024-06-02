@@ -124,11 +124,14 @@ const known_file_extensions = {
 function upload_authorize(files_meta) {
   const signer = UploadConfig.get_signer();
   var result = [];
-  for (let {filename, size, hash_hex} of files_meta) {
+  for (let {filename, size, hash_hex, is_text} of files_meta) {
     let [, file_ext] = split_filename_(filename);
     let file_type = known_file_extensions[file_ext];
     if (file_type == null)
       throw "upload_worksheet: unknown file extension " + file_ext;
+    if (is_text && file_type.startsWith('text/')) {
+      file_type += '; charset=utf-8';
+    }
     let [upload_url, upload_headers] = signer.sign( "PUT",
       filename, "", [
         ["Content-Length", size.toString()],

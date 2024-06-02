@@ -359,7 +359,7 @@
             </label>
           </div
          ><div class="upload_dialog--author_edit form-group">
-            <label>Автор_ки листочка<br/>
+            <label>Автор:ки листочка<br/>
               <input type="text" class="upload_dialog--author_input"
                 placeholder="Лев Толстой" />
             </label>
@@ -838,6 +838,7 @@ function make_text_blob(content, filename) {
     type: filename_ext == ".tex" ? "text/x-tex" : "text/plain",
   });
   blob.name = filename;
+  blob.is_text = true;
   return blob;
 }
 
@@ -1028,6 +1029,7 @@ class ResourceBlob extends Resource {
     } else {
       this.filename_ext = filename_ext;
     }
+    this.is_text = this.blob.is_text || false;
   }
   get_url() {
     if (this.url == null)
@@ -1073,6 +1075,7 @@ ResourceBlob.prototype.get_file_info = async function() {
     filename: this.filename,
     size: this.blob.size,
     hash_hex: bytes_to_hex(await this.get_hash()),
+    is_text: this.is_text,
   }
 }
 

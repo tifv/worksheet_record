@@ -469,3 +469,31 @@ function test_set_minimal_worksheet() {
   });
 }
 
+function test_worksheet_add_game_placeholder() {
+  ReportError.with_reporting(() => {
+    Active.with_group((group) => {
+      const sheet = group.sheet;
+      var date = WorksheetDate.today();
+      date.period = 3;
+      var worksheet = WorksheetBuilder.build( group,
+        sheet.getRange(1,sheet.getMaxColumns()),
+        { rating_column: 0, sum_column: 0, data_width: 1,
+          title: "(название игры)", date: date,
+          category: "o" },
+      );
+      worksheet.set_max_formula(null);
+      worksheet.set_weight_formula(null);
+      var [section] = worksheet.list_sections();
+      section.set_data_borders(
+        section.dim.data_start, section.dim.data_end,
+        {weight_row: false, max_row: false} );
+      sheet.setColumnWidths(worksheet.dim.start, worksheet.dim.width, 50);
+      sheet.setColumnWidths(worksheet.dim.data_start, 1, 100);
+      var addendum_section = section.get_addendum({
+        type: "answers", title: "ответы",
+        label: emoji.cake });
+      sheet.setColumnWidths(addendum_section.dim.start, 1, 50);
+    });
+  });
+}
+
