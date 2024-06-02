@@ -23,11 +23,11 @@ var hidden_sync = new Scheduler(
       [19, 15],
       [23, 45],
     ].map(([h, m]) => {
-      let now = new Date();
-      now.setHours(h);
-      now.setMinutes(m);
-      now.setSeconds(0);
-      return {date: now, args: []};
+      let date = new Date();
+      date.setHours(h);
+      date.setMinutes(m);
+      date.setSeconds(0);
+      return {date, args: []};
     });
   },
 );
